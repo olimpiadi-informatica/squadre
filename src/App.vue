@@ -3,9 +3,13 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
       <img style="width: 6rem;" class="navbar-brand" src="./assets/logo.png"/>
 
-      <div class="collapse navbar-collapse">
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav mr-auto">
-          <router-link class="nav-item" tag="li" to="/" active-class="active" exact="true">
+          <router-link class="nav-item" tag="li" to="/" active-class="active" :exact="true">
             <a class="nav-link">Home</a>
           </router-link>
           <router-link class="nav-item" tag="li" to="/edition" active-class="active">
