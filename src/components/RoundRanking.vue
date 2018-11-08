@@ -57,7 +57,7 @@
         <td class="align-middle font-weight-bold">{{ row.name }}</td>
         <td class="align-middle font-italic"><small>{{ row.institute }}</small></td>
         <td class="align-middle text-center">
-          <img style="height: 2rem" :src="'/flags/' + row.region + '.png'">
+          <img style="height: 2rem" :title='row.fullregion' :src="'/flags/' + row.region + '.png'">
         </td>
         <td class="align-middle font-weight-bold text-center">
           {{ row.total }}
@@ -67,7 +67,10 @@
             v-for="(score, index) in row.scores"
             v-bind:score="score"
             v-bind:key="row.id + '_' + index"
-            v-bind:class="{ 'font-weight-bold': score == 100, 'alert-success': score > 80, 'alert-warning': score > 40 && score <= 80, 'alert-danger': score <= 40 }">
+            v-bind:class="{ 'font-weight-bold': score != null && score == 100,
+                            'alert-success': score != null && score > 80,
+                            'alert-warning': score != null && score > 40 && score <= 80,
+                            'alert-danger': score != null && score <= 40 }">
           {{ score == null ? "–" : score }}
         </td>
       </tr>
@@ -90,8 +93,9 @@ export default {
     this.init()
   },
 
-  updated () {
+  beforeRouteUpdate (to, from, next) {
     this.init()
+    next()
   },
 
   methods: {

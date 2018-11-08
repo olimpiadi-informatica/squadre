@@ -32,11 +32,12 @@
         <th class="align-middle text-center">To finals</th>
         <th class="align-middle text-center">Score</th>
         <th class="text-center"
-            v-for="(contest, index) in remote.contests"
+            v-for="contest in remote.contests"
             v-bind:contest="contest"
-            v-bind:key="contest.name"
-            v-if="index != 4">
-          <span class="score-header d-inline-block align-middle text-truncate">{{ contest.name }}</span>
+            v-bind:key="contest.name">
+          <span class="score-header d-inline-block align-middle text-truncate">
+            {{ 'Σ ' + contest.name }}
+          </span>
         </th>
       </tr>
 
@@ -58,7 +59,10 @@
             v-for="(score, index) in row.rounds"
             v-bind:score="score"
             v-bind:key="row.id + '_' + index"
-            v-bind:class="{ 'alert-success': score == 100, 'alert-warning': score > 40 && score < 100, 'alert-danger': score <= 40 }">
+            v-bind:class="{ 'font-weight-bold': score != null && score == 700,
+                            'alert-success': score != null && Math.floor(score * 100 / 700) > 80,
+                            'alert-warning': score != null && Math.floor(score * 100 / 700) > 40 && Math.floor(score * 100 / 700) <= 80,
+                            'alert-danger': score != null && Math.floor(score * 100 / 700) <= 40 }">
           {{ score == null ? "–" : score }}
         </td>
       </tr>
@@ -79,6 +83,11 @@ export default {
 
   created () {
     this.init()
+  },
+
+  beforeRouteUpdate (to, from, next) {
+    this.init()
+    next()
   },
 
   methods: {
