@@ -67,7 +67,7 @@
             v-for="(score, index) in row.scores"
             v-bind:score="score"
             v-bind:key="row.id + '_' + index"
-            v-bind:class="{ 'alert-success': score == 100, 'alert-warning': score > 40 && score < 100, 'alert-danger': score <= 40 }">
+            v-bind:class="{ 'font-weight-bold': score == 100, 'alert-success': score > 80, 'alert-warning': score > 40 && score <= 80, 'alert-danger': score <= 40 }">
           {{ score == null ? "–" : score }}
         </td>
       </tr>
@@ -87,6 +87,10 @@ export default {
   },
 
   created () {
+    this.init()
+  },
+
+  updated () {
     this.init()
   },
 
