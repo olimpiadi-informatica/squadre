@@ -115,7 +115,7 @@ export default {
       let query = this.searchQuery.toLowerCase()
 
       return ranking.filter(function (row) {
-        return row.team.toLowerCase().indexOf(query) >= 0 ||
+        return row.name.toLowerCase().indexOf(query) >= 0 ||
                row.fullregion.toLowerCase().indexOf(query) >= 0 ||
                row.institute.toLowerCase().indexOf(query) >= 0
       })
