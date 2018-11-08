@@ -1,3 +1,6 @@
+# don't push the JSON data because it's 20+ MB
+public/json/*
+
 .DS_Store
 node_modules
 /dist
