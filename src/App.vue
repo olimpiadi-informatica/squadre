@@ -1,28 +1,35 @@
 <template>
-  <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <img style="width: 6rem;" class="navbar-brand" src="./assets/logo.png"/>
+
+      <div class="collapse navbar-collapse">
+        <ul class="navbar-nav mr-auto">
+          <router-link class="nav-item" tag="li" to="/" active-class="active" exact="true">
+            <a class="nav-link">Home</a>
+          </router-link>
+          <router-link class="nav-item" tag="li" to="/edition" active-class="active">
+            <a class="nav-link">Editions</a>
+          </router-link>
+          <router-link class="nav-item" tag="li" to="/region" active-class="active">
+            <a class="nav-link">Regions</a>
+          </router-link>
+          <router-link class="nav-item" tag="li" to="/school" active-class="active">
+            <a class="nav-link">Schools</a>
+          </router-link>
+        </ul>
+      </div>
+    </nav>
+
+    <router-view/>
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
-
 export default {
-  name: 'app',
-  components: {
-    HelloWorld
-  }
+  name: 'App'
 }
 </script>
 
-<style>
-#app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
+<style scoped>
 </style>
