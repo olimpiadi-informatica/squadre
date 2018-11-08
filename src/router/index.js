@@ -4,6 +4,8 @@ import RoundRanking from '@/components/RoundRanking'
 import EditionRanking from '@/components/EditionRanking'
 import Editions from '@/components/Editions'
 import Homepage from '@/components/Homepage'
+import Regions from '@/components/Regions'
+import Schools from '@/components/Schools'
 
 Vue.use(Router)
 
@@ -28,6 +30,16 @@ export default new Router({
       path: '/edition/:editionId/round/:roundId',
       name: 'RoundRanking',
       component: RoundRanking
+    },
+    {
+      path: '/region',
+      name: 'Regions',
+      component: Regions
+    },
+    {
+      path: '/school',
+      name: 'Schools',
+      component: Schools
     }
   ]
 })

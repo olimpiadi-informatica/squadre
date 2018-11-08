@@ -6,23 +6,25 @@
           <router-link to="/edition">Editions</router-link>
         </li>
         <li class="breadcrumb-item">
-          <span v-if="!roundData">Loading...</span>
-          <router-link v-bind:to="/edition/ + parseInt(roundData.edition)">{{ roundData.edition }}</router-link>
+          <span v-if="!remote">Loading...</span>
+          <router-link v-bind:to="/edition/ + parseInt(remote.edition)">{{ remote.edition }}</router-link>
         </li>
         <li class="breadcrumb-item active" aria-current="page">
-          <span v-if="!roundData">Loading...</span>
-          <span v-else>{{ roundData.title }}</span>
+          <span v-if="!remote">Loading...</span>
+          <span v-else>{{ remote.title }}</span>
         </li>
       </ol>
     </nav>
 
-    <h1 class="mt-3">
-      OIS —
-      <span v-if="!roundData">Loading...</span>
-      <span v-else>{{ roundData.edition + ", " + roundData.title }}</span>
-    </h1>
+    <div class="btn-group btn-group-lg" role="group" aria-label="Rounds">
+      <router-link active-class="active" class="btn btn-primary" to="../round/1">Round 1</router-link>
+      <router-link active-class="active" class="btn btn-primary" to="../round/2">Round 2</router-link>
+      <router-link active-class="active" class="btn btn-primary" to="../round/3">Round 3</router-link>
+      <router-link active-class="active" class="btn btn-primary" to="../round/4">Round 4</router-link>
+      <router-link active-class="active" class="btn btn-success" to="../round/final">Final Round</router-link>
+    </div>
 
-    <div class="input-group col-4 mb-3 p-0">
+    <div class="input-group col-4 mb-3 mt-3 p-0">
       <div class="input-group-prepend">
         <span class="input-group-text" id="basic-addon1">🔍</span>
       </div>
@@ -30,7 +32,7 @@
               v-model="searchQuery">
     </div>
 
-    <div v-if="!roundData">
+    <div v-if="!remote">
         Loading...
     </div>
     <table class="table table-sm table-responsive-lg mt-3" v-else>
@@ -41,18 +43,18 @@
         <th class="align-middle text-center">Region</th>
         <th class="align-middle text-center">Score</th>
         <th class="text-center"
-            v-for="task in roundData.tasks"
+            v-for="task in remote.tasks"
             v-bind:task="task"
             v-bind:key="task.name">
           <span class="score-header d-inline-block align-middle text-truncate">{{ task.name }}</span>
         </th>
       </tr>
 
-      <tr v-for="row in filterQuery(roundData.ranking)"
+      <tr v-for="row in filterQuery(remote.ranking)"
           v-bind:row="row"
           v-bind:key="row.id">
         <td class="align-middle">{{ row.rank }}</td>
-        <td class="align-middle font-weight-bold">{{ row.team }}</td>
+        <td class="align-middle font-weight-bold">{{ row.name }}</td>
         <td class="align-middle font-italic"><small>{{ row.institute }}</small></td>
         <td class="align-middle text-center">
           <img style="height: 2rem" :src="'/flags/' + row.region + '.png'">
@@ -79,7 +81,7 @@ export default {
 
   data () {
     return {
-      roundData: null,
+      remote: null,
       searchQuery: null
     }
   },
@@ -93,11 +95,10 @@ export default {
       // fetch JSON data for the round
       fetch(new Request('/json/edition.' + this.$route.params.editionId + '.round.' + this.$route.params.roundId + '.json'), { method: 'GET' }).then((data) => {
         data.json().then((data) => {
-          this.roundData = data
+          this.remote = data
 
           // outside of "app" scope, so it needs to be done manually
-          document.title = document.title.replace('{{pageName}}',
-            this.roundData.title + ' ranking, ' + this.roundData.edition)
+          document.title = this.remote.title + ' ranking, ' + this.remote.edition + ' ­— OIS'
         })
       })
     },

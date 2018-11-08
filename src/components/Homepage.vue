@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <h1 class="mt-3">IIOT — Open Contests 2018/19</h1>
+    <h1 class="mt-3">OIS 2018/19</h1>
     <p>To access the active contest, click:</p>
     <a href="/contest/" class="btn btn-primary btn-lg">Current contest</a>
 
@@ -10,7 +10,7 @@
       <tr>
         <th>Contest</th>
         <th>Date</th>
-        <th>Times</th>
+        <th>Time</th>
       </tr>
       <tr>
         <td>1st contest</td>

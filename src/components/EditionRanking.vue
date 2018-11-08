@@ -12,18 +12,12 @@
       </ol>
     </nav>
 
-    <h1 class="mt-3">
-      OIS —
-      <span v-if="!remote">Loading...</span>
-      <span v-else>{{ remote.title }}</span>
-    </h1>
-
     <div class="input-group col-4 mb-3 p-0">
       <div class="input-group-prepend">
         <span class="input-group-text" id="basic-addon1">🔍</span>
       </div>
       <input type="text" class="form-control" placeholder="Search" aria-label="Search" aria-describedby="basic-addon1"
-              v-model="searchQuery">
+          v-model="searchQuery">
     </div>
 
     <div v-if="!remote">
@@ -35,35 +29,36 @@
         <th class="align-middle">Team</th>
         <th class="align-middle">Institute</th>
         <th class="align-middle text-center">Region</th>
+        <th class="align-middle text-center">To finals</th>
         <th class="align-middle text-center">Score</th>
         <th class="text-center"
             v-for="(contest, index) in remote.contests"
             v-bind:contest="contest"
-            v-bind:key="contest"
+            v-bind:key="contest.name"
             v-if="index != 4">
-          <span class="score-header d-inline-block align-middle text-truncate">{{ contest }}</span>
+          <span class="score-header d-inline-block align-middle text-truncate">{{ contest.name }}</span>
         </th>
       </tr>
 
-      <tr v-for="row in filterQuery(remote.ranking)"
+      <tr v-for="row in filterQuery(remote.rounds)"
           v-bind:row="row"
           v-bind:key="row.id">
-        <td class="align-middle">{{ row.rank }}</td>
+        <td class="align-middle">{{ row.rank_tot }}</td>
         <td class="align-middle font-weight-bold">{{ row.name }}</td>
         <td class="align-middle font-italic"><small>{{ row.institute }}</small></td>
         <td class="align-middle text-center">
-          <img style="height: 2rem" :src="'/flags/' + row.region + '.png'">
+          <img style="height: 2rem" :title='row.fullregion' :src="'/flags/' + row.region + '.png'">
         </td>
+        <td class="align-middle text-center">{{ row.final ? "🏆" : "" }}</td>
         <td class="align-middle font-weight-bold text-center">
-          {{ row.scores[4] }}
+          {{ row.total }}
         </td>
 
         <td class="align-middle text-center"
-            v-for="(score, index) in row.scores"
+            v-for="(score, index) in row.rounds"
             v-bind:score="score"
             v-bind:key="row.id + '_' + index"
-            v-bind:class="{ 'alert-success': score == 100, 'alert-warning': score > 40 && score < 100, 'alert-danger': score <= 40 }"
-            v-if="index != 4">
+            v-bind:class="{ 'alert-success': score == 100, 'alert-warning': score > 40 && score < 100, 'alert-danger': score <= 40 }">
           {{ score == null ? "–" : score }}
         </td>
       </tr>
@@ -106,7 +101,7 @@ export default {
       let query = this.searchQuery.toLowerCase()
 
       return ranking.filter(function (row) {
-        return row.team.toLowerCase().indexOf(query) >= 0 ||
+        return row.name.toLowerCase().indexOf(query) >= 0 ||
                row.fullregion.toLowerCase().indexOf(query) >= 0 ||
                row.institute.toLowerCase().indexOf(query) >= 0
       })
