@@ -59,10 +59,10 @@
             v-for="(score, index) in row.rounds"
             v-bind:score="score"
             v-bind:key="row.id + '_' + index"
-            v-bind:class="{ 'font-weight-bold': score != null && score == 700,
-                            'alert-success': score != null && Math.floor(score * 100 / 700) > 80,
-                            'alert-warning': score != null && Math.floor(score * 100 / 700) > 40 && Math.floor(score * 100 / 700) <= 80,
-                            'alert-danger': score != null && Math.floor(score * 100 / 700) <= 40 }">
+            v-bind:class="{ 'font-weight-bold': score != null && score == remote.max_contest_score,
+                            'alert-success': score != null && Math.floor(score * 100 / remote.max_contest_score) > 80,
+                            'alert-warning': score != null && Math.floor(score * 100 / remote.max_contest_score) > 40 && Math.floor(score * 100 / remote.max_contest_score) <= 80,
+                            'alert-danger': score != null && Math.floor(score * 100 / remote.max_contest_score) <= 40 }">
           {{ score == null ? "–" : score }}
         </td>
       </tr>
@@ -96,6 +96,7 @@ export default {
       fetch(new Request('/json/edition.' + this.$route.params.editionId + '.json'), { method: 'GET' }).then((data) => {
         data.json().then((data) => {
           this.remote = data
+          this.remote.max_contest_score = data.fullscore / data.contests.length
 
           document.title = this.remote.title + ' ranking — OIS'
         })
