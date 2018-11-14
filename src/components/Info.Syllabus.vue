@@ -14,12 +14,17 @@
 
     <div class="mb-4 p-5 bg-white rounded text-justify"
         style="box-shadow: 0 0 2rem rgba(0,0,0,.175); font-size: larger;">
-      <a class="float-right btn btn-success" href="/resources/syllabus.pdf" download>
+      <router-link class="btn btn-outline-primary" to="/info">
+        <font-awesome-icon icon="arrow-left" />
+        Back
+      </router-link>
+
+      <a class="ml-2 btn btn-success" href="/resources/syllabus.pdf" download>
         <font-awesome-icon icon="file-pdf" />
         Download PDF
       </a>
 
-      <h2>Syllabus</h2>
+      <h2 class="mt-3">Syllabus</h2>
       <h3>Olimpiadi di Informatica a Squadre</h3>
 
       <h6>Revisione: 10 settembre 2018</h6>

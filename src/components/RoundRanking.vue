@@ -52,12 +52,12 @@
 
       <tr v-for="row in filterQuery(remote.ranking)"
           v-bind:row="row"
-          v-bind:key="row.id">
+          v-bind:key="row.team.id">
         <td class="align-middle">{{ row.rank }}</td>
-        <td class="align-middle font-weight-bold">{{ row.name }}</td>
-        <td class="align-middle font-italic"><small>{{ row.institute }}</small></td>
+        <td class="align-middle font-weight-bold">{{ row.team.name }}</td>
+        <td class="align-middle font-italic"><small>{{ row.team.institute }}</small></td>
         <td class="align-middle text-center">
-          <img style="height: 2rem" :title='row.fullregion' :src="'/flags/' + row.region + '.png'">
+          <img style="height: 2rem" :title='row.team.fullregion' :src="'/flags/' + row.team.region + '.png'">
         </td>
         <td class="align-middle font-weight-bold text-center">
           {{ row.total }}
@@ -124,9 +124,9 @@ export default {
       let query = this.searchQuery.toLowerCase()
 
       return ranking.filter(function (row) {
-        return row.name.toLowerCase().indexOf(query) >= 0 ||
-               row.fullregion.toLowerCase().indexOf(query) >= 0 ||
-               row.institute.toLowerCase().indexOf(query) >= 0
+        return row.team.name.toLowerCase().indexOf(query) >= 0 ||
+               row.team.fullregion.toLowerCase().indexOf(query) >= 0 ||
+               row.team.institute.toLowerCase().indexOf(query) >= 0
       })
     }
   }

@@ -1,15 +1,14 @@
 <template>
   <div class="container">
-    <nav class="mt-3" aria-label="breadcrumb">
-      <ol class="breadcrumb">
-        <li class="breadcrumb-item">
-          <router-link to="/">Home</router-link>
-        </li>
-        <li class="breadcrumb-item active" aria-current="page">Info</li>
-      </ol>
-    </nav>
-
     <h1 class="mt-3">Italian Team Olympiads in Informatics</h1>
+
+    <blockquote class="blockquote">
+      <p class="mb-0 ml-2">Website: <a href="http://oisquadre.it/" target="_blank">
+        http://oisquadre.it/
+        <font-awesome-icon icon="external-link-alt" />
+      </a></p>
+    </blockquote>
+
     <p>
       The <i>Olimpiadi di Informatica a Squadre (OIS)</i> aims to be a
       <strong>team-oriented</strong> version of the already-existing Italian

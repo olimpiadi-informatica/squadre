@@ -14,12 +14,17 @@
 
     <div class="mb-4 p-5 bg-white rounded text-justify"
         style="box-shadow: 0 0 2rem rgba(0,0,0,.175); font-size: larger;">
-      <a class="float-right btn btn-success" href="/resources/regolamento.pdf" download>
+      <router-link class="btn btn-outline-primary" to="/info">
+        <font-awesome-icon icon="arrow-left" />
+        Back
+      </router-link>
+
+      <a class="ml-2 btn btn-success" href="/resources/regolamento.pdf" download>
         <font-awesome-icon icon="file-pdf" />
         Download PDF
       </a>
 
-      <h3>REGOLAMENTO CAMPIONATO ITALIANO</h3>
+      <h3 class="mt-3">REGOLAMENTO CAMPIONATO ITALIANO</h3>
       <h3>OLIMPIADI DI INFORMATICA A SQUADRE</h3>
 
       <p>

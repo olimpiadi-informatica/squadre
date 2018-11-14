@@ -2,7 +2,6 @@ import Vue from 'vue'
 import Router from 'vue-router'
 import RoundRanking from '@/components/RoundRanking'
 import EditionRanking from '@/components/EditionRanking'
-import Editions from '@/components/Editions'
 import Homepage from '@/components/Homepage'
 import Info from '@/components/Info'
 import InfoRules from '@/components/Info.Rules'
@@ -11,6 +10,9 @@ import Regions from '@/components/Regions'
 import Schools from '@/components/Schools'
 
 Vue.use(Router)
+
+// This should be changed to reflect the most recent edition available
+var LATEST_EDITION_ID = 10
 
 export default new Router({
   mode: process.env.NODE_ENV === 'production' ? 'history' : 'hash',
@@ -37,8 +39,7 @@ export default new Router({
     },
     {
       path: '/edition',
-      name: 'Editions',
-      component: Editions
+      redirect: '/edition/' + LATEST_EDITION_ID
     },
     {
       path: '/edition/:editionId',

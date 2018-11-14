@@ -12,18 +12,64 @@
       </ol>
     </nav> -->
 
-    <div class="card-group mb-3">
+    <nav aria-label="Navigation between editions" class="row container">
+      <span class="font-weight-light" style="font-size: x-large">
+        Edition:
+      </span>
+
+      <ul class="pagination ml-2 mb-0">
+        <router-link class="page-item" aria-label="Previous" tag="li"
+            v-bind:class="{ 'disabled': $route.params.editionId === '6' }"
+            :to="'/edition/' + (parseInt($route.params.editionId) - 1)">
+          <a class="page-link">
+            <span aria-hidden="true">&laquo;</span>
+            <span class="sr-only">Previous</span>
+          </a>
+        </router-link>
+
+        <router-link class="page-item" to="/edition/6" tag="li" active-class="active">
+          <a class="page-link">6</a>
+        </router-link>
+
+        <router-link class="page-item" to="/edition/7" tag="li" active-class="active">
+          <a class="page-link">7</a>
+        </router-link>
+
+        <router-link class="page-item" to="/edition/8" tag="li" active-class="active">
+          <a class="page-link">8</a>
+        </router-link>
+
+        <router-link class="page-item" to="/edition/9" tag="li" active-class="active">
+          <a class="page-link">9</a>
+        </router-link>
+
+        <router-link class="page-item" to="/edition/10" tag="li" active-class="active">
+          <a class="page-link">10</a>
+        </router-link>
+
+        <router-link class="page-item" aria-label="Next" tag="li"
+            v-bind:class="{ 'disabled': $route.params.editionId === '10' }"
+            :to="'/edition/' + (parseInt($route.params.editionId) + 1)">
+          <a class="page-link">
+            <span aria-hidden="true">&raquo;</span>
+            <span class="sr-only">Next</span>
+          </a>
+        </router-link>
+      </ul>
+    </nav>
+
+
+    <div class="card-group mb-3 mt-2">
       <div class="card bg-light">
         <div class="card-body">
           <h5 class="card-title">OIS {{ remote.year }}</h5>
           <h6 class="card-subtitle mb-2 text-muted">{{ remote.title }}</h6>
 
           <p class="card-text">
-            <abbr>{{ remote.rounds.length }} teams</abbr>
-            participated in this edition of the OIS. The region with the highest
-            number of participating teams was <a href="#">Abruzzo</a>. The task
-            with the highest number of full score solutions was <a
-            href="#">numpad</a>.
+            {{ remote.rounds.length }} teams participated in this edition of the
+            OIS. The region with the highest number of participating teams was
+            <a href="#">Abruzzo</a>. The task with the highest number of full
+            score solutions was <a href="#">numpad</a>.
           </p>
 
           <h6 class="card-subtitle mb-2 text-muted">Individual rounds:</h6>
@@ -155,9 +201,9 @@ export default {
       let query = this.searchQuery.toLowerCase()
 
       return ranking.filter(function (row) {
-        return row.name.toLowerCase().indexOf(query) >= 0 ||
-               row.fullregion.toLowerCase().indexOf(query) >= 0 ||
-               row.institute.toLowerCase().indexOf(query) >= 0
+        return row.team.name.toLowerCase().indexOf(query) >= 0 ||
+               row.team.fullregion.toLowerCase().indexOf(query) >= 0 ||
+               row.team.institute.toLowerCase().indexOf(query) >= 0
       })
     }
   }

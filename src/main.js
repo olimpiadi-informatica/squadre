@@ -7,10 +7,10 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 // start of FontAwesome support
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faCertificate, faExternalLinkAlt, faFileAlt, faFilePdf, faBookOpen } from '@fortawesome/free-solid-svg-icons'
+import { faCertificate, faExternalLinkAlt, faFileAlt, faFilePdf, faBookOpen, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-library.add(faCertificate, faExternalLinkAlt, faFileAlt, faFilePdf, faBookOpen)
+library.add(faCertificate, faExternalLinkAlt, faFileAlt, faFilePdf, faBookOpen, faArrowLeft)
 
 Vue.component('font-awesome-icon', FontAwesomeIcon)
 // end of FontAwesome support
