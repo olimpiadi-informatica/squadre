@@ -1,6 +1,6 @@
 <template>
   <div class="mr-5 ml-5 mt-3">
-    <nav aria-label="breadcrumb" class="mt-3">
+    <!-- <nav aria-label="breadcrumb" class="mt-3">
       <ol class="breadcrumb">
         <li class="breadcrumb-item">
           <router-link to="/edition">Editions</router-link>
@@ -10,7 +10,45 @@
           <span v-else>{{ remote.title }}</span>
         </li>
       </ol>
-    </nav>
+    </nav> -->
+
+    <div class="card-group mb-3">
+      <div class="card bg-light">
+        <div class="card-body">
+          <h5 class="card-title">OIS {{ remote.year }}</h5>
+          <h6 class="card-subtitle mb-2 text-muted">{{ remote.title }}</h6>
+
+          <p class="card-text">
+            <abbr>{{ Math.floor(Math.random() * 1000) }} teams</abbr>
+            participated in this edition of the OIS. The region with the highest
+            number of participating teams was <a href="#">Abruzzo</a>. The task
+            with the highest number of full score solutions was <a
+            href="#">numpad</a>.
+          </p>
+
+          <h6 class="card-subtitle mb-2 text-muted">Individual rounds:</h6>
+          <div class="btn-group" role="group" aria-label="Rounds">
+            <router-link class="btn btn-outline-primary" :to="'round/' + parseInt(contest.name.slice(5))"
+                v-for="contest in remote.contests"
+                v-bind:contest="contest"
+                v-bind:key="contest.name"
+                v-bind:class="{ 'disabled': contest.tasks == null }">
+              {{ contest.title }}
+            </router-link>
+          </div>
+        </div>
+      </div>
+
+      <div class="card bg-light">
+        <div class="card-body col-6">
+          <h5 class="card-title">Final Round</h5>
+          <p class="card-text">8th February 2019</p>
+          <p>100 teams</p>
+          <a href="#" class="card-link">Card link</a>
+          <a href="#" class="card-link">Another link</a>
+        </div>
+      </div>
+    </div>
 
     <div class="input-group col-4 mb-3 p-0">
       <div class="input-group-prepend">
@@ -50,7 +88,9 @@
         <td class="align-middle text-center">
           <img style="height: 2rem" :title='row.fullregion' :src="'/flags/' + row.region + '.png'">
         </td>
-        <td class="align-middle text-center">{{ row.final ? "🏆" : "" }}</td>
+        <td class="align-middle text-center">
+          <font-awesome-icon v-if="row.final" icon="certificate" style="color: goldenrod" />
+        </td>
         <td class="align-middle font-weight-bold text-center">
           {{ row.total }}
         </td>
@@ -96,7 +136,7 @@ export default {
       fetch(new Request('/json/edition.' + this.$route.params.editionId + '.json'), { method: 'GET' }).then((data) => {
         data.json().then((data) => {
           this.remote = data
-          this.remote.max_contest_score = data.fullscore / data.contests.length
+          this.remote.max_contest_score = data.fullscore / (data.contests.length + 1)
 
           document.title = this.remote.title + ' ranking — OIS'
         })

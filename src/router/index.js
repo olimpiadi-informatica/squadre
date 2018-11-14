@@ -4,6 +4,9 @@ import RoundRanking from '@/components/RoundRanking'
 import EditionRanking from '@/components/EditionRanking'
 import Editions from '@/components/Editions'
 import Homepage from '@/components/Homepage'
+import Info from '@/components/Info'
+import InfoRules from '@/components/Info.Rules'
+import InfoSyllabus from '@/components/Info.Syllabus'
 import Regions from '@/components/Regions'
 import Schools from '@/components/Schools'
 
@@ -16,6 +19,21 @@ export default new Router({
       path: '/',
       name: 'Homepage',
       component: Homepage
+    },
+    {
+      path: '/info',
+      name: 'Info',
+      component: Info
+    },
+    {
+      path: '/info/rules',
+      name: 'Info.Rules',
+      component: InfoRules
+    },
+    {
+      path: '/info/syllabus',
+      name: 'Info.Syllabus',
+      component: InfoSyllabus
     },
     {
       path: '/edition',
