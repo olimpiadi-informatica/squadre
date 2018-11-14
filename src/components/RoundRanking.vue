@@ -93,10 +93,15 @@ export default {
     this.init()
   },
 
-  beforeRouteUpdate (to, from, next) {
-    this.init()
-    next()
+  watch: {
+    // call again the method if the route changes
+    '$route': 'init'
   },
+
+  // beforeRouteUpdate (to, from, next) {
+  //   this.init()
+  //   next()
+  // },
 
   methods: {
     init: function () {

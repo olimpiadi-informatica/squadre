@@ -19,7 +19,7 @@
           <h6 class="card-subtitle mb-2 text-muted">{{ remote.title }}</h6>
 
           <p class="card-text">
-            <abbr>{{ Math.floor(Math.random() * 1000) }} teams</abbr>
+            <abbr>{{ remote.rounds.length }} teams</abbr>
             participated in this edition of the OIS. The region with the highest
             number of participating teams was <a href="#">Abruzzo</a>. The task
             with the highest number of full score solutions was <a
@@ -81,15 +81,15 @@
 
       <tr v-for="row in filterQuery(remote.rounds)"
           v-bind:row="row"
-          v-bind:key="row.id">
+          v-bind:key="row.team.id">
         <td class="align-middle">{{ row.rank_tot }}</td>
-        <td class="align-middle font-weight-bold">{{ row.name }}</td>
-        <td class="align-middle font-italic"><small>{{ row.institute }}</small></td>
+        <td class="align-middle font-weight-bold">{{ row.team.name }}</td>
+        <td class="align-middle font-italic"><small>{{ row.team.institute }}</small></td>
         <td class="align-middle text-center">
-          <img style="height: 2rem" :title='row.fullregion' :src="'/flags/' + row.region + '.png'">
+          <img style="height: 2rem" :title='row.team.fullregion' :src="'/flags/' + row.team.region + '.png'">
         </td>
         <td class="align-middle text-center">
-          <font-awesome-icon v-if="row.final" icon="certificate" style="color: goldenrod" />
+          <font-awesome-icon v-if="row.team.finalist === true" icon="certificate" style="color: goldenrod" />
         </td>
         <td class="align-middle font-weight-bold text-center">
           {{ row.total }}
@@ -99,10 +99,10 @@
             v-for="(score, index) in row.rounds"
             v-bind:score="score"
             v-bind:key="row.id + '_' + index"
-            v-bind:class="{ 'font-weight-bold': score != null && score == remote.max_contest_score,
-                            'alert-success': score != null && Math.floor(score * 100 / remote.max_contest_score) > 80,
-                            'alert-warning': score != null && Math.floor(score * 100 / remote.max_contest_score) > 40 && Math.floor(score * 100 / remote.max_contest_score) <= 80,
-                            'alert-danger': score != null && Math.floor(score * 100 / remote.max_contest_score) <= 40 }">
+            v-bind:class="{ 'font-weight-bold': score != null && score == remote.contests[index].fullscore,
+                            'alert-success': score != null && Math.floor(score * 100 / remote.contests[index].fullscore) > 80,
+                            'alert-warning': score != null && Math.floor(score * 100 / remote.contests[index].fullscore) > 40 && Math.floor(score * 100 / remote.contests[index].fullscore) <= 80,
+                            'alert-danger': score != null && Math.floor(score * 100 / remote.contests[index].fullscore) <= 40 }">
           {{ score == null ? "–" : score }}
         </td>
       </tr>
@@ -125,10 +125,15 @@ export default {
     this.init()
   },
 
-  beforeRouteUpdate (to, from, next) {
-    this.init()
-    next()
+  watch: {
+    // call again the method if the route changes
+    '$route': 'init'
   },
+
+  // beforeRouteUpdate (to, from, next) {
+  //   this.init()
+  //   next()
+  // },
 
   methods: {
     init: function () {
@@ -136,7 +141,6 @@ export default {
       fetch(new Request('/json/edition.' + this.$route.params.editionId + '.json'), { method: 'GET' }).then((data) => {
         data.json().then((data) => {
           this.remote = data
-          this.remote.max_contest_score = data.fullscore / (data.contests.length + 1)
 
           document.title = this.remote.title + ' ranking — OIS'
         })
