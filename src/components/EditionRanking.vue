@@ -28,7 +28,7 @@
 
           <h6 class="card-subtitle mb-2 text-muted">Individual rounds:</h6>
           <div class="btn-group" role="group" aria-label="Rounds">
-            <router-link class="btn btn-outline-primary" :to="'round/' + parseInt(contest.name.slice(5))"
+            <router-link class="btn btn-outline-primary" :to="'/edition/' + $route.params.editionId + '/round/' + parseInt(contest.name.slice(5))"
                 v-for="contest in remote.contests"
                 v-bind:contest="contest"
                 v-bind:key="contest.name"

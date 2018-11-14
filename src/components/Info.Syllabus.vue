@@ -80,10 +80,10 @@
           Visite di grafi (BFS, DFS)
         </li>
         <li>
-          Algoritmi di ordinamento efficienti (sort o qsort)
+          Algoritmi di ordinamento efficienti (<code>sort</code> o <code>qsort</code>)
         </li>
         <li>
-          Contenitori (set, map)
+          Contenitori (<code>set</code>, <code>map</code>)
         </li>
         <li>
           Problemi di ottimizzazione approssimata (tipo machine learning)
