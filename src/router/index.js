@@ -3,9 +3,9 @@ import Router from 'vue-router'
 import RoundRanking from '@/components/RoundRanking'
 import EditionRanking from '@/components/EditionRanking'
 import Homepage from '@/components/Homepage'
-import Info from '@/components/Info'
-import InfoRules from '@/components/Info.Rules'
-import InfoSyllabus from '@/components/Info.Syllabus'
+import About from '@/components/About'
+import AboutRules from '@/components/About.Rules'
+import AboutSyllabus from '@/components/About.Syllabus'
 import Regions from '@/components/Regions'
 import Schools from '@/components/Schools'
 
@@ -23,19 +23,19 @@ export default new Router({
       component: Homepage
     },
     {
-      path: '/info',
-      name: 'Info',
-      component: Info
+      path: '/about',
+      name: 'About',
+      component: About
     },
     {
-      path: '/info/rules',
-      name: 'Info.Rules',
-      component: InfoRules
+      path: '/about/rules',
+      name: 'About.Rules',
+      component: AboutRules
     },
     {
-      path: '/info/syllabus',
-      name: 'Info.Syllabus',
-      component: InfoSyllabus
+      path: '/about/syllabus',
+      name: 'About.Syllabus',
+      component: AboutSyllabus
     },
     {
       path: '/edition',

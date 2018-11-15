@@ -98,7 +98,9 @@
 
     <div class="input-group col-4 mb-3 p-0">
       <div class="input-group-prepend">
-        <span class="input-group-text" id="basic-addon1">🔍</span>
+        <span class="input-group-text" id="basic-addon1">
+          <font-awesome-icon icon="search" />
+        </span>
       </div>
       <input type="text" class="form-control" placeholder="Search" aria-label="Search" aria-describedby="basic-addon1"
           v-model="searchQuery">

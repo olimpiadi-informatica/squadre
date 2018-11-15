@@ -48,12 +48,12 @@
       </a> system, hosted on the OII servers.
     </p>
 
-    <router-link to="/info/rules" class="btn btn-info btn-lg">
+    <router-link to="/about/rules" class="btn btn-info btn-lg">
       <font-awesome-icon icon="file-alt" />
       Rules and Regulations
     </router-link>
 
-    <router-link to="/info/syllabus" class="btn btn-info btn-lg ml-2">
+    <router-link to="/about/syllabus" class="btn btn-info btn-lg ml-2">
       <font-awesome-icon icon="book-open" />
       Syllabus
     </router-link>
@@ -62,7 +62,7 @@
 
 <script>
 export default {
-  name: 'Infopage',
+  name: 'About',
 }
 </script>
 

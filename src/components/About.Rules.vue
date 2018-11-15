@@ -6,7 +6,7 @@
           <router-link to="/">Home</router-link>
         </li>
         <li class="breadcrumb-item">
-          <router-link to="/info">Info</router-link>
+          <router-link to="/about">About</router-link>
         </li>
         <li class="breadcrumb-item active" aria-current="page">Rules and Regulations</li>
       </ol>
@@ -14,7 +14,7 @@
 
     <div class="mb-4 p-5 bg-white rounded text-justify"
         style="box-shadow: 0 0 2rem rgba(0,0,0,.175); font-size: larger;">
-      <router-link class="btn btn-outline-primary" to="/info">
+      <router-link class="btn btn-outline-primary" to="/about">
         <font-awesome-icon icon="arrow-left" />
         Back
       </router-link>
@@ -271,7 +271,7 @@
 
 <script>
 export default {
-  name: 'InfoRules',
+  name: 'AboutRules',
 }
 </script>
 

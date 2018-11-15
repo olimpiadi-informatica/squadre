@@ -14,8 +14,8 @@
           <router-link class="nav-item" tag="li" to="/" active-class="active" :exact="true">
             <a class="nav-link">Home</a>
           </router-link>
-          <router-link class="nav-item" tag="li" to="/info" active-class="active">
-            <a class="nav-link">Info</a>
+          <router-link class="nav-item" tag="li" to="/about" active-class="active">
+            <a class="nav-link">About</a>
           </router-link>
           <router-link class="nav-item" tag="li" to="/edition" active-class="active">
             <a class="nav-link">Editions</a>
