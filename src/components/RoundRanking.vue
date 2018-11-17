@@ -1,27 +1,36 @@
 <template>
   <div class="mr-5 ml-5 mt-3">
-    <nav aria-label="breadcrumb" class="mt-3">
-      <ol class="breadcrumb">
-        <li class="breadcrumb-item">
-          <router-link to="/edition">Editions</router-link>
-        </li>
-        <li class="breadcrumb-item">
-          <span v-if="!remote">Loading...</span>
-          <router-link v-bind:to="/edition/ + parseInt(remote.edition)">{{ remote.edition }}</router-link>
-        </li>
-        <li class="breadcrumb-item active" aria-current="page">
-          <span v-if="!remote">Loading...</span>
-          <span v-else>{{ remote.title }}</span>
-        </li>
-      </ol>
-    </nav>
+    <div class="row">
+      <div class="col-lg-6">
+        <h4>
+          <router-link :to="'/edition/' + $route.params.editionId">
+            OIS {{ remote.edition }}
+          </router-link> — {{ remote.title }}
+        </h4>
 
-    <div class="btn-group btn-group-lg" role="group" aria-label="Rounds">
-      <router-link active-class="active" class="btn btn-primary" to="../round/1">Round 1</router-link>
-      <router-link active-class="active" class="btn btn-primary" to="../round/2">Round 2</router-link>
-      <router-link active-class="active" class="btn btn-primary" to="../round/3">Round 3</router-link>
-      <router-link active-class="active" class="btn btn-primary" to="../round/4">Round 4</router-link>
-      <router-link active-class="active" class="btn btn-success" to="../round/final">Final Round</router-link>
+        <!-- <h6 class="card-subtitle mb-2 text-muted">Rounds:</h6> -->
+        <div class="btn-group" role="group" aria-label="Rounds">
+          <router-link class="btn btn-outline-primary" :to="'/edition/' + $route.params.editionId + '/round/' + i"
+              v-for="i in [1, 2, 3, 4]"
+              v-bind:key="i"
+              v-bind:class="{ 'active': i == parseInt($route.params.roundId) }">
+            Round {{ i }}
+          </router-link>
+
+          <router-link class="btn btn-outline-success" :to="'/edition/' + $route.params.editionId + '/round/final'">
+            Final Round
+          </router-link>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <h5 class="card-title">Tasks</h5>
+
+        <a class="btn btn-link" href="#"
+            v-for="t in remote.tasks" v-bind:key="t.name">
+          {{ t.name }}
+        </a>
+      </div>
     </div>
 
     <div class="input-group col-4 mb-3 mt-3 p-0">
@@ -37,7 +46,7 @@
     <div v-if="!remote">
         Loading...
     </div>
-    <table class="table table-sm table-responsive-lg mt-3" v-else>
+    <table class="table table-sm table-responsive-lg table-borderless mt-3" v-else>
       <tr class="text-uppercase" style="font-size: small;">
         <th class="align-middle">#</th>
         <th class="align-middle">Team</th>
@@ -138,6 +147,15 @@ export default {
 <style scoped>
 th {
   font-family: monospace;
+  border-color: #d9d9d9;
+  border-style: solid;
+  border-width: 1px 0 1px 0;
+}
+th:first-child {
+  border-left-width: 1px;
+}
+th:last-child {
+  border-right-width: 1px;
 }
 
 th:hover {

@@ -1,17 +1,5 @@
 <template>
   <div class="mr-5 ml-5 mt-3">
-    <!-- <nav aria-label="breadcrumb" class="mt-3">
-      <ol class="breadcrumb">
-        <li class="breadcrumb-item">
-          <router-link to="/edition">Editions</router-link>
-        </li>
-        <li class="breadcrumb-item active" aria-current="page">
-          <span v-if="!remote">Loading...</span>
-          <span v-else>{{ remote.title }}</span>
-        </li>
-      </ol>
-    </nav> -->
-
     <nav aria-label="Navigation between editions" class="row container">
       <span class="font-weight-light" style="font-size: x-large">
         Edition:
@@ -58,18 +46,17 @@
       </ul>
     </nav>
 
-
     <div class="card-group mb-3 mt-2">
       <div class="card bg-light">
         <div class="card-body">
           <h5 class="card-title">OIS {{ remote.year }}</h5>
-          <h6 class="card-subtitle mb-2 text-muted">{{ remote.title }}</h6>
 
           <p class="card-text">
             {{ remote.rounds.length }} teams participated in this edition of the
-            OIS. The region with the highest number of participating teams was
+            OIS.
+            <!-- The region with the highest number of participating teams was
             <a href="#">Abruzzo</a>. The task with the highest number of full
-            score solutions was <a href="#">numpad</a>.
+            score solutions was <a href="#">numpad</a>. -->
           </p>
 
           <h6 class="card-subtitle mb-2 text-muted">Individual rounds:</h6>
@@ -81,17 +68,31 @@
                 v-bind:class="{ 'disabled': contest.tasks == null }">
               {{ contest.title }}
             </router-link>
+
+            <router-link class="btn btn-outline-success" :to="'/edition/' + $route.params.editionId + '/round/final'">
+              Final Round
+            </router-link>
           </div>
         </div>
       </div>
 
       <div class="card bg-light">
-        <div class="card-body col-6">
-          <h5 class="card-title">Final Round</h5>
-          <p class="card-text">8th February 2019</p>
-          <p>100 teams</p>
-          <a href="#" class="card-link">Card link</a>
-          <a href="#" class="card-link">Another link</a>
+        <div class="card-body">
+          <h5 class="card-title">Winner</h5>
+
+          <p>The top 3 teams at the finals of the {{ remote.title }} were:</p>
+
+          <ol class="mb-0" v-if="remote.final != null">
+            <li v-for="row in remote.final.ranking.slice(0, 3)" v-bind:key="row.team.id">
+              <mark>{{ row.team.name }}</mark> from {{ row.team.institute }}
+            </li>
+          </ol>
+
+          <ol v-else>
+            <li></li>
+            <li></li>
+            <li></li>
+          </ol>
         </div>
       </div>
     </div>
