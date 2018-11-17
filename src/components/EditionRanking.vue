@@ -110,7 +110,7 @@
     <div v-if="!remote">
         Loading...
     </div>
-    <table class="table table-sm table-responsive-lg mt-3" v-else>
+    <table class="table table-sm table-responsive-lg table-borderless mt-3" v-else>
       <tr class="text-uppercase" style="font-size: small;">
         <th class="align-middle">#</th>
         <th class="align-middle">Team</th>
@@ -216,6 +216,15 @@ export default {
 <style scoped>
 th {
   font-family: monospace;
+  border-color: #d9d9d9;
+  border-style: solid;
+  border-width: 1px 0 1px 0;
+}
+th:first-child {
+  border-left-width: 1px;
+}
+th:last-child {
+  border-right-width: 1px;
 }
 
 th:hover {
