@@ -18,7 +18,7 @@
             <a class="nav-link">About</a>
           </router-link>
           <router-link class="nav-item" tag="li" to="/edition" active-class="active">
-            <a class="nav-link">Editions</a>
+            <a class="nav-link">Scoreboard</a>
           </router-link>
           <router-link class="nav-item" tag="li" to="/region" active-class="active">
             <a class="nav-link">Regions</a>

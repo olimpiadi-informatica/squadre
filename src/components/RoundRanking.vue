@@ -1,11 +1,10 @@
 <template>
-  <div class="mr-5 ml-5 mt-3">
-    <div class="row">
-      <div class="col-lg-6">
+  <div class="mt-3">
+    <div class="row ml-3 mr-3">
+      <div class="col-lg-6 p-0">
         <h4>
           <router-link :to="'/edition/' + $route.params.editionId">
-            OIS {{ remote.edition }}
-          </router-link> — {{ remote.title }}
+            OIS {{ remote.edition }}</router-link> — {{ remote.title }}
         </h4>
 
         <!-- <h6 class="card-subtitle mb-2 text-muted">Rounds:</h6> -->
@@ -17,13 +16,14 @@
             Round {{ i }}
           </router-link>
 
-          <router-link class="btn btn-outline-success" :to="'/edition/' + $route.params.editionId + '/round/final'">
+          <router-link class="btn btn-outline-success" :to="'/edition/' + $route.params.editionId + '/round/final'"
+              v-bind:class="{ 'active': 'final' === $route.params.roundId }">
             Final Round
           </router-link>
         </div>
       </div>
 
-      <div class="col-lg-6">
+      <div class="col-lg-6 p-0">
         <h5 class="card-title">Tasks</h5>
 
         <a class="btn btn-link" href="#"
@@ -33,7 +33,7 @@
       </div>
     </div>
 
-    <div class="input-group col-4 mb-3 mt-3 p-0">
+    <div class="input-group col-4 m-3 p-0">
       <div class="input-group-prepend">
         <span class="input-group-text" id="basic-addon1">
           <font-awesome-icon icon="search" />
@@ -46,45 +46,49 @@
     <div v-if="!remote">
         Loading...
     </div>
-    <table class="table table-sm table-responsive-lg table-borderless mt-3" v-else>
-      <tr class="text-uppercase" style="font-size: small;">
-        <th class="align-middle">#</th>
-        <th class="align-middle">Team</th>
-        <th class="align-middle">Institute</th>
-        <th class="align-middle text-center">Region</th>
-        <th class="align-middle text-center">Score</th>
-        <th class="text-center"
-            v-for="task in remote.tasks"
-            v-bind:task="task"
-            v-bind:key="task.name">
-          <span class="score-header d-inline-block align-middle text-truncate">{{ task.name }}</span>
-        </th>
-      </tr>
+    <table class="table table-sm table-responsive-lg table-borderless table-striped mt-3" v-else>
+      <thead>
+        <tr class="text-uppercase" style="font-size: small;">
+          <th class="align-middle text-center">Rank</th>
+          <th class="align-middle">Team</th>
+          <th class="align-middle">Institute</th>
+          <th class="align-middle text-center">Region</th>
+          <th class="align-middle text-center">Score</th>
+          <th class="text-center"
+              v-for="task in remote.tasks"
+              v-bind:task="task"
+              v-bind:key="task.name">
+            <span class="score-header d-inline-block align-middle text-truncate">{{ task.name }}</span>
+          </th>
+        </tr>
+      </thead>
 
-      <tr v-for="row in filterQuery(remote.ranking)"
-          v-bind:row="row"
-          v-bind:key="row.team.id">
-        <td class="align-middle">{{ row.rank }}</td>
-        <td class="align-middle font-weight-bold">{{ row.team.name }}</td>
-        <td class="align-middle font-italic"><small>{{ row.team.institute }}</small></td>
-        <td class="align-middle text-center">
-          <img style="height: 2rem" :title='row.team.fullregion' :src="'/flags/' + row.team.region + '.png'">
-        </td>
-        <td class="align-middle font-weight-bold text-center">
-          {{ row.total }}
-        </td>
+      <tbody>
+        <tr v-for="row in filterQuery(remote.ranking)"
+            v-bind:row="row"
+            v-bind:key="row.team.id">
+          <td class="align-middle text-center">{{ row.rank }}</td>
+          <td class="align-middle font-weight-bold">{{ row.team.name }}</td>
+          <td class="align-middle font-italic"><small>{{ row.team.institute }}</small></td>
+          <td class="align-middle text-center">
+            <img style="height: 2rem" :title='row.team.fullregion' :src="'/flags/' + row.team.region + '.png'">
+          </td>
+          <td class="align-middle font-weight-bold text-center">
+            {{ row.total }}
+          </td>
 
-        <td class="align-middle text-center"
-            v-for="(score, index) in row.scores"
-            v-bind:score="score"
-            v-bind:key="row.id + '_' + index"
-            v-bind:class="{ 'font-weight-bold': score != null && score == 100,
-                            'alert-success': score != null && score > 80,
-                            'alert-warning': score != null && score > 40 && score <= 80,
-                            'alert-danger': score != null && score <= 40 }">
-          {{ score == null ? "–" : score }}
-        </td>
-      </tr>
+          <td class="align-middle text-center"
+              v-for="(score, index) in row.scores"
+              v-bind:score="score"
+              v-bind:key="row.id + '_' + index"
+              v-bind:class="{ 'font-weight-bold': score != null && score == 100,
+                              'alert-success': score != null && score > 80,
+                              'alert-warning': score != null && score > 40 && score <= 80,
+                              'alert-danger': score != null && score <= 40 }">
+            {{ score == null ? "–" : score }}
+          </td>
+        </tr>
+      </tbody>
     </table>
   </div>
 </template>
@@ -147,15 +151,9 @@ export default {
 <style scoped>
 th {
   font-family: monospace;
-  border-color: #d9d9d9;
-  border-style: solid;
-  border-width: 1px 0 1px 0;
-}
-th:first-child {
-  border-left-width: 1px;
-}
-th:last-child {
-  border-right-width: 1px;
+  border-color: #d9d9d9 !important;
+  border-style: solid !important;
+  border-width: 1px 0 1px 0 !important;
 }
 
 th:hover {

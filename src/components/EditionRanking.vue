@@ -1,7 +1,7 @@
 <template>
-  <div class="mr-5 ml-5 mt-3">
+  <div class="mt-3">
     <nav aria-label="Navigation between editions" class="row container">
-      <span class="font-weight-light" style="font-size: x-large">
+      <span class="font-weight-light ml-3" style="font-size: x-large">
         Edition:
       </span>
 
@@ -46,7 +46,7 @@
       </ul>
     </nav>
 
-    <div class="card-group mb-3 mt-2">
+    <div class="card-group m-3">
       <div class="card bg-light">
         <div class="card-body">
           <h5 class="card-title">OIS {{ remote.year }}</h5>
@@ -80,7 +80,7 @@
         <div class="card-body">
           <h5 class="card-title">Winner</h5>
 
-          <p>The top 3 teams at the finals of the {{ remote.title }} were:</p>
+          <p>The top 3 teams at the <strong>finals</strong> of the {{ remote.title }} were:</p>
 
           <ol class="mb-0" v-if="remote.final != null">
             <li v-for="row in remote.final.ranking.slice(0, 3)" v-bind:key="row.team.id">
@@ -97,7 +97,7 @@
       </div>
     </div>
 
-    <div class="input-group col-4 mb-3 p-0">
+    <div class="input-group col-4 m-3 p-0">
       <div class="input-group-prepend">
         <span class="input-group-text" id="basic-addon1">
           <font-awesome-icon icon="search" />
@@ -110,9 +110,10 @@
     <div v-if="!remote">
         Loading...
     </div>
-    <table class="table table-sm table-responsive-lg table-borderless mt-3" v-else>
+    <table class="table table-sm table-responsive-lg table-striped table-borderless mt-3" v-else>
+      <thead>
       <tr class="text-uppercase" style="font-size: small;">
-        <th class="align-middle">#</th>
+        <th class="align-middle text-center">Rank</th>
         <th class="align-middle">Team</th>
         <th class="align-middle">Institute</th>
         <th class="align-middle text-center">Region</th>
@@ -127,11 +128,13 @@
           </span>
         </th>
       </tr>
+      </thead>
 
+      <tbody>
       <tr v-for="row in filterQuery(remote.rounds)"
           v-bind:row="row"
           v-bind:key="row.team.id">
-        <td class="align-middle">{{ row.rank_tot }}</td>
+        <td class="align-middle text-center">{{ row.rank_tot }}</td>
         <td class="align-middle font-weight-bold">{{ row.team.name }}</td>
         <td class="align-middle font-italic"><small>{{ row.team.institute }}</small></td>
         <td class="align-middle text-center">
@@ -151,10 +154,12 @@
             v-bind:class="{ 'font-weight-bold': score != null && score == remote.contests[index].fullscore,
                             'alert-success': score != null && Math.floor(score * 100 / remote.contests[index].fullscore) > 80,
                             'alert-warning': score != null && Math.floor(score * 100 / remote.contests[index].fullscore) > 40 && Math.floor(score * 100 / remote.contests[index].fullscore) <= 80,
-                            'alert-danger': score != null && Math.floor(score * 100 / remote.contests[index].fullscore) <= 40 }">
+                            'alert-danger': score != null && Math.floor(score * 100 / remote.contests[index].fullscore) <= 40,
+                            'bg-light': score == null }">
           {{ score == null ? "–" : score }}
         </td>
       </tr>
+      </tbody>
     </table>
   </div>
 </template>
@@ -216,15 +221,9 @@ export default {
 <style scoped>
 th {
   font-family: monospace;
-  border-color: #d9d9d9;
-  border-style: solid;
-  border-width: 1px 0 1px 0;
-}
-th:first-child {
-  border-left-width: 1px;
-}
-th:last-child {
-  border-right-width: 1px;
+  border-color: #d9d9d9 !important;
+  border-style: solid !important;
+  border-width: 1px 0 1px 0 !important;
 }
 
 th:hover {
