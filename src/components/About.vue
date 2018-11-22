@@ -42,7 +42,7 @@
       <strong>staff</strong> and <strong>resources</strong> so that, from the
       6th edition the OIS, the project started running its own contests using
       beautiful and original tasks and grading students' submission with the
-      open source <a href="http://cms-dev.github.io/">
+      open source <a href="http://cms-dev.github.io/" target="_blank">
         CMS
         <font-awesome-icon icon="external-link-alt" />
       </a> system, hosted on the OII servers.
