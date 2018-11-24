@@ -6,9 +6,9 @@ import Vue from 'vue'
 import App from './App'
 import router from './router'
 
+// set up Google Analytics plugin
+import VueAnalytics from 'vue-analytics'
 if (process.env.NODE_ENV === 'production') {
-  // set up Google Analytics plugin
-  import VueAnalytics from 'vue-analytics'
   Vue.use(VueAnalytics, {
     id: 'UA-70826003-4',
     router
