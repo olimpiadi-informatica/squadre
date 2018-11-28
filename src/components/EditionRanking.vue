@@ -89,7 +89,7 @@
             </li>
           </ol>
 
-          <ol v-else>
+          <ol class="mb-0" v-else>
             <li></li>
             <li></li>
             <li></li>
