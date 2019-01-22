@@ -59,7 +59,7 @@
       <tr>
         <td>Final contest</td>
         <td>8th February 2019</td>
-        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?iso=20190208T11&p1=215&ah=3">11:00 - 14:00 (GMT+1)</a></td>
+        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?iso=20190208T13&p1=215&ah=3">13:00 - 16:00 (GMT+1)</a></td>
       </tr>
     </table>
   </div>
