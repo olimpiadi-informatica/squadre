@@ -13,13 +13,13 @@
               v-for="i in [1, 2, 3, 4]"
               v-bind:key="i"
               v-bind:class="{ 'active': i == parseInt($route.params.roundId),
-                              'disabled': $route.params.editionId === '10' && i > 2 }">
+                              'disabled': $route.params.editionId === '11' && i > 0 }">
             Round {{ i }}
           </router-link>
 
           <router-link class="btn btn-outline-success" :to="'/edition/' + $route.params.editionId + '/round/final'"
               v-bind:class="{ 'active': 'final' === $route.params.roundId,
-                              'disabled': $route.params.editionId === '10' }">
+                              'disabled': $route.params.editionId === '11' }">
             Final Round
           </router-link>
         </div>
