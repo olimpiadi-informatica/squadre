@@ -31,10 +31,10 @@
 
     <script>
         $(document).ready(function() {
-            if (window.location.pathname.endsWith("2/"))
-                $("#contest-name").text("IIOT — Open Contests 2018/19");
+            if (window.location.host.startsWith("mirror"))
+                $("#contest-name").text("IIOT — Open Contests 2019/20");
             else
-                $("#contest-name").text("OIS 2018/19");
+                $("#contest-name").text("OIS 2019/20");
         });
     </script>
   </body>
