@@ -70,7 +70,7 @@
             </router-link>
 
             <router-link class="btn btn-outline-success" :to="'/edition/' + $route.params.editionId + '/round/final'"
-                v-bind:class="{ 'disabled': $route.params.editionId == '10' }">
+                v-bind:class="{ 'disabled': $route.params.editionId == '11' }">
               Final Round
             </router-link>
           </div>
