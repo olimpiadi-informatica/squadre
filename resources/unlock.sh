@@ -1,7 +1,8 @@
 #!/bin/sh -e
 
 WS="159.149.129.94"
-DOMAIN="gara.squadre.olinfo.it"
+DOMAIN="squadre.olinfo.it"  # usiamo vecchio dominio per retrocompatibilita'
+                            # tanto sed cancella lo stesso la cosa giusta
 
 IPTABLES="/sbin/iptables"
 
