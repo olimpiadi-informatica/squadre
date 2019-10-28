@@ -1,0 +1,20 @@
+#!/bin/sh -e
+
+WS="131.114.2.138"
+DOMAIN="squadre.olinfo.it"
+
+IPTABLES="/sbin/iptables"
+
+$IPTABLES -P INPUT DROP
+$IPTABLES -P OUTPUT DROP
+$IPTABLES -P FORWARD DROP
+
+$IPTABLES -A INPUT -i lo -j ACCEPT
+$IPTABLES -A OUTPUT -o lo -j ACCEPT
+
+$IPTABLES -A OUTPUT -d $WS -p tcp -j ACCEPT
+
+$IPTABLES -A OUTPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+$IPTABLES -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+echo $WS $DOMAIN >> /etc/hosts
