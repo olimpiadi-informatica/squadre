@@ -60,6 +60,36 @@ export default new Router({
       path: '/school',
       name: 'Schools',
       component: Schools
+    },
+    {
+      path: '/contest',
+      beforeEnter() {
+        location.href = 'https://gara.squadre.olinfo.it';
+      }
+    },
+    {
+      path: '/contest2',
+      beforeEnter() {
+        location.href = 'https://mirror.squadre.olinfo.it';
+      }
+    },
+    {
+      path: '/contest/documentation',
+      beforeEnter() {
+        location.href = 'https://gara.squadre.olinfo.it';
+      }
+    },
+    {
+      path: '/ranking',
+      beforeEnter() {
+        location.href = 'https://gara.squadre.olinfo.it/ranking';
+      }
+    },
+    {
+      path: '/ranking2',
+      beforeEnter() {
+        location.href = 'https://mirror.squadre.olinfo.it/ranking';
+      }
     }
   ]
 })
