@@ -90,6 +90,12 @@ export default new Router({
       beforeEnter() {
         location.href = 'https://mirror.squadre.olinfo.it/ranking';
       }
+    },
+    {
+      path: '/check',
+      beforeEnter() {
+        location.href = 'https://gara.squadre.olinfo.it/check';
+      }
     }
   ]
 })
