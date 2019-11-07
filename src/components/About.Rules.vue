@@ -52,7 +52,8 @@
           Italiane di Informatica Individuali (di seguito “OII”) per lo stesso
           anno scolastico, ciò per permettere ai propri studenti, in caso di
           vittoria nella gara finale nella propria regione, di accedere
-          direttamente con un codice scuola delle OII delle Territoriali.
+          direttamente con un codice scuola delle OII delle Territoriali
+          secondo quanto disposto dal regolamento delle OII.
         </li>
 
         <li>
@@ -195,6 +196,10 @@
               Che non sia possibile per le squadre comunicare tra di loro e quindi
               copiarsi le soluzioni ai problemi.
             </li>
+
+            <li>
+              Che le porte USB dei PC siano disabilitate.
+            </li>
           </ol>
         </li>
 
@@ -240,25 +245,40 @@
         </li>
 
         <li>
-          La/e prima/e una o due squadre che si classificheranno nella Gara Finale
-          parteciperanno, rappresentando l'Italia, alle Olimpiadi Internazionali
-          di Informatica a Squadre (di seguito “IIOT”) di quell'anno scolastico.
-          Verrà comunicato dalla nazione ospitante il numero delle squadre
-          partecipanti per ogni Stato (questo ovviamente per una questione di
-          disponibilità finanziaria per promuovere l'evento).
+          La prima squadra classificata nella Gara Finale parteciperà,
+          rappresentando l'Italia, alle Olimpiadi Internazionali
+          di Informatica a Squadre (di seguito “IIOT”) di quell'anno scolastico
+          secondo quanto disposto dal regolamento delle IIOT.
         </li>
 
         <li>
           Nel caso in cui alle IIOT una o più squadre italiane ottengano una
           qualsiasi medaglia (oro, argento o bronzo) la squadra che otterrà la
           migliore medaglia accederà direttamente alla selezione nazionale delle
-          OII dell'anno solare in corso.
+          OII dell'anno solare in corso, secondo quanto disposto dal regolamento
+          delle OII.
         </li>
 
         <li>
           In caso di parità verrà selezionata la squadra che comprende il maggior
           numero di studentesse, in seconda opzione la squadra che presenta l’età
           media dei propri studenti, misurata in giorni, più alta.
+        </li>
+
+        <li>
+          Per incentivare la partecipazione di studenti anche più giovani al
+          campionato, contemporaneamente alle 4 gare online si svolgerà un mini
+          campionato parallelo riservato agli studenti iscritti in una classe
+          del primo biennio degli Istituti di Secondo Grado da svolgersi sulla
+          piattaforma “mirror” che permetterà loro di gareggiare utilizzando anche
+          il linguaggio di programmazione Phyton. Le iscrizioni, il regolamento,
+          le squadre e le gare avranno gli stessi requisiti del campionato
+          ufficiale (eccetto l'età e la classe frequentata dagli atleti
+          partecipanti), ma i loro risultati rientreranno in una classifica
+          separata. Al termine delle 4 gare online la squadra che avrà ottenuto il
+          miglior risultato nazionale nel mini campionato riceverà un
+          riconoscimento nel corso della cerimonia di premiazione della Gara
+          Finale in presenza del campionato ufficiale.
         </li>
       </ol>
 
