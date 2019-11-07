@@ -27,16 +27,16 @@
       <h2 class="mt-3">Syllabus</h2>
       <h3>Olimpiadi di Informatica a Squadre</h3>
 
-      <h6>Revisione: 10 settembre 2018</h6>
+      <h6>Versione 2 — 19 maggio 2019</h6>
 
-      <h3 class="mt-5">Livello 1 — Programmazione di base</h3>
+      <h3 class="mt-5">Livello 1</h3>
 
       <ul>
         <li>
-          Tipi di dato primitivo (e.g. <code>int</code>, <code>char</code>, <code>double</code>)
+          Tipi di dato primitivo (e.g. <code>int</code>, <code>char</code>, <code>double</code>, <code>bool</code>)
         </li>
         <li>
-          Array mono-dimensionali (e.g. <code>int[]</code>, <code>char[]</code>, <code>double[]</code>)
+          Array mono-dimensionali (e.g. <code>int[]</code>, <code>char[]</code>, <code>double[]</code>, <code>bool[]</code>)
         </li>
         <li>
           Branching (costrutti <code>if</code>/<code>else</code>)
@@ -46,40 +46,49 @@
         </li>
       </ul>
 
-      <h3 class="mt-3">Livello 2 — Strutture dati di base</h3>
+      <h3 class="mt-3">Livello 2</h3>
 
       <ul>
         <li>
-          Array multi-dimensionali
-        </li>
-        <li>
-          Cicli illimitati (costrutto <code>while</code>)
-        </li>
-        <li>
-          Funzioni e ricorsione (esaustiva)
+          Array multi-dimensionali (e.g. <code>​int[][]​</code>)
         </li>
         <li>
           Strutture dati coda e pila
         </li>
         <li>
-          Vettori dinamici (<code>vector</code>)
+          Cicli illimitati (costrutto <code>while</code>)
         </li>
         <li>
-          Aritmetica modulare (e.g. calcolo del MCD)
+          Funzioni e ricorsione esaustiva (e.g. elencare le permutazioni)
         </li>
         <li>
-          Geometria euclidea (e.g. teorema di Pitagora, prodotto scalare)
+          Ricerca binaria
+        </li>
+        <li>
+          Algoritmi di ordinamento quadratici (e.g. bubble sort) 
+        </li>
+        <li>
+          Stringhe e ricerca quadratica di una sottostringa in una stringa
+        </li>
+        <li>
+          Algoritmo di Euclide per il massimo comun divisore
+        </li>
+        <li>
+          Concetti base di geometria e aritmetica
         </li>
       </ul>
 
-      <h3 class="mt-3">Livello 3 — Tecniche algoritmiche</h3>
+      <h3 class="mt-3">Livello 3</h3>
 
       <ul>
+        <li>
+          Contenitori standard (e.g. <code>​vector​</code>,​ <code>set​</code>,​ <code>map</code>​)
+        </li>
         <li>
           Divide et impera
         </li>
         <li>
-          Programmazione dinamica
+          Programmazione dinamica su array mono- o multi-dimensionali
         </li>
         <li>
           Visite di grafi (BFS, DFS)
@@ -88,16 +97,40 @@
           Algoritmi di ordinamento efficienti (<code>sort</code> o <code>qsort</code>)
         </li>
         <li>
-          Contenitori (<code>set</code>, <code>map</code>)
-        </li>
-        <li>
-          Problemi di ottimizzazione approssimata (tipo machine learning)
+          Ottimizzazione approssimata tramite tecniche euristiche
         </li>
       </ul>
 
-      <h3 class="mt-3">Livello 4 — Altri argomenti nel Syllabus IOI</h3>
+      <h3 class="mt-3">Livello 4</h3>
 
-      <h3 class="mt-3">Livello 5 — Altri argomenti fuori dal Syllabus IOI</h3>
+      <ul>
+        <li>
+          Struttura dati union-find per insiemi disgiunti
+        </li>
+        <li>
+          Strutture dati per query su range
+        </li>
+        <li>
+          Minimo antenato comune su alberi
+        </li>
+        <li>
+          Algoritmi su grafi: cammini minimi, albero ricoprente
+        </li>
+        <li>
+          Programmazione dinamica su grafi aciclici
+        </li>
+        <li>
+          Backtracking (algoritmi branch and bound)
+        </li>
+      </ul>
+
+      <h3 class="mt-3">Livello 5</h3>
+
+      <ul>
+        <li>
+          Tutti gli argomenti non menzionati nei livelli precedenti
+        </li>
+      </ul>
     </div>
   </div>
 </template>
