@@ -35,8 +35,12 @@
           <a class="page-link">10</a>
         </router-link>
 
+        <router-link class="page-item" to="/edition/11" tag="li" active-class="active">
+          <a class="page-link">11</a>
+        </router-link>
+
         <router-link class="page-item" aria-label="Next" tag="li"
-            v-bind:class="{ 'disabled': $route.params.editionId === '10' }"
+            v-bind:class="{ 'disabled': $route.params.editionId === '11' }"
             :to="'/edition/' + (parseInt($route.params.editionId) + 1)">
           <a class="page-link">
             <span aria-hidden="true">&raquo;</span>

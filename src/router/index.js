@@ -12,7 +12,7 @@ import Schools from '@/components/Schools'
 Vue.use(Router)
 
 // This should be changed to reflect the most recent edition available
-var LATEST_EDITION_ID = 10
+var LATEST_EDITION_ID = 11
 
 export default new Router({
   mode: process.env.NODE_ENV === 'production' ? 'history' : 'hash',
