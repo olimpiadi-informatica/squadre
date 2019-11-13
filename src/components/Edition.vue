@@ -139,12 +139,18 @@
       <tr v-for="row in filterQuery(remote.rounds)"
           v-bind:row="row"
           v-bind:key="row.team.id">
-        <td class="align-middle text-center">{{ row.rank_tot }}</td>
-        <td class="align-middle font-weight-bold">{{ row.team.name }}</td>
-        <td class="align-middle font-italic"><small>{{ row.team.institute }}</small></td>
-        <td class="align-middle text-center">
-          <img style="height: 2rem" :title='row.team.fullregion' :src="'/flags/' + row.team.region + '.png'">
-        </td>
+          <td class="align-middle text-center">{{ row.rank_tot }}</td>
+          <td class="align-middle font-weight-bold">
+            <router-link :to="'/edition/' + remote.id + '/team/' + row.team.id" active-class="active">{{ row.team.name }}</router-link>
+          </td>
+          <td class="align-middle font-italic"><small>
+            <router-link :to="'/region/' + row.team.region + '/' + row.team.inst_id" active-class="active">{{ row.team.institute }}</router-link>
+          </small></td>
+          <td class="align-middle text-center">
+            <router-link :to="'/region/' + row.team.region" active-class="active">
+              <img style="height: 2rem" :title='row.team.fullregion' :src="'/flags/' + row.team.region + '.png'">
+            </router-link>
+          </td>
         <td class="align-middle text-center">
           <font-awesome-icon v-if="row.team.finalist === true" icon="certificate" style="color: goldenrod" />
         </td>
@@ -171,7 +177,7 @@
 
 <script>
 export default {
-  name: 'EditionRanking',
+  name: 'Edition',
 
   data () {
     return {
@@ -201,7 +207,7 @@ export default {
         data.json().then((data) => {
           this.remote = data
 
-          document.title = this.remote.title + ' ranking — OIS'
+          document.title = this.remote.title + ' — OIS'
         })
       })
     },

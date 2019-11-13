@@ -1,12 +1,12 @@
 <template>
-  <div class="mt-3">
+  <div class="container">
     <div class="card-group m-3">
       <div class="card bg-light">
         <div class="card-body">
-          <h5 class="card-title">OIS Regions</h5>
+          <h5 class="card-title">OIS Editions</h5>
 
           <p class="card-text">
-            {{ remote.teams }} teams from {{ remote.institutes }} institutes participated in all OIS editions.
+            {{ remote.teams }} teams participated in all OIS editions.
           </p>
           <p class="card-text">
             Overall, {{ remote.points }} points were scored on {{ remote.tasks }} tasks.
@@ -18,31 +18,10 @@
         <div class="card-body">
           <h5 class="card-title">Interesting facts</h5>
           <ol class="mb-0">
-            <li>
-              <router-link :to="'/region/' + bigRegion.id" active-class="active">
-                <a>{{ bigRegion.name }}</a>
-              </router-link>
-              is the region with the most participating schools ({{ bigRegion.instnum }}), teams ({{ bigRegion.teams }}) and overall points ({{ bigRegion.points }}).
-            </li>
-            <li>
-              <router-link :to="'/region/' + bestRegion.id" active-class="active">
-                <a>{{ bestRegion.name }}</a>
-              </router-link>
-              is the region with highest average ranking of its institutes ({{ bestRegion.bestavgrank }}).
-            </li>
+            <li>some things</li>
           </ol>
         </div>
       </div>
-    </div>
-
-    <div class="input-group col-4 m-3 p-0">
-      <div class="input-group-prepend">
-        <span class="input-group-text" id="basic-addon1">
-          <font-awesome-icon icon="search" />
-        </span>
-      </div>
-      <input type="text" class="form-control" placeholder="Search" aria-label="Search" aria-describedby="basic-addon1"
-          v-model="searchQuery">
     </div>
 
     <div v-if="!remote">
@@ -51,34 +30,34 @@
     <table class="table table-sm table-responsive-lg table-striped table-borderless mt-3" v-else>
       <thead>
       <tr class="text-uppercase" style="font-size: small;">
-        <th class="align-middle text-center"></th>
-        <th class="align-middle text-center">Region</th>
-        <th class="align-middle text-center">Participations</th>
+        <th class="align-middle text-center">Edition</th>
+        <th class="align-middle text-center">Year</th>
         <th class="align-middle text-center">Schools</th>
         <th class="align-middle text-center">Teams</th>
-        <th class="align-middle text-center">Medals</th>
-        <th class="align-middle text-center">Ranking</th>
-        <th class="align-middle text-center">Points</th>
+        <th class="align-middle text-center">Tasks</th>
+        <th class="align-middle text-center">Fullscore</th>
+        <th class="align-middle text-center">Highest</th>
+        <th class="align-middle text-center">Average</th>
+        <th class="align-middle text-center">Total</th>
       </tr>
       </thead>
 
       <tbody>
-      <tr v-for="row in filterQuery(remote.regions)"
+      <tr v-for="row in remote.editions"
           v-bind:row="row"
           v-bind:key="row.id">
         <td class="align-middle text-center">
-          <img style="height: 2rem" :title='row.id' :src="'/flags/' + row.id + '.png'">
-        </td>
-        <td class="align-middle text-center">
-          <router-link :to="'/region/' + row.id" active-class="active">
-            <a>{{ row.name }}</a>
+          <router-link :to="'/edition/' + row.id" active-class="active">
+            <a>{{ row.title }}</a>
           </router-link>
         </td>
-        <td class="align-middle text-center">{{ row.participations }}</td>
+        <td class="align-middle text-center">{{ row.year }}</td>
         <td class="align-middle text-center">{{ row.instnum }}</td>
         <td class="align-middle text-center">{{ row.teams }}</td>
-        <td class="align-middle text-center">{{ row.medals }}</td>
-        <td class="align-middle text-center">{{ row.bestavgrank }}</td>
+        <td class="align-middle text-center">{{ row.tasks }}</td>
+        <td class="align-middle text-center">{{ row.fullscore }}</td>
+        <td class="align-middle text-center">{{ row.highest }}</td>
+        <td class="align-middle text-center">{{ row.average }}</td>
         <td class="align-middle text-center">{{ row.points }}</td>
       </tr>
       </tbody>
@@ -88,14 +67,12 @@
 
 <script>
 export default {
-  name: 'Regions',
+  name: 'Editions',
 
   data () {
     return {
       remote: null,
       searchQuery: null,
-      bigRegion : null,
-      bestRegion : null
     }
   },
 
@@ -111,12 +88,10 @@ export default {
   methods: {
     init: function () {
       // fetch JSON data for the regions
-      fetch(new Request('/json/region.json'), { method: 'GET' }).then((data) => {
+      fetch(new Request('/json/edition.json'), { method: 'GET' }).then((data) => {
         data.json().then((data) => {
           this.remote = data
-          this.bigRegion = this.getQuery(data.regions, 'emi')
-          this.bestRegion = this.getQuery(data.regions, 'sic')
-          document.title = 'Regions — OIS'
+          document.title = 'Editions — OIS'
         })
       })
     },

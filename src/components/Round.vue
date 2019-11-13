@@ -26,12 +26,7 @@
       </div>
 
       <div class="col-lg-6 p-0">
-        <h5 class="card-title">Tasks</h5>
-
-        <a class="btn btn-link" href="#"
-            v-for="t in remote.tasks" v-bind:key="t.name">
-          {{ t.name }}
-        </a>
+        <h5 class="card-title">Interesting facts</h5>
       </div>
     </div>
 
@@ -60,7 +55,9 @@
               v-for="task in remote.tasks"
               v-bind:task="task"
               v-bind:key="task.name">
-            <span class="score-header d-inline-block align-middle text-truncate">{{ task.name }}</span>
+            <span class="score-header d-inline-block align-middle text-truncate">
+              <router-link :to="'/edition/' + remote.ed_num + '/round/' + remote.id + '/' + task.name" active-class="active">{{ task.name }}</router-link>
+            </span>
           </th>
         </tr>
       </thead>
@@ -70,10 +67,16 @@
             v-bind:row="row"
             v-bind:key="row.team.id">
           <td class="align-middle text-center">{{ row.rank }}</td>
-          <td class="align-middle font-weight-bold">{{ row.team.name }}</td>
-          <td class="align-middle font-italic"><small>{{ row.team.institute }}</small></td>
+          <td class="align-middle font-weight-bold">
+            <router-link :to="'/edition/' + remote.ed_num + '/team/' + row.team.id" active-class="active">{{ row.team.name }}</router-link>
+          </td>
+          <td class="align-middle font-italic"><small>
+            <router-link :to="'/region/' + row.team.region + '/' + row.team.inst_id" active-class="active">{{ row.team.institute }}</router-link>
+          </small></td>
           <td class="align-middle text-center">
-            <img style="height: 2rem" :title='row.team.fullregion' :src="'/flags/' + row.team.region + '.png'">
+            <router-link :to="'/region/' + row.team.region" active-class="active">
+              <img style="height: 2rem" :title='row.team.fullregion' :src="'/flags/' + row.team.region + '.png'">
+            </router-link>
           </td>
           <td class="align-middle font-weight-bold text-center">
             {{ row.total }}
@@ -97,7 +100,7 @@
 
 <script>
 export default {
-  name: 'RoundRanking',
+  name: 'Round',
 
   data () {
     return {
@@ -128,7 +131,7 @@ export default {
           this.remote = data
 
           // outside of "app" scope, so it needs to be done manually
-          document.title = this.remote.title + ' ranking, ' + this.remote.edition + ' ­— OIS'
+          document.title = this.remote.title + ', ' + this.remote.edition + ' ­— OIS'
         })
       })
     },

@@ -1,18 +1,19 @@
 import Vue from 'vue'
 import Router from 'vue-router'
-import RoundRanking from '@/components/RoundRanking'
-import EditionRanking from '@/components/EditionRanking'
 import Homepage from '@/components/Homepage'
 import About from '@/components/About'
 import AboutRules from '@/components/About.Rules'
 import AboutSyllabus from '@/components/About.Syllabus'
+import Editions from '@/components/Editions'
+import Edition from '@/components/Edition'
+import Round from '@/components/Round'
+import Task from '@/components/Task'
+import Team from '@/components/Team'
 import Regions from '@/components/Regions'
-import Schools from '@/components/Schools'
+import Region from '@/components/Region'
+import School from '@/components/School'
 
 Vue.use(Router)
-
-// This should be changed to reflect the most recent edition available
-var LATEST_EDITION_ID = 11
 
 export default new Router({
   mode: process.env.NODE_ENV === 'production' ? 'history' : 'hash',
@@ -39,17 +40,28 @@ export default new Router({
     },
     {
       path: '/edition',
-      redirect: '/edition/' + LATEST_EDITION_ID
+      name: 'Editions',
+      component: Editions
     },
     {
       path: '/edition/:editionId',
-      name: 'EditionRanking',
-      component: EditionRanking
+      name: 'Edition',
+      component: Edition
     },
     {
       path: '/edition/:editionId/round/:roundId',
-      name: 'RoundRanking',
-      component: RoundRanking
+      name: 'Round',
+      component: Round
+    },
+    {
+      path: '/edition/:editionId/round/:roundId/:taskId',
+      name: 'Task',
+      component: Task
+    },
+    {
+      path: '/edition/:editionId/team/:teamId',
+      name: 'Team',
+      component: Team
     },
     {
       path: '/region',
@@ -57,9 +69,14 @@ export default new Router({
       component: Regions
     },
     {
-      path: '/school',
-      name: 'Schools',
-      component: Schools
+      path: '/region/:regionId',
+      name: 'Region',
+      component: Region
+    },
+    {
+      path: '/region/:regionId/:schoolId',
+      name: 'School',
+      component: School
     },
     {
       path: '/contest',
