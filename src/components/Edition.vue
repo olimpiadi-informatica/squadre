@@ -128,9 +128,11 @@
             v-for="contest in remote.contests"
             v-bind:contest="contest"
             v-bind:key="contest.name">
-          <span class="score-header d-inline-block align-middle text-truncate">
-            {{ 'Σ ' + contest.name }}
-          </span>
+            <router-link :to="'/edition/' + remote.id + '/round/' + contest.id" active-class="active">
+              <span class="score-header d-inline-block align-middle text-truncate">
+                <a>{{ 'Σ ' + contest.name }}</a>
+              </span>
+            </router-link>
         </th>
       </tr>
       </thead>

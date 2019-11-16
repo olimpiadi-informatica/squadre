@@ -135,7 +135,7 @@
         <th class="align-middle text-center">City</th>
         <th class="align-middle text-center">Participations</th>
         <th class="align-middle text-center">Teams</th>
-        <th class="align-middle text-center">Medals</th>
+        <th class="align-middle text-center">Awards</th>
         <th class="align-middle text-center">Ranking</th>
         <th class="align-middle text-center">Points</th>
       </tr>
@@ -151,9 +151,28 @@
           </router-link>
         </td>
         <td class="align-middle text-center">{{ row.city }}</td>
-        <td class="align-middle text-center">{{ row.participations }}</td>
+        <td class="align-middle text-center">
+          <span v-for="p in row.participations" v-bind:p="p" v-bind:key="p">
+            <router-link :to="'/edition/' + p" active-class="active">
+            {{ p }}th
+            </router-link>
+          </span>
+        </td>
         <td class="align-middle text-center">{{ row.teams }}</td>
-        <td class="align-middle text-center">{{ row.medals }}</td>
+        <td class="align-middle text-center">
+            <span v-if="row.medals[0] > 0">
+              {{ row.medals[0] }}<font-awesome-icon icon="certificate" style="color: green" />
+            </span>
+            <span v-if="row.medals[1] > 0">
+              {{ row.medals[1] }}<font-awesome-icon icon="certificate" style="color: goldenrod" />
+            </span>
+            <span v-if="row.medals[2] > 0">
+              {{ row.medals[2] }}<font-awesome-icon icon="certificate" style="color: silver" />
+            </span>
+            <span v-if="row.medals[3] > 0">
+              {{ row.medals[3] }}<font-awesome-icon icon="certificate" style="color: brown" />
+            </span>
+        </td>
         <td class="align-middle text-center">{{ row.bestavgrank }}</td>
         <td class="align-middle text-center">{{ row.points }}</td>
       </tr>

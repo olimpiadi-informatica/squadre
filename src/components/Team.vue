@@ -34,6 +34,7 @@
           <thead>
             <tr class="text-uppercase" style="font-size: small;">
               <th class="align-middle text-center">Rank</th>
+              <th class="align-middle text-center">Reg. Rank</th>
               <th class="align-middle text-center">Score</th>
               <th class="text-center"
                   v-for="task in row.tasks"
@@ -48,7 +49,16 @@
 
           <tbody>
             <tr>
-              <td class="align-middle text-center">{{ row.ranking }}</td>
+              <td class="align-middle text-center">
+                {{ row.rank_tot }}
+                <font-awesome-icon v-if="row.rank_tot == 1" icon="certificate" style="color: green" />
+                <font-awesome-icon v-if="row.rank_tot > 1 && (row.rank_tot-1)*100 <= 5*(row.teams-1)" icon="certificate" style="color: goldenrod" />
+                <font-awesome-icon v-if="5*(row.teams-1) < (row.rank_tot-1)*100 && (row.rank_tot-1)*100 <= 15*(row.teams-1)" icon="certificate" style="color: silver" />
+                <font-awesome-icon v-if="15*(row.teams-1) < (row.rank_tot-1)*100 && (row.rank_tot-1)*100 <= 30*(row.teams-1)" icon="certificate" style="color: brown" />
+              </td>
+              <td class="align-middle text-center">
+                {{ row.rank_reg }}
+              </td>
               <td class="align-middle font-weight-bold text-center">
                 {{ row.total }}
               </td>

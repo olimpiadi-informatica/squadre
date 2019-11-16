@@ -66,7 +66,13 @@
         <tr v-for="row in filterQuery(remote.ranking)"
             v-bind:row="row"
             v-bind:key="row.team.id">
-          <td class="align-middle text-center">{{ row.rank }}</td>
+          <td class="align-middle text-center">
+            {{ row.rank }}
+            <font-awesome-icon v-if="row.rank == 1" icon="certificate" style="color: green" />
+            <font-awesome-icon v-if="row.rank > 1 && (row.rank-1)*100 <= 5*(remote.teams-1)" icon="certificate" style="color: goldenrod" />
+            <font-awesome-icon v-if="5*(remote.teams-1) < (row.rank-1)*100 && (row.rank-1)*100 <= 15*(remote.teams-1)" icon="certificate" style="color: silver" />
+            <font-awesome-icon v-if="15*(remote.teams-1) < (row.rank-1)*100 && (row.rank-1)*100 <= 30*(remote.teams-1)" icon="certificate" style="color: brown" />
+          </td>
           <td class="align-middle font-weight-bold">
             <router-link :to="'/edition/' + remote.ed_num + '/team/' + row.team.id" active-class="active">{{ row.team.name }}</router-link>
           </td>

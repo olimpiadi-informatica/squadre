@@ -8,7 +8,13 @@
             {{ this.remote.name }}, {{ this.remote.city }} (<router-link :to="'/region/' + this.remote.region" active-class="active">{{ this.remote.fullregion }}</router-link>)
           </h5>
           <p class="card-text">
-            {{ remote.teams }} teams from this institute participated in OIS editions {{ remote.participations }}, scoring a total of {{ remote.points }} points.
+            {{ remote.teams }} teams from this institute participated in OIS editions
+            <span v-for="p in remote.participations" v-bind:p="p" v-bind:key="p">
+              <router-link :to="'/edition/' + p" active-class="active">
+                <a>{{ p }}th</a>
+              </router-link>,
+            </span>
+            scoring a total of {{ remote.points }} points.
           </p>
         </div>
       </div>
@@ -41,11 +47,12 @@
         <table class="table table-sm table-responsive-lg table-striped table-borderless mt-3">
           <thead>
           <tr class="text-uppercase" style="font-size: small;">
-            <th class="align-middle text-center">Regional Rank</th>
+            <th class="align-middle text-center">Rank</th>
+            <th class="align-middle text-center">Reg. Rank</th>
             <th class="align-middle text-center">Name</th>
             <th class="align-middle text-center">Coach</th>
             <th class="align-middle text-center">To Finals</th>
-            <th class="align-middle text-center">Medals</th>
+            <th class="align-middle text-center">Awards</th>
             <th class="align-middle text-center">Ranking</th>
             <th class="align-middle text-center">Points</th>
           </tr>
@@ -53,6 +60,7 @@
 
           <tbody>
           <tr v-for="row in filterQuery(ed.teams)" v-bind:row="row" v-bind:key="row.id">
+            <td class="align-middle text-center">{{ row.rank_tot }}</td>
             <td class="align-middle text-center">{{ row.rank_reg }}</td>
             <td class="align-middle text-center">
               <router-link :to="'/edition/' + ed.num + '/team/' + row.id" active-class="active">
@@ -63,7 +71,20 @@
             <td class="align-middle text-center">
               <font-awesome-icon v-if="row.finalist === true" icon="certificate" style="color: goldenrod" />
             </td>
-            <td class="align-middle text-center">{{ row.medals }}</td>
+            <td class="align-middle text-center">
+                <span v-if="row.medals[0] > 0">
+                  {{ row.medals[0] }}<font-awesome-icon icon="certificate" style="color: green" />
+                </span>
+                <span v-if="row.medals[1] > 0">
+                  {{ row.medals[1] }}<font-awesome-icon icon="certificate" style="color: goldenrod" />
+                </span>
+                <span v-if="row.medals[2] > 0">
+                  {{ row.medals[2] }}<font-awesome-icon icon="certificate" style="color: silver" />
+                </span>
+                <span v-if="row.medals[3] > 0">
+                  {{ row.medals[3] }}<font-awesome-icon icon="certificate" style="color: brown" />
+                </span>
+            </td>
             <td class="align-middle text-center">{{ row.avgrank }}</td>
             <td class="align-middle text-center">{{ row.points }}</td>
           </tr>
