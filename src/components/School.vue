@@ -21,8 +21,14 @@
 
       <div class="card bg-light">
         <div class="card-body">
-          <h5 class="card-title">Interesting facts</h5>
+          <h5 class="card-title">Highlights</h5>
           <ol class="mb-0">
+            <li v-for="row in remote.highlights" v-bind:row="row" v-bind:key="row.id">
+              <router-link :to="'/edition/' + row.edition + '/team/' + row.id" active-class="active">
+                <a>{{ row.name }}</a>
+              </router-link>
+              is the team with the {{ row.description }}.
+            </li>
           </ol>
         </div>
       </div>

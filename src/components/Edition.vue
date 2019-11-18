@@ -48,6 +48,25 @@
           </a>
         </router-link>
       </ul>
+
+      <span class="font-weight-light ml-3" style="font-size: x-large">
+        Round:&nbsp;
+      </span>
+
+      <div class="btn-group" role="group" aria-label="Rounds">
+        <router-link class="btn btn-outline-primary" :to="'/edition/' + $route.params.editionId + '/round/' + parseInt(contest.name.slice(5))"
+            v-for="contest in remote.contests"
+            v-bind:contest="contest"
+            v-bind:key="contest.name"
+            v-bind:class="{ 'disabled': contest.tasks == null }">
+          {{ contest.title }}
+        </router-link>
+
+        <router-link class="btn btn-outline-success" :to="'/edition/' + $route.params.editionId + '/round/final'"
+            v-bind:class="{ 'disabled': $route.params.editionId == '11' }">
+          Final Round
+        </router-link>
+      </div>
     </nav>
 
     <div class="card-group m-3">
@@ -56,40 +75,19 @@
           <h5 class="card-title">OIS {{ remote.year }}</h5>
 
           <p class="card-text">
-            {{ remote.rounds.length }} teams participated in this edition of the
-            OIS.
-            <!-- The region with the highest number of participating teams was
-            <a href="#">Abruzzo</a>. The task with the highest number of full
-            score solutions was <a href="#">numpad</a>. -->
+            {{ remote.rounds.length }} teams participated in this edition of the OIS. <br>
+            The top 3 teams at the <strong>finals</strong> of the {{ remote.title }} were:
           </p>
-
-          <h6 class="card-subtitle mb-2 text-muted">Individual rounds:</h6>
-          <div class="btn-group" role="group" aria-label="Rounds">
-            <router-link class="btn btn-outline-primary" :to="'/edition/' + $route.params.editionId + '/round/' + parseInt(contest.name.slice(5))"
-                v-for="contest in remote.contests"
-                v-bind:contest="contest"
-                v-bind:key="contest.name"
-                v-bind:class="{ 'disabled': contest.tasks == null }">
-              {{ contest.title }}
-            </router-link>
-
-            <router-link class="btn btn-outline-success" :to="'/edition/' + $route.params.editionId + '/round/final'"
-                v-bind:class="{ 'disabled': $route.params.editionId == '11' }">
-              Final Round
-            </router-link>
-          </div>
-        </div>
-      </div>
-
-      <div class="card bg-light">
-        <div class="card-body">
-          <h5 class="card-title">Winner</h5>
-
-          <p>The top 3 teams at the <strong>finals</strong> of the {{ remote.title }} were:</p>
 
           <ol class="mb-0" v-if="remote.final != null">
             <li v-for="row in remote.final.ranking.slice(0, 3)" v-bind:key="row.team.id">
-              <mark>{{ row.team.name }}</mark> from {{ row.team.institute }}
+              <mark><router-link :to="$route.params.editionId + '/team/'+row.team.id" active-class="active">
+                <a>{{ row.team.name }}</a>
+              </router-link></mark>
+              from
+              <router-link :to="'/region/' + row.team.region + '/'+row.team.inst_id" active-class="active">
+                <a>{{ row.team.institute }}</a>
+              </router-link>
             </li>
           </ol>
 
@@ -97,6 +95,20 @@
             <li></li>
             <li></li>
             <li></li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="card bg-light">
+        <div class="card-body">
+          <h5 class="card-title">Highlights</h5>
+          <ol class="mb-0">
+            <li v-for="row in remote.highlights" v-bind:row="row" v-bind:key="row.id">
+              <router-link :to="'/'+row.id" active-class="active">
+                <a>{{ row.name }}</a>
+              </router-link>
+              {{ row.description }}.
+            </li>
           </ol>
         </div>
       </div>
@@ -119,6 +131,7 @@
       <thead>
       <tr class="text-uppercase" style="font-size: small;">
         <th class="align-middle text-center">Rank</th>
+        <th class="align-middle text-center">Reg. Rank</th>
         <th class="align-middle">Team</th>
         <th class="align-middle">Institute</th>
         <th class="align-middle text-center">Region</th>
@@ -142,6 +155,7 @@
           v-bind:row="row"
           v-bind:key="row.team.id">
           <td class="align-middle text-center">{{ row.rank_tot }}</td>
+          <td class="align-middle text-center">{{ row.rank_reg }}</td>
           <td class="align-middle font-weight-bold">
             <router-link :to="'/edition/' + remote.id + '/team/' + row.team.id" active-class="active">{{ row.team.name }}</router-link>
           </td>

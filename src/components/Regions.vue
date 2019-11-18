@@ -6,7 +6,7 @@
           <h5 class="card-title">OIS Regions</h5>
 
           <p class="card-text">
-            {{ remote.teams }} teams from {{ remote.institutes }} institutes participated in all OIS editions.
+            {{ remote.teams }} teams from {{ remote.instnum }} institutes participated in all OIS editions.
           </p>
           <p class="card-text">
             Overall, {{ remote.points }} points were scored on {{ remote.tasks }} tasks.
@@ -16,19 +16,13 @@
 
       <div class="card bg-light">
         <div class="card-body">
-          <h5 class="card-title">Interesting facts</h5>
+          <h5 class="card-title">Highlights</h5>
           <ol class="mb-0">
-            <li>
-              <router-link :to="'/region/' + bigRegion.id" active-class="active">
-                <a>{{ bigRegion.name }}</a>
+            <li v-for="row in remote.highlights" v-bind:row="row" v-bind:key="row.id">
+              <router-link :to="'/region/' + row.id" active-class="active">
+                <a>{{ row.name }}</a>
               </router-link>
-              is the region with the most participating schools ({{ bigRegion.instnum }}), teams ({{ bigRegion.teams }}) and overall points ({{ bigRegion.points }}).
-            </li>
-            <li>
-              <router-link :to="'/region/' + bestRegion.id" active-class="active">
-                <a>{{ bestRegion.name }}</a>
-              </router-link>
-              is the region with highest average ranking of its institutes ({{ bestRegion.bestavgrank }}).
+              is the region with the {{ row.description }}.
             </li>
           </ol>
         </div>

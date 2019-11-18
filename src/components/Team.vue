@@ -16,8 +16,20 @@
 
       <div class="card bg-light">
         <div class="card-body">
-          <h5 class="card-title">Interesting facts</h5>
+          <h5 class="card-title">Highlights</h5>
           <ol class="mb-0">
+            <li>
+              <router-link :to="'/edition/' + remote.ed_num + '/round/' + remote.bestprob.id + '/' + remote.bestprob.name" active-class="active">
+                <a>{{ remote.bestprob.title }}</a>
+              </router-link>
+              is the hardest task solved by the team.
+            </li>
+            <li v-for="row in remote.highlights" v-bind:row="row" v-bind:key="row.id">
+              <router-link :to="'/edition/' + remote.ed_num + '/round/' + row.id" active-class="active">
+                <a>{{ row.name }}</a>
+              </router-link>
+              is the round with the {{ row.description }}.
+            </li>
           </ol>
         </div>
       </div>

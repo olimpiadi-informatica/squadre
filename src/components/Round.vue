@@ -47,11 +47,12 @@
       <thead>
         <tr class="text-uppercase" style="font-size: small;">
           <th class="align-middle text-center">Rank</th>
+          <th class="align-middle text-center">Reg. Rank</th>
           <th class="align-middle">Team</th>
           <th class="align-middle">Institute</th>
           <th class="align-middle text-center">Region</th>
           <th class="align-middle text-center">Score</th>
-          <th class="text-center"
+          <th class="align-middle text-center"
               v-for="task in remote.tasks"
               v-bind:task="task"
               v-bind:key="task.name">
@@ -73,6 +74,7 @@
             <font-awesome-icon v-if="5*(remote.teams-1) < (row.rank-1)*100 && (row.rank-1)*100 <= 15*(remote.teams-1)" icon="certificate" style="color: silver" />
             <font-awesome-icon v-if="15*(remote.teams-1) < (row.rank-1)*100 && (row.rank-1)*100 <= 30*(remote.teams-1)" icon="certificate" style="color: brown" />
           </td>
+          <td class="align-middle text-center">{{ row.rank_reg }}</td>
           <td class="align-middle font-weight-bold">
             <router-link :to="'/edition/' + remote.ed_num + '/team/' + row.team.id" active-class="active">{{ row.team.name }}</router-link>
           </td>
