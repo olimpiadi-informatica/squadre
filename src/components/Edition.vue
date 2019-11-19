@@ -104,7 +104,7 @@
           <h5 class="card-title">Highlights</h5>
           <ol class="mb-0">
             <li v-for="row in remote.highlights" v-bind:row="row" v-bind:key="row.id">
-              <router-link :to="'/'+row.id" active-class="active">
+              <router-link :to="row.id" active-class="active">
                 <a>{{ row.name }}</a>
               </router-link>
               {{ row.description }}.

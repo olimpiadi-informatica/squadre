@@ -1,32 +1,44 @@
 <template>
   <div class="mt-3">
-    <div class="row ml-3 mr-3">
-      <div class="col-lg-6 p-0">
-        <h4>
-          <router-link :to="'/edition/' + $route.params.editionId">
-            OIS {{ remote.edition }}</router-link> — {{ remote.title }}
-        </h4>
+    <div class="card-group m-3">
+      <div class="card bg-light">
+        <div class="card-body">
+          <h4>
+            <router-link :to="'/edition/' + $route.params.editionId">
+              OIS {{ remote.edition }}
+            </router-link> — {{ remote.title }}
+          </h4>
 
-        <!-- <h6 class="card-subtitle mb-2 text-muted">Rounds:</h6> -->
-        <div class="btn-group" role="group" aria-label="Rounds">
-          <router-link class="btn btn-outline-primary" :to="'/edition/' + $route.params.editionId + '/round/' + i"
-              v-for="i in [1, 2, 3, 4]"
-              v-bind:key="i"
-              v-bind:class="{ 'active': i == parseInt($route.params.roundId),
-                              'disabled': $route.params.editionId === '11' && i > 0 }">
-            Round {{ i }}
-          </router-link>
+          <div class="btn-group" role="group" aria-label="Rounds">
+            <router-link class="btn btn-outline-primary" :to="'/edition/' + $route.params.editionId + '/round/' + i"
+                v-for="i in [1, 2, 3, 4]"
+                v-bind:key="i"
+                v-bind:class="{ 'active': i == parseInt($route.params.roundId),
+                                'disabled': $route.params.editionId === '11' && i > 0 }">
+              Round {{ i }}
+            </router-link>
 
-          <router-link class="btn btn-outline-success" :to="'/edition/' + $route.params.editionId + '/round/final'"
-              v-bind:class="{ 'active': 'final' === $route.params.roundId,
-                              'disabled': $route.params.editionId === '11' }">
-            Final Round
-          </router-link>
+            <router-link class="btn btn-outline-success" :to="'/edition/' + $route.params.editionId + '/round/final'"
+                v-bind:class="{ 'active': 'final' === $route.params.roundId,
+                                'disabled': $route.params.editionId === '11' }">
+              Final Round
+            </router-link>
+          </div>
         </div>
       </div>
 
-      <div class="col-lg-6 p-0">
-        <h5 class="card-title">Interesting facts</h5>
+      <div class="card bg-light">
+        <div class="card-body">
+          <h5 class="card-title">Highlights</h5>
+          <ol class="mb-0">
+            <li v-for="row in remote.highlights" v-bind:row="row" v-bind:key="row.id">
+              <router-link :to="row.id" active-class="active">
+                <a>{{ row.name }}</a>
+              </router-link>
+              {{ row.description }}.
+            </li>
+          </ol>
+        </div>
       </div>
     </div>
 

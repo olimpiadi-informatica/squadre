@@ -6,7 +6,7 @@
           <h5 class="card-title">OIS Editions</h5>
 
           <p class="card-text">
-            {{ remote.teams }} teams participated in all OIS editions.
+            {{ remote.teams }} teams from {{ remote.instnum }} institutes participated in all OIS editions.
           </p>
           <p class="card-text">
             Overall, {{ remote.points }} points were scored on {{ remote.tasks }} tasks.
@@ -19,11 +19,10 @@
           <h5 class="card-title">Highlights</h5>
           <ol class="mb-0">
             <li v-for="row in remote.highlights" v-bind:row="row" v-bind:key="row.id">
-              The
-              <router-link :to="'/edition/' + row.id" active-class="active">
+              <router-link :to="row.id" active-class="active">
                 <a>{{ row.name }}</a>
               </router-link>
-              is the one with the {{ row.description }}.
+              {{ row.description }}.
             </li>
           </ol>
         </div>
@@ -41,8 +40,8 @@
         <th class="align-middle text-center">Schools</th>
         <th class="align-middle text-center">Teams</th>
         <th class="align-middle text-center">Tasks</th>
-        <th class="align-middle text-center">Fullscore</th>
         <th class="align-middle text-center">Highest</th>
+        <th class="align-middle text-center">Median</th>
         <th class="align-middle text-center">Average</th>
         <th class="align-middle text-center">Total</th>
       </tr>
@@ -61,8 +60,8 @@
         <td class="align-middle text-center">{{ row.instnum }}</td>
         <td class="align-middle text-center">{{ row.teams }}</td>
         <td class="align-middle text-center">{{ row.tasks }}</td>
-        <td class="align-middle text-center">{{ row.fullscore }}</td>
         <td class="align-middle text-center">{{ row.highest }}</td>
+        <td class="align-middle text-center">{{ row.medpos }}</td>
         <td class="align-middle text-center">{{ row.average }}</td>
         <td class="align-middle text-center">{{ row.points }}</td>
       </tr>
