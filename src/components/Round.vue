@@ -9,8 +9,7 @@
             </router-link> — {{ remote.title }}
           </h4>
 
-          <p class="card-text">
-          <div class="btn-group" role="group" aria-label="Rounds">
+          <div class="card-text btn-group" role="group" aria-label="Rounds">
             <router-link class="btn btn-outline-primary" :to="'/edition/' + $route.params.editionId + '/round/' + i"
                 v-for="i in [1, 2, 3, 4]"
                 v-bind:key="i"
@@ -25,7 +24,6 @@
               Final Round
             </router-link>
           </div>
-          </p>
 
           <p class="card-text">
             {{ remote.positive }} teams scored {{ remote.points }} points on {{ remote.tasks.length }} tasks, for an average score of {{ remote.avgpos.toFixed(0) }} and a median score of {{ remote.medpos }}.
