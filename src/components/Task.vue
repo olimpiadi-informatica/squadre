@@ -10,6 +10,13 @@
             <router-link :to="'/edition/' + $route.params.editionId">{{ remote.edition }}</router-link>,
             <router-link :to="'/edition/' + $route.params.editionId + '/round/' + $route.params.roundId">{{ remote.round }}</router-link>
           </p>
+
+          <p class="card-text">
+            {{ remote.positive }} teams scored {{ remote.points }} points on this task, for
+            <span v-if="remote.fullscores > 0">{{ remote.fullscores }} fullscores,</span>
+            <span v-else>a maximum score of {{ remote.highest }},</span>
+            an average score of {{ remote.avgpos.toFixed(0) }} and a median score of {{ remote.medpos }}.
+          </p>
         </div>
       </div>
 
@@ -26,6 +33,12 @@
           </ol>
         </div>
       </div>
+    </div>
+
+    <div class="card-group m-3">
+      <span style="font-size: small;">
+        {{ remote.statement }}
+      </span>
     </div>
 
     <div class="input-group col-4 m-3 p-0">

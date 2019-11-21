@@ -8,13 +8,10 @@
             {{ this.remote.name }}, {{ this.remote.city }} (<router-link :to="'/region/' + this.remote.region" active-class="active">{{ this.remote.fullregion }}</router-link>)
           </h5>
           <p class="card-text">
-            {{ remote.teams }} teams from this institute participated in OIS editions
-            <span v-for="p in remote.participations" v-bind:p="p" v-bind:key="p">
-              <router-link :to="'/edition/' + p" active-class="active">
-                <a>{{ p }}th</a>
-              </router-link>,
-            </span>
-            scoring a total of {{ remote.points }} points.
+            {{ remote.teams }} teams from this institute participated in {{ remote.participations.length }} OIS editions, scoring a total of {{ remote.points }} points.
+          </p>
+          <p class="card-text">
+            Teams of {{ remote.name }} have an average ranking of {{ remote.bestavgrank.toFixed(0) }}%, and the best rank ever achieved by a team is {{ remote.bestedrank }} in an edition ({{ remote.bestrank }} in a contest).
           </p>
         </div>
       </div>
@@ -78,20 +75,20 @@
               <font-awesome-icon v-if="row.finalist === true" icon="certificate" style="color: goldenrod" />
             </td>
             <td class="align-middle text-center">
-                <span v-if="row.medals[0] > 0">
+                <span v-if="row.medals[0] > 0" title="platinum medals are awarded for ranking 1st in a contest">
                   {{ row.medals[0] }}<font-awesome-icon icon="certificate" style="color: green" />
                 </span>
-                <span v-if="row.medals[1] > 0">
+                <span v-if="row.medals[1] > 0" title="gold medals are awarded for ranking in the top 5% of a contest">
                   {{ row.medals[1] }}<font-awesome-icon icon="certificate" style="color: goldenrod" />
                 </span>
-                <span v-if="row.medals[2] > 0">
+                <span v-if="row.medals[2] > 0" title="silver medals are awarded for ranking in the top 15% of a contest">
                   {{ row.medals[2] }}<font-awesome-icon icon="certificate" style="color: silver" />
                 </span>
-                <span v-if="row.medals[3] > 0">
+                <span v-if="row.medals[3] > 0" title="bronze medals are awarded for ranking in the top 30% of a contest">
                   {{ row.medals[3] }}<font-awesome-icon icon="certificate" style="color: brown" />
                 </span>
             </td>
-            <td class="align-middle text-center">{{ row.avgrank }}</td>
+            <td class="align-middle text-center"><span :title="row.avgrank.toFixed(2) + '%'">{{ row.avgrank.toFixed(0) }}%</span></td>
             <td class="align-middle text-center">{{ row.points }}</td>
           </tr>
           </tbody>

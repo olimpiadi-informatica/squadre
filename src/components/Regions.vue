@@ -6,10 +6,11 @@
           <h5 class="card-title">OIS Regions</h5>
 
           <p class="card-text">
-            {{ remote.teams }} teams from {{ remote.instnum }} institutes participated in all OIS editions.
+            {{ remote.teams }} teams from {{ remote.instnum }} schools participated in {{ remote.editions }} OIS editions. <br>
+            Overall, {{ remote.points }} points were scored on {{ remote.tasks }} tasks.
           </p>
           <p class="card-text">
-            Overall, {{ remote.points }} points were scored on {{ remote.tasks }} tasks.
+            Regions participated in average to {{ remote.avgpart.toFixed(2) }} editions, <br> with {{ remote.allpart }} regions participating to all of them.
           </p>
         </div>
       </div>
@@ -78,20 +79,20 @@
         <td class="align-middle text-center">{{ row.instnum }}</td>
         <td class="align-middle text-center">{{ row.teams }}</td>
         <td class="align-middle text-center">
-            <span v-if="row.medals[0] > 0">
+            <span v-if="row.medals[0] > 0" title="platinum medals are awarded for ranking 1st in a contest">
               {{ row.medals[0] }}<font-awesome-icon icon="certificate" style="color: green" />
             </span>
-            <span v-if="row.medals[1] > 0">
+            <span v-if="row.medals[1] > 0" title="gold medals are awarded for ranking in the top 5% of a contest">
               {{ row.medals[1] }}<font-awesome-icon icon="certificate" style="color: goldenrod" />
             </span>
-            <span v-if="row.medals[2] > 0">
+            <span v-if="row.medals[2] > 0" title="silver medals are awarded for ranking in the top 15% of a contest">
               {{ row.medals[2] }}<font-awesome-icon icon="certificate" style="color: silver" />
             </span>
-            <span v-if="row.medals[3] > 0">
+            <span v-if="row.medals[3] > 0" title="bronze medals are awarded for ranking in the top 30% of a contest">
               {{ row.medals[3] }}<font-awesome-icon icon="certificate" style="color: brown" />
             </span>
         </td>
-        <td class="align-middle text-center">{{ row.bestavgrank }}</td>
+        <td class="align-middle text-center"><span :title="row.bestavgrank.toFixed(2) + '%'">{{ row.bestavgrank.toFixed(0) }}%</span></td>
         <td class="align-middle text-center">{{ row.points }}</td>
       </tr>
       </tbody>

@@ -6,10 +6,11 @@
           <h5 class="card-title">OIS Editions</h5>
 
           <p class="card-text">
-            {{ remote.teams }} teams from {{ remote.instnum }} institutes participated in all OIS editions.
+            {{ remote.teams }} teams from {{ remote.instnum }} schools participated in {{ remote.editions.length }} OIS editions. <br>
+            Overall, {{ remote.points }} points were scored on {{ remote.tasks }} tasks.
           </p>
           <p class="card-text">
-            Overall, {{ remote.points }} points were scored on {{ remote.tasks }} tasks.
+            In average, {{ remote.avgreg.toFixed(1) }} regions participated to the OIS editions, <br> and {{ remote.allreg }} editions were disputed with all regions.
           </p>
         </div>
       </div>
@@ -37,12 +38,14 @@
       <tr class="text-uppercase" style="font-size: small;">
         <th class="align-middle text-center">Edition</th>
         <th class="align-middle text-center">Year</th>
+        <th class="align-middle text-center">Regions</th>
         <th class="align-middle text-center">Schools</th>
         <th class="align-middle text-center">Teams</th>
         <th class="align-middle text-center">Tasks</th>
+        <th class="align-middle text-center">Fullscore</th>
         <th class="align-middle text-center">Highest</th>
-        <th class="align-middle text-center">Median</th>
         <th class="align-middle text-center">Average</th>
+        <th class="align-middle text-center">Median</th>
         <th class="align-middle text-center">Total</th>
       </tr>
       </thead>
@@ -57,12 +60,14 @@
           </router-link>
         </td>
         <td class="align-middle text-center">{{ row.year }}</td>
+        <td class="align-middle text-center">{{ row.regions }}</td>
         <td class="align-middle text-center">{{ row.instnum }}</td>
         <td class="align-middle text-center">{{ row.teams }}</td>
         <td class="align-middle text-center">{{ row.tasks }}</td>
+        <td class="align-middle text-center">{{ row.fullscore }}</td>
         <td class="align-middle text-center">{{ row.highest }}</td>
-        <td class="align-middle text-center">{{ row.medpos }}</td>
         <td class="align-middle text-center">{{ row.average }}</td>
+        <td class="align-middle text-center">{{ row.medpos }}</td>
         <td class="align-middle text-center">{{ row.points }}</td>
       </tr>
       </tbody>

@@ -9,6 +9,7 @@
             </router-link> — {{ remote.title }}
           </h4>
 
+          <p class="card-text">
           <div class="btn-group" role="group" aria-label="Rounds">
             <router-link class="btn btn-outline-primary" :to="'/edition/' + $route.params.editionId + '/round/' + i"
                 v-for="i in [1, 2, 3, 4]"
@@ -24,6 +25,11 @@
               Final Round
             </router-link>
           </div>
+          </p>
+
+          <p class="card-text">
+            {{ remote.positive }} teams scored {{ remote.points }} points on {{ remote.tasks.length }} tasks, for an average score of {{ remote.avgpos.toFixed(0) }} and a median score of {{ remote.medpos }}.
+          </p>
         </div>
       </div>
 
@@ -79,7 +85,7 @@
         <tr v-for="row in filterQuery(remote.ranking)"
             v-bind:row="row"
             v-bind:key="row.team.id">
-          <td class="align-middle text-center">
+          <td class="align-middle text-center" title="medals are assigned: platinum to the 1st, gold to the top 5%, silver to the top 15%, bronze to the top 30%">
             {{ row.rank }}
             <font-awesome-icon v-if="row.rank == 1" icon="certificate" style="color: green" />
             <font-awesome-icon v-if="row.rank > 1 && (row.rank-1)*100 <= 5*(remote.teams-1)" icon="certificate" style="color: goldenrod" />

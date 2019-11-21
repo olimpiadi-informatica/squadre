@@ -4,12 +4,24 @@
       <div class="card bg-light">
         <div class="card-body">
           <h5 class="card-title">
-            Team "{{ this.remote.name }}" ({{ this.remote.edition }}, {{ this.remote.year }})
+            Team "{{ this.remote.name }}"
+            <router-link :to="'/edition/' + this.remote.ed_num" active-class="active">
+              ({{ this.remote.edition }}, {{ this.remote.year }})
+            </router-link>
           </h5>
           <p class="card-text">
             <router-link :to="'/region/' + this.remote.region + '/' + this.remote.inst_id" active-class="active">
-              {{ this.remote.institute }} ({{ this.remote.fullregion }})
+              {{ this.remote.institute }}
             </router-link>
+            <router-link :to="'/region/' + this.remote.region" active-class="active">
+              ({{ this.remote.fullregion }})
+            </router-link>
+          </p>
+          <p class="card-text" v-if="remote.coach.length > 0">
+            Coach: {{ remote.coach }}.
+          </p>
+          <p class="card-text">
+            {{ remote.name }} scored {{ remote.points }} points, ranking {{ remote.rank_tot }} in Italy and {{ remote.rank_reg }} in {{ remote.fullregion }}; for an average ranking of {{ remote.avgrank.toFixed(0) }}%, and an highest rank achieved in a contest of {{ remote.bestrank }}.
           </p>
         </div>
       </div>
@@ -55,7 +67,7 @@
 
           <tbody>
             <tr>
-              <td class="align-middle text-center">
+              <td class="align-middle text-center" title="medals are assigned: platinum to the 1st, gold to the top 5%, silver to the top 15%, bronze to the top 30%">
                 {{ row.rank_tot }}
                 <font-awesome-icon v-if="row.rank_tot == 1" icon="certificate" style="color: green" />
                 <font-awesome-icon v-if="row.rank_tot > 1 && (row.rank_tot-1)*100 <= 5*(row.teams-1)" icon="certificate" style="color: goldenrod" />

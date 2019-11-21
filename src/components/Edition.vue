@@ -75,8 +75,8 @@
           <h5 class="card-title">OIS {{ remote.year }}</h5>
 
           <p class="card-text">
-            {{ remote.rounds.length }} teams participated in this edition of the OIS. <br>
-            The top 3 teams at the <strong>finals</strong> of the {{ remote.title }} were:
+            {{ remote.teams }} teams from {{ remote.instnum }} schools participated in this edition of the OIS, scoring a total of {{ remote.points }} points on {{ remote.tasks }} tasks.
+            The top 3 teams at the <strong>finals</strong> were:
           </p>
 
           <ol class="mb-0" v-if="remote.final != null">
