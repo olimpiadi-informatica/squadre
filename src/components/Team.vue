@@ -69,10 +69,10 @@
             <tr>
               <td class="align-middle text-center" title="medals are assigned: platinum to the 1st, gold to the top 5%, silver to the top 15%, bronze to the top 30%">
                 {{ row.rank_tot }}
-                <font-awesome-icon v-if="row.rank_tot == 1" icon="certificate" style="color: green" />
-                <font-awesome-icon v-if="row.rank_tot > 1 && (row.rank_tot-1)*100 <= 5*(row.teams-1)" icon="certificate" style="color: goldenrod" />
-                <font-awesome-icon v-if="5*(row.teams-1) < (row.rank_tot-1)*100 && (row.rank_tot-1)*100 <= 15*(row.teams-1)" icon="certificate" style="color: silver" />
-                <font-awesome-icon v-if="15*(row.teams-1) < (row.rank_tot-1)*100 && (row.rank_tot-1)*100 <= 30*(row.teams-1)" icon="certificate" style="color: brown" />
+                <font-awesome-icon v-if="row.rank_tot == 1" icon="medal" style="color: green" />
+                <font-awesome-icon v-if="row.rank_tot > 1 && (row.rank_tot-1)*100 <= 5*(row.teams-1)" icon="medal" style="color: goldenrod" />
+                <font-awesome-icon v-if="5*(row.teams-1) < (row.rank_tot-1)*100 && (row.rank_tot-1)*100 <= 15*(row.teams-1)" icon="medal" style="color: silver" />
+                <font-awesome-icon v-if="15*(row.teams-1) < (row.rank_tot-1)*100 && (row.rank_tot-1)*100 <= 30*(row.teams-1)" icon="medal" style="color: brown" />
               </td>
               <td class="align-middle text-center">
                 {{ row.rank_reg }}

@@ -170,16 +170,16 @@
         <td class="align-middle text-center">{{ row.teams }}</td>
         <td class="align-middle text-center">
             <span v-if="row.medals[0] > 0" title="platinum medals are awarded for ranking 1st in a contest">
-              {{ row.medals[0] }}<font-awesome-icon icon="certificate" style="color: green" />
+              {{ row.medals[0] }}<font-awesome-icon icon="medal" style="color: green" />
             </span>
             <span v-if="row.medals[1] > 0" title="gold medals are awarded for ranking in the top 5% of a contest">
-              {{ row.medals[1] }}<font-awesome-icon icon="certificate" style="color: goldenrod" />
+              {{ row.medals[1] }}<font-awesome-icon icon="medal" style="color: goldenrod" />
             </span>
             <span v-if="row.medals[2] > 0" title="silver medals are awarded for ranking in the top 15% of a contest">
-              {{ row.medals[2] }}<font-awesome-icon icon="certificate" style="color: silver" />
+              {{ row.medals[2] }}<font-awesome-icon icon="medal" style="color: silver" />
             </span>
             <span v-if="row.medals[3] > 0" title="bronze medals are awarded for ranking in the top 30% of a contest">
-              {{ row.medals[3] }}<font-awesome-icon icon="certificate" style="color: brown" />
+              {{ row.medals[3] }}<font-awesome-icon icon="medal" style="color: brown" />
             </span>
         </td>
         <td class="align-middle text-center"><span :title="row.bestavgrank.toFixed(2) + '%'">{{ row.bestavgrank.toFixed(0) }}%</span></td>

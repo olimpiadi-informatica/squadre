@@ -49,6 +49,10 @@
       </div>
       <input type="text" class="form-control" placeholder="Search" aria-label="Search" aria-describedby="basic-addon1"
               v-model="searchQuery">
+        <a class="ml-2 btn btn-success" :href="'https://training.olinfo.it/#/task/ois_' + remote.name + '/statement'" target="_blank">
+            <font-awesome-icon icon="graduation-cap" />
+            solve the task here
+        </a>
     </div>
 
     <div v-if="!remote">

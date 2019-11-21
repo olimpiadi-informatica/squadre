@@ -85,10 +85,10 @@
             v-bind:key="row.team.id">
           <td class="align-middle text-center" title="medals are assigned: platinum to the 1st, gold to the top 5%, silver to the top 15%, bronze to the top 30%">
             {{ row.rank }}
-            <font-awesome-icon v-if="row.rank == 1" icon="certificate" style="color: green" />
-            <font-awesome-icon v-if="row.rank > 1 && (row.rank-1)*100 <= 5*(remote.teams-1)" icon="certificate" style="color: goldenrod" />
-            <font-awesome-icon v-if="5*(remote.teams-1) < (row.rank-1)*100 && (row.rank-1)*100 <= 15*(remote.teams-1)" icon="certificate" style="color: silver" />
-            <font-awesome-icon v-if="15*(remote.teams-1) < (row.rank-1)*100 && (row.rank-1)*100 <= 30*(remote.teams-1)" icon="certificate" style="color: brown" />
+            <font-awesome-icon v-if="row.rank == 1" icon="medal" style="color: green" />
+            <font-awesome-icon v-if="row.rank > 1 && (row.rank-1)*100 <= 5*(remote.teams-1)" icon="medal" style="color: goldenrod" />
+            <font-awesome-icon v-if="5*(remote.teams-1) < (row.rank-1)*100 && (row.rank-1)*100 <= 15*(remote.teams-1)" icon="medal" style="color: silver" />
+            <font-awesome-icon v-if="15*(remote.teams-1) < (row.rank-1)*100 && (row.rank-1)*100 <= 30*(remote.teams-1)" icon="medal" style="color: brown" />
           </td>
           <td class="align-middle text-center">{{ row.rank_reg }}</td>
           <td class="align-middle font-weight-bold">
