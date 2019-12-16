@@ -17,10 +17,10 @@ if (process.env.NODE_ENV === 'production') {
 
 // start of FontAwesome support
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faCertificate, faExternalLinkAlt, faFileAlt, faFilePdf, faBookOpen, faArrowLeft, faSearch } from '@fortawesome/free-solid-svg-icons'
+import { faCertificate, faGraduationCap, faExternalLinkAlt, faFileAlt, faFilePdf, faMedal, faBookOpen, faArrowLeft, faSearch } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-library.add(faCertificate, faExternalLinkAlt, faFileAlt, faFilePdf, faBookOpen, faArrowLeft, faSearch)
+library.add(faCertificate, faGraduationCap, faExternalLinkAlt, faFileAlt, faFilePdf, faMedal, faBookOpen, faArrowLeft, faSearch)
 
 Vue.component('font-awesome-icon', FontAwesomeIcon)
 // end of FontAwesome support

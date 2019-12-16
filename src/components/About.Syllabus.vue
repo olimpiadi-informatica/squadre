@@ -50,7 +50,7 @@
 
       <ul>
         <li>
-          Array multi-dimensionali (e.g. <code>​int[][]​</code>)
+          Array multi-dimensionali (e.g. <code>int[][]</code>)
         </li>
         <li>
           Strutture dati coda e pila
@@ -82,7 +82,7 @@
 
       <ul>
         <li>
-          Contenitori standard (e.g. <code>​vector​</code>,​ <code>set​</code>,​ <code>map</code>​)
+          Contenitori standard (e.g. <code>vector</code>, <code>set</code>, <code>map</code>)
         </li>
         <li>
           Divide et impera

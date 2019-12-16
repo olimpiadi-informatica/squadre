@@ -21,10 +21,7 @@
             <a class="nav-link">Scoreboard</a>
           </router-link>
           <router-link class="nav-item" tag="li" to="/region" active-class="active">
-            <a class="nav-link">Regions</a>
-          </router-link>
-          <router-link class="nav-item" tag="li" to="/school" active-class="active">
-            <a class="nav-link">Schools</a>
+            <a class="nav-link">Teams</a>
           </router-link>
         </ul>
       </div>
