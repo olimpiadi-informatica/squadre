@@ -7,6 +7,7 @@
             <router-link :to="'/edition/' + $route.params.editionId">
               OIS {{ remote.edition }}
             </router-link> — {{ remote.title }}
+            <span v-if="$route.params.editionId === '11' && $route.params.roundId == '3'">(provisional results)</span>
           </h4>
 
           <div class="card-text btn-group" role="group" aria-label="Rounds">
@@ -14,7 +15,7 @@
                 v-for="i in [1, 2, 3, 4]"
                 v-bind:key="i"
                 v-bind:class="{ 'active': i == parseInt($route.params.roundId),
-                                'disabled': $route.params.editionId === '11' && i > 0 }">
+                                'disabled': $route.params.editionId === '11' && i > 3 }">
               Round {{ i }}
             </router-link>
 
