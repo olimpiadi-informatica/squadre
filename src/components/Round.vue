@@ -7,7 +7,7 @@
             <router-link :to="'/edition/' + $route.params.editionId">
               OIS {{ remote.edition }}
             </router-link> — {{ remote.title }}
-            <span v-if="$route.params.editionId === '11' && $route.params.roundId == '3'">(provisional results)</span>
+            <span v-if="$route.params.editionId === '11' && $route.params.roundId == '4'">(provisional results)</span>
           </h4>
 
           <div class="card-text btn-group" role="group" aria-label="Rounds">
