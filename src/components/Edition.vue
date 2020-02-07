@@ -40,7 +40,7 @@
         </router-link>
 
         <router-link class="page-item" aria-label="Next" tag="li"
-            v-bind:class="{ 'disabled': $route.params.editionId === '11' }"
+            v-bind:class="{ 'disabled': $route.params.editionId == remote.lastEd }"
             :to="'/edition/' + (parseInt($route.params.editionId) + 1)">
           <a class="page-link">
             <span aria-hidden="true">&raquo;</span>
@@ -63,7 +63,7 @@
         </router-link>
 
         <router-link class="btn btn-outline-success" :to="'/edition/' + $route.params.editionId + '/round/final'"
-            v-bind:class="{ 'disabled': $route.params.editionId == '11' }">
+            v-bind:class="{ 'disabled': $route.params.editionId == remote.lastEd }">
           Final Round
         </router-link>
       </div>
@@ -72,11 +72,11 @@
     <div class="card-group m-3">
       <div class="card bg-light">
         <div class="card-body">
-          <h5 class="card-title">OIS {{ remote.year }}</h5>
+          <h5 class="card-title">OIS {{ remote.year }}<span v-if="$route.params.editionId == remote.lastEd"> (provisional results)</span></h5>
 
           <p class="card-text">
             {{ remote.teams }} teams from {{ remote.instnum }} schools participated in this edition of the OIS, scoring a total of {{ remote.points }} points on {{ remote.tasks }} tasks.
-            The top 3 teams at the <strong>finals</strong> were:
+            <span v-if="remote.final != null">The top 3 teams at the <strong>finals</strong> were:</span>
           </p>
 
           <ol class="mb-0" v-if="remote.final != null">
@@ -89,12 +89,6 @@
                 <a>{{ row.team.institute }}</a>
               </router-link>
             </li>
-          </ol>
-
-          <ol class="mb-0" v-else>
-            <li></li>
-            <li></li>
-            <li></li>
           </ol>
         </div>
       </div>
@@ -222,6 +216,7 @@ export default {
       fetch(new Request('/json/edition.' + this.$route.params.editionId + '.json'), { method: 'GET' }).then((data) => {
         data.json().then((data) => {
           this.remote = data
+          this.remote.lastEd = 11
 
           document.title = this.remote.title + ' — OIS'
         })
