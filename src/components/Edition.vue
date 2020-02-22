@@ -15,28 +15,8 @@
           </a>
         </router-link>
 
-        <router-link class="page-item" to="/edition/6" tag="li" active-class="active">
-          <a class="page-link">6</a>
-        </router-link>
-
-        <router-link class="page-item" to="/edition/7" tag="li" active-class="active">
-          <a class="page-link">7</a>
-        </router-link>
-
-        <router-link class="page-item" to="/edition/8" tag="li" active-class="active">
-          <a class="page-link">8</a>
-        </router-link>
-
-        <router-link class="page-item" to="/edition/9" tag="li" active-class="active">
-          <a class="page-link">9</a>
-        </router-link>
-
-        <router-link class="page-item" to="/edition/10" tag="li" active-class="active">
-          <a class="page-link">10</a>
-        </router-link>
-
-        <router-link class="page-item" to="/edition/11" tag="li" active-class="active">
-          <a class="page-link">11</a>
+        <router-link v-for="n in (remote.lastEd-5)" v-bind:key="n" class="page-item" :to="'/edition/'+(n+5)" tag="li" active-class="active">
+          <a class="page-link">{{n+5}}</a>
         </router-link>
 
         <router-link class="page-item" aria-label="Next" tag="li"
@@ -63,7 +43,7 @@
         </router-link>
 
         <router-link class="btn btn-outline-success" :to="'/edition/' + $route.params.editionId + '/round/final'"
-            v-bind:class="{ 'disabled': $route.params.editionId == remote.lastEd }">
+            v-bind:class="{ 'disabled': remote.final == null }">
           Final Round
         </router-link>
       </div>
@@ -72,7 +52,7 @@
     <div class="card-group m-3">
       <div class="card bg-light">
         <div class="card-body">
-          <h5 class="card-title">OIS {{ remote.year }}<span v-if="$route.params.editionId == remote.lastEd"> (provisional results)</span></h5>
+          <h5 class="card-title">OIS {{ remote.year }}<span v-if="remote.final == null"> (provisional results)</span></h5>
 
           <p class="card-text">
             {{ remote.teams }} teams from {{ remote.instnum }} schools participated in this edition of the OIS, scoring a total of {{ remote.points }} points on {{ remote.tasks }} tasks.
@@ -216,7 +196,6 @@ export default {
       fetch(new Request('/json/edition.' + this.$route.params.editionId + '.json'), { method: 'GET' }).then((data) => {
         data.json().then((data) => {
           this.remote = data
-          this.remote.lastEd = 11
 
           document.title = this.remote.title + ' — OIS'
         })

@@ -7,7 +7,7 @@
             <router-link :to="'/edition/' + $route.params.editionId">
               OIS {{ remote.edition }}
             </router-link> — {{ remote.title }}
-            <span v-if="$route.params.editionId == remote.lastEd && $route.params.roundId == remote.lastRound">(provisional results)</span>
+            <span v-if="$route.params.editionId == remote.lastEd && $route.params.roundId == remote.lastRound && remote.provisional">(provisional results)</span>
           </h4>
 
           <div class="card-text btn-group" role="group" aria-label="Rounds">
@@ -15,13 +15,13 @@
                 v-for="i in [1, 2, 3, 4]"
                 v-bind:key="i"
                 v-bind:class="{ 'active': i == parseInt($route.params.roundId),
-                                'disabled': $route.params.editionId == remote.lastEd && i > 4 }">
+                                'disabled': $route.params.editionId == remote.lastEd && (remote.lastRound != 'final' || i > parseInt(remote.lastRound)) }">
               Round {{ i }}
             </router-link>
 
             <router-link class="btn btn-outline-success" :to="'/edition/' + $route.params.editionId + '/round/final'"
                 v-bind:class="{ 'active': 'final' === $route.params.roundId,
-                                'disabled': $route.params.editionId == remote.lastEd }">
+                                'disabled': $route.params.editionId == remote.lastEd && remote.lastRound != 'final' }">
               Final Round
             </router-link>
           </div>
@@ -154,8 +154,6 @@ export default {
       fetch(new Request('/json/edition.' + this.$route.params.editionId + '.round.' + this.$route.params.roundId + '.json'), { method: 'GET' }).then((data) => {
         data.json().then((data) => {
           this.remote = data
-          this.remote.lastEd = 11
-          this.remote.lastRound = 4
 
           // outside of "app" scope, so it needs to be done manually
           document.title = this.remote.title + ', ' + this.remote.edition + ' ­— OIS'
