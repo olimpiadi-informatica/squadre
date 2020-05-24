@@ -16,13 +16,15 @@
                 v-bind:key="i"
                 v-bind:class="{ 'active': i == parseInt($route.params.roundId),
                                 'disabled': $route.params.editionId == remote.lastEd && (remote.lastRound != 'final' || i > parseInt(remote.lastRound)) }">
-              Round {{ i }}
+              <span class="d-none d-md-block">Round</span>
+              {{ i }}
             </router-link>
 
             <router-link class="btn btn-outline-success" :to="'/edition/' + $route.params.editionId + '/round/final'"
                 v-bind:class="{ 'active': 'final' === $route.params.roundId,
                                 'disabled': $route.params.editionId == remote.lastEd && remote.lastRound != 'final' }">
-              Final Round
+              Final
+              <span class="d-none d-md-block">Round</span>
             </router-link>
           </div>
 
@@ -47,7 +49,7 @@
       </div>
     </div>
 
-    <div class="input-group col-4 m-3 p-0">
+    <div class="input-group col-11 col-lg-4 m-3 p-0">
       <div class="input-group-prepend">
         <span class="input-group-text" id="basic-addon1">
           <font-awesome-icon icon="search" />
