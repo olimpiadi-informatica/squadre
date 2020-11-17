@@ -3,7 +3,7 @@
     <div class="row">
       <div class="card bg-light col-lg-5 m-2">
         <div class="card-body">
-          <h5 class="card-title">OIS 2019/20</h5>
+          <h5 class="card-title">OIS 2020/21</h5>
           <h6 class="card-subtitle mb-2 text-muted">Official contest</h6>
           <p class="card-text">
             If you are an officially participating team and you have received an
@@ -16,7 +16,7 @@
 
       <div class="card bg-light col-lg-5 m-2">
         <div class="card-body">
-          <h5 class="card-title">IIOT Open Contests 2019/20</h5>
+          <h5 class="card-title">IIOT Open Contests 2020/21</h5>
           <h6 class="card-subtitle mb-2 text-muted">Mirrored, open contest</h6>
           <p class="card-text">
             If you don't have an official username and password and you want to
@@ -38,28 +38,28 @@
       </tr>
       <tr>
         <td>1st contest</td>
-        <td>11th November 2019</td>
-        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?iso=20191111T15&p1=215&ah=3">15.00 - 18.00 (CET)</a></td>
+        <td>16th November 2020</td>
+        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Round+1&iso=20201116T1430&p1=215&ah=3">14.30 - 17.30 (CET)</a></td>
       </tr>
       <tr>
         <td>2nd contest</td>
-        <td>17th December 2019</td>
-        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?iso=20191217T15&p1=215&ah=3">15:00 - 18:00 (CET)</a></td>
+        <td>15th December 2020</td>
+        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Round+2&iso=20201215T1430&p1=215&ah=3">14:30 - 17:30 (CET)</a></td>
       </tr>
       <tr>
         <td>3rd contest</td>
-        <td>15th January 2020</td>
-        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?iso=20190115T1430&p1=215&ah=3">14:30 - 17:30 (CET)</a></td>
+        <td>13th January 2021</td>
+        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Round+3&iso=20210113T1430&p1=215&ah=3">14:30 - 17:30 (CET)</a></td>
       </tr>
       <tr>
         <td>4th contest</td>
-        <td>6th February 2020</td>
-        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?iso=20200206T1430&p1=215&ah=3">14:30 - 17:30 (CET)</a></td>
+        <td>4th February 2021</td>
+        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Round+4&iso=20210204T1430&p1=215&ah=3">14:30 - 17:30 (CET)</a></td>
       </tr>
       <tr>
         <td>Final contest</td>
-        <td>21th February 2020</td>
-        <td> <!-- <a href="https://www.timeanddate.com/worldclock/fixedtime.html?iso=20190208T13&p1=215&ah=3">13:00 - 16:00 (GMT+1)</a> --> </td>
+        <td>26th February 2021</td>
+        <td> <!-- <a href="https://www.timeanddate.com/worldclock/fixedtime.html?iso=20210226T13&p1=215&ah=3">13:00 - 16:00 (GMT+1)</a> --> </td>
       </tr>
     </table>
   </div>
