@@ -15,7 +15,7 @@
                 v-for="i in [1, 2, 3, 4]"
                 v-bind:key="i"
                 v-bind:class="{ 'active': i == parseInt($route.params.roundId),
-                                'disabled': $route.params.editionId == remote.lastEd && (remote.lastRound != 'final' || i > parseInt(remote.lastRound)) }">
+                                'disabled': $route.params.editionId == remote.lastEd && remote.lastRound != 'final' && i > parseInt(remote.lastRound) }">
               <span class="d-none d-md-block">Round</span>
               {{ i }}
             </router-link>
