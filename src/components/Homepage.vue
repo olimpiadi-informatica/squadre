@@ -3,7 +3,7 @@
     <div class="row">
       <div class="card bg-light col-lg-5 m-2">
         <div class="card-body">
-          <h5 class="card-title">OIS 2020/21</h5>
+          <h5 class="card-title">OIS 2022/23</h5>
           <h6 class="card-subtitle mb-2 text-muted">Official contest</h6>
           <p class="card-text">
             If you are an officially participating team and you have received an
@@ -16,7 +16,7 @@
 
       <div class="card bg-light col-lg-5 m-2">
         <div class="card-body">
-          <h5 class="card-title">IIOT Open Contests 2020/21</h5>
+          <h5 class="card-title">IIOT Open Contests 2022/23</h5>
           <h6 class="card-subtitle mb-2 text-muted">Mirrored, open contest</h6>
           <p class="card-text">
             If you don't have an official username and password and you want to
