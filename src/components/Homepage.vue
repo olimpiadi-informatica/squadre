@@ -38,28 +38,28 @@
       </tr>
       <tr>
         <td>1st contest</td>
-        <td>15th November 2021</td>
-        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Round+1&iso=20211115T1430&p1=215&ah=3">14.30 - 17.30 (CET)</a></td>
+        <td>14th November 2022</td>
+        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Round+1&iso=20221114T1430&p1=215&ah=3">14.30 - 17.30 (CET)</a></td>
       </tr>
       <tr>
         <td>2nd contest</td>
-        <td>14th December 2021</td>
-        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Round+2&iso=20211214T1430&p1=215&ah=3">14:30 - 17:30 (CET)</a></td>
+        <td>13th December 2022</td>
+        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Round+2&iso=20221213T1430&p1=215&ah=3">14:30 - 17:30 (CET)</a></td>
       </tr>
       <tr>
         <td>3rd contest</td>
-        <td>12th January 2022</td>
-        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Round+3&iso=20220112T1430&p1=215&ah=3">14:30 - 17:30 (CET)</a></td>
+        <td>11th January 2023</td>
+        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Round+3&iso=20230111T1430&p1=215&ah=3">14:30 - 17:30 (CET)</a></td>
       </tr>
       <tr>
         <td>4th contest</td>
-        <td>3th February 2022</td>
-        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Round+4&iso=20220203T1430&p1=215&ah=3">14:30 - 17:30 (CET)</a></td>
+        <td>9th February 2023</td>
+        <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Round+4&iso=20230209T1430&p1=215&ah=3">14:30 - 17:30 (CET)</a></td>
       </tr>
       <tr>
         <td>Final contest</td>
-        <td>25th February 2022</td>
-        <td> <!-- <a href="https://www.timeanddate.com/worldclock/fixedtime.html?iso=20220225T13&p1=215&ah=3">13:00 - 16:00 (GMT+1)</a> --> </td>
+        <td>10th March 2023</td>
+        <td> <!-- <a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Final+Round&iso=20230310T13&p1=215&ah=3">13:00 - 16:00 (CET)</a> --> </td>
       </tr>
     </table>
   </div>
