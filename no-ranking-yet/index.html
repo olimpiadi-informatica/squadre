@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="bootstrap.min.css">
+
+    <title>Ranking not available yet</title>
+  </head>
+  <body class="container">
+    <h1 id="contest-name" class="mt-3"></h1>
+
+    <h3 style="color: red;">The ranking is not yet available</h3>
+
+    <p>The ranking will be available at this page only at 14:50 Italian Time.</p>
+
+    <script src="jquery-3.3.1.slim.min.js"></script>
+
+    <script>
+        const date = new Date();
+        const year = date.getFullYear() - (date.getMonth() <= 7 ? 1 : 0) - 2000;
+        $(document).ready(function() {
+            if (window.location.host.startsWith("mirror"))
+                $("#contest-name").text(`IIOT — Open Contests 20${year}/${year + 1}`);
+            else
+                $("#contest-name").text(`OIS 20${year}/${year + 1}`);
+        });
+    </script>
+  </body>
+</html>
