@@ -112,8 +112,8 @@
         </li>
 
         <li>
-          I linguaggi che possono essere usati sono: C, C++ e Pascal; i dati di
-          input devono essere prelevati da file di testo, i dati di output
+          I linguaggi che possono essere usati sono: C, C++, Java, Python3 e Pascal;
+          i dati di input devono essere prelevati da file di testo, i dati di output
           stampati su file di testo.
         </li>
 

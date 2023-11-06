@@ -7,6 +7,10 @@
         http://oisquadre.it/
         <font-awesome-icon icon="external-link-alt" />
       </a></p>
+      <p class="mb-0 ml-2">International website: <a href="https://iio.team/" target="_blank">
+        https://iio.team/
+        <font-awesome-icon icon="external-link-alt" />
+      </a></p>
     </blockquote>
 
     <p>
@@ -46,6 +50,10 @@
         CMS
         <font-awesome-icon icon="external-link-alt" />
       </a> system, hosted on the OII servers.
+    </p>
+
+    <p>
+      In 2017, the initiative expanded to the international level. On May 17-20th 2017 the first edition of the IIOT was held in Bologna, Italy, with the participation of 8 teams from Italy, Romania and the Russian Federation. In the following years, editions have been hosted in Piatra Neamț (Romania), Moscow (Russian Federation), online for COVID restrictions, then again in Bologna (Italy), and finally in Port Said (Egypt). During the years, teams from Italy, Romania, Hungary, Egypt, Syria, Russian Federation, Moldova, Bulgaria, Iran, Spain, Peru have participated in the initiative.
     </p>
 
     <router-link to="/about/rules" class="btn btn-info btn-lg">
