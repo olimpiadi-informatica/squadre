@@ -1,22 +1,19 @@
-import Vue from 'vue'
-import Router from 'vue-router'
-import Homepage from '@/components/Homepage'
-import About from '@/components/About'
-import AboutRules from '@/components/About.Rules'
-import AboutSyllabus from '@/components/About.Syllabus'
-import Editions from '@/components/Editions'
-import Edition from '@/components/Edition'
-import Round from '@/components/Round'
-import Task from '@/components/Task'
-import Team from '@/components/Team'
-import Regions from '@/components/Regions'
-import Region from '@/components/Region'
-import School from '@/components/School'
+import { createRouter, createWebHistory } from 'vue-router'
+import Homepage from '@/components/Homepage.vue'
+import About from '@/components/About.vue'
+import AboutRules from '@/components/About.Rules.vue'
+import AboutSyllabus from '@/components/About.Syllabus.vue'
+import Editions from '@/components/Editions.vue'
+import Edition from '@/components/Edition.vue'
+import Round from '@/components/Round.vue'
+import Task from '@/components/Task.vue'
+import Team from '@/components/Team.vue'
+import Regions from '@/components/Regions.vue'
+import Region from '@/components/Region.vue'
+import School from '@/components/School.vue'
 
-Vue.use(Router)
-
-export default new Router({
-  mode: process.env.NODE_ENV === 'production' ? 'history' : 'hash',
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
@@ -80,39 +77,29 @@ export default new Router({
     },
     {
       path: '/contest',
-      beforeEnter() {
-        location.href = 'https://gara.squadre.olinfo.it';
-      }
+      redirect: 'https://gara.squadre.olinfo.it'
     },
     {
       path: '/contest2',
-      beforeEnter() {
-        location.href = 'https://mirror.squadre.olinfo.it';
-      }
+      redirect: 'https://mirror.squadre.olinfo.it'
     },
     {
       path: '/contest/documentation',
-      beforeEnter() {
-        location.href = 'https://gara.squadre.olinfo.it';
-      }
+      redirect: 'https://gara.squadre.olinfo.it'
     },
     {
       path: '/ranking',
-      beforeEnter() {
-        location.href = 'https://gara.squadre.olinfo.it/ranking';
-      }
+      redirect: 'https://gara.squadre.olinfo.it/ranking'
     },
     {
       path: '/ranking2',
-      beforeEnter() {
-        location.href = 'https://mirror.squadre.olinfo.it/ranking';
-      }
+      redirect: 'https://mirror.squadre.olinfo.it/ranking'
     },
     {
       path: '/check',
-      beforeEnter() {
-        location.href = 'https://gara.squadre.olinfo.it/check';
-      }
+      redirect: 'https://gara.squadre.olinfo.it/check'
     }
   ]
 })
+
+export default router

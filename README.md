@@ -3,33 +3,37 @@
 ## Gather the JSON data
 
 1. Go to the OIS private task repository.
-1. `cd` into the `util/export_data` folder.
+1. `cd` into the `util/export_stats` folder.
 1. `./exporter.py ~/git/www.squadre.olinfo.it/public -a`.
 
-## Project setup
-```
-yarn install
+## Project Setup
+
+```sh
+npm install
 ```
 
-### Compiles and hot-reloads for development
-```
-yarn run serve
+### Compile and Hot-Reload for Development
+
+```sh
+npm run dev
 ```
 
-### Compiles and minifies for production
-```
-yarn run build
+### Compile and Minify for Production
+
+```sh
+npm run build
 ```
 
-### Run your tests
-```
-yarn run test
+### Lint with [ESLint](https://eslint.org/)
+
+```sh
+npm run lint
 ```
 
-### Lints and fixes files
-```
-yarn run lint
-```
+## Recommended IDE Setup
 
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+
+## Customize configuration
+
+See [Vite Configuration Reference](https://vitejs.dev/config/).

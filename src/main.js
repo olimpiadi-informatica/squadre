@@ -2,17 +2,19 @@ import 'jquery';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap';
 
-import Vue from 'vue'
-import App from './App'
+import { createApp } from 'vue'
+import VueGtag from "vue-gtag"
+import App from './App.vue'
 import router from './router'
 
-// set up Google Analytics plugin
-import VueAnalytics from 'vue-analytics'
+const app = createApp(App)
+
+app.use(router)
+
 if (process.env.NODE_ENV === 'production') {
-  Vue.use(VueAnalytics, {
-    id: 'UA-70826003-4',
-    router
-  })
+    app.use(VueGtag, {
+        config: { id: "UA-70826003-4" }
+    });
 }
 
 // start of FontAwesome support
@@ -22,15 +24,8 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 library.add(faCertificate, faGraduationCap, faExternalLinkAlt, faFileAlt, faFilePdf, faMedal, faBookOpen, faArrowLeft, faSearch)
 
-Vue.component('font-awesome-icon', FontAwesomeIcon)
+app.component('font-awesome-icon', FontAwesomeIcon)
 // end of FontAwesome support
 
 
-Vue.config.productionTip = false
-
-/* eslint-disable no-new */
-new Vue({
-  el: '#app',
-  router,
-  render: h => h(App)
-})
+app.mount('#app')
