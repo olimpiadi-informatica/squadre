@@ -48,7 +48,7 @@
       </tr>
       <tr>
         <td>3rd contest</td>
-        <td>17th January 2024</td>
+        <td>18th January 2024</td>
         <td><a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Round+3&iso=20240117T1430&p1=215&ah=3">14:30 - 17:30 (CET)</a></td>
       </tr>
       <tr>
@@ -58,7 +58,7 @@
       </tr>
       <tr>
         <td>Final contest</td>
-        <td>15-16th March 2024</td>
+        <td>15th March 2024</td>
         <td> <!-- <a href="https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+Final+Round&iso=20240308T13&p1=215&ah=3">13:00 - 16:00 (CET)</a> --> </td>
       </tr>
     </table>
