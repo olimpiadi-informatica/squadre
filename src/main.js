@@ -13,7 +13,7 @@ app.use(router)
 
 if (process.env.NODE_ENV === 'production') {
     app.use(VueGtag, {
-        config: { id: "UA-70826003-4" }
+        config: { id: "G-Q25K1YDNFL" }
     });
 }
 
