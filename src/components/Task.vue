@@ -96,7 +96,56 @@
 
 <script>
 export default {
-  name: 'Task'
+  name: 'Task',
+
+  data () {
+    return {
+      remote: null,
+      searchQuery: null
+    }
+  },
+
+  created () {
+    this.init()
+  },
+
+  watch: {
+    // call again the method if the route changes
+    '$route': 'init'
+  },
+
+  // beforeRouteUpdate (to, from, next) {
+  //   this.init()
+  //   next()
+  // },
+
+  methods: {
+    init: function () {
+      // fetch JSON data for the round
+      fetch(new Request('/json/edition.' + this.$route.params.editionId + '.round.' + this.$route.params.roundId + '.' + this.$route.params.taskId + '.json'), { method: 'GET' }).then((data) => {
+        data.json().then((data) => {
+          this.remote = data
+
+          // outside of "app" scope, so it needs to be done manually
+          document.title = this.remote.title + ' (' + this.remote.edition + ', ' + this.remote.round + ') ­— OIS'
+        })
+      })
+    },
+
+    filterQuery: function (ranking) {
+      if (this.searchQuery == null) {
+        return ranking
+      }
+
+      let query = this.searchQuery.toLowerCase()
+
+      return ranking.filter(function (row) {
+        return row.team.name.toLowerCase().indexOf(query) >= 0 ||
+               row.team.fullregion.toLowerCase().indexOf(query) >= 0 ||
+               row.team.institute.toLowerCase().indexOf(query) >= 0
+      })
+    }
+  }
 }
 </script>
 
