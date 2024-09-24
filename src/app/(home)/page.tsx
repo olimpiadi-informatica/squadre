@@ -10,7 +10,7 @@ export default function Page() {
     tzDate("2025-01-15 14:30", "Europe/Rome"),
     tzDate("2025-02-06 14:30", "Europe/Rome"),
   ];
-  const final = tzDate("2025-03-08 14:30", "Europe/Rome");
+  const final = tzDate("2025-03-14 14:30", "Europe/Rome");
 
   const year = rounds[0].getFullYear();
   const years = `${year}/${(year + 1) % 100}`;
