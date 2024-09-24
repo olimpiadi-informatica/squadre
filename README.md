@@ -1,4 +1,4 @@
-# www.squadre.olinfo.it
+# squadre.olinfo.it
 
 ## Gather the JSON data
 
@@ -24,7 +24,7 @@ npm run dev
 npm run build
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+### Lint
 
 ```sh
 npm run lint
