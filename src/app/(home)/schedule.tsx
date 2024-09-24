@@ -38,7 +38,7 @@ function ScheduleItem({
           format(date, { date: "long" }, "en")
         ) : (
           <a
-            href={`https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+${round}&iso=${encodeURIComponent(date.toISOString())}&ah=3`}
+            href={`https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+${round}&iso=${encodeURIComponent(date.toISOString())}&p1=215&ah=3`}
             className="link"
             target="_blank"
             rel="noreferrer">
