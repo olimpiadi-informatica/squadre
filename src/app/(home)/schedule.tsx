@@ -35,14 +35,19 @@ function ScheduleItem({
       <div className="py-4">
         <h3 className="text-lg font-bold">{round}</h3>
         {hideTime ? (
-          format(date, { date: "long" }, "en")
+          format({ date, format: { date: "long" }, locale: "en", tz: "Europe/Rome" })
         ) : (
           <a
-            href={`https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+${round}&iso=${encodeURIComponent(date.toISOString())}&p1=215&ah=3`}
+            href={`https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+${round}&iso=${encodeURIComponent(date.toISOString())}&ah=3`}
             className="link"
             target="_blank"
             rel="noreferrer">
-            {format(date, { date: "long", time: "short" }, "en")}
+            {format({
+              date,
+              format: { date: "long", time: "short" },
+              locale: "en",
+              tz: "Europe/Rome",
+            })}
           </a>
         )}
       </div>
