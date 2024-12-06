@@ -53,7 +53,7 @@ function TableRow({ item: team }: { item: Round["ranking"][number] }) {
     <>
       <div>{team.rank}</div>
       <div>{team.rank_reg}</div>
-      <div className="min-w-32 text-wrap text-sm">
+      <div className="min-w-32 text-wrap break-words text-sm">
         <Link href={`/edition/${round.ed_num}/team/${team.team.id}`} className="link">
           {team.team.name}
         </Link>
