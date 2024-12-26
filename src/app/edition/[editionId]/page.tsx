@@ -47,22 +47,28 @@ export default async function Page({ params: { editionId } }: Props) {
           <CardBody title={`OIS ${edition.year}`}>
             <p>
               {edition.teams} teams from {edition.instnum} schools participated in this edition of
-              the OIS, scoring a total of {edition.points} points on {edition.tasks} tasks. The top{" "}
-              {edition.final.ranking.length} teams at the finals were:
+              the OIS, scoring a total of {edition.points} points on {edition.tasks} tasks.
+              {edition.final && (
+                <> The top {edition.final.ranking.length} teams at the finals were:</>
+              )}
             </p>
-            <ol className="list-decimal pl-6">
-              {edition.final.ranking.map((team, i) => (
-                <li key={i} value={team.rank}>
-                  <Link href={`/edition/${editionId}/team/${team.team.id}`} className="link">
-                    {team.team.name}
-                  </Link>{" "}
-                  from{" "}
-                  <Link href={`/region/${team.team.region}/${team.team.inst_id}`} className="link">
-                    {team.team.institute}
-                  </Link>
-                </li>
-              ))}
-            </ol>
+            {edition.final && (
+              <ol className="list-decimal pl-6">
+                {edition.final.ranking.map((team, i) => (
+                  <li key={i} value={team.rank}>
+                    <Link href={`/edition/${editionId}/team/${team.team.id}`} className="link">
+                      {team.team.name}
+                    </Link>{" "}
+                    from{" "}
+                    <Link
+                      href={`/region/${team.team.region}/${team.team.inst_id}`}
+                      className="link">
+                      {team.team.institute}
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            )}
           </CardBody>
         </Card>
         <Highlights highlights={edition.highlights} />

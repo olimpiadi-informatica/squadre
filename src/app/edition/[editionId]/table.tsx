@@ -37,15 +37,23 @@ function TableHeaders() {
       <div>Region</div>
       <div>Total</div>
       <div>
-        <Link href={`/edition/${edition.id}/round/final`} className="link">
-          Finalist
-        </Link>
+        {edition.final ? (
+          <Link href={`/edition/${edition.id}/round/final`} className="link">
+            Finalist
+          </Link>
+        ) : (
+          <>Finalist</>
+        )}
       </div>
       {edition.contests.map((contest) => (
         <div key={contest.id}>
-          <Link href={`/edition/${edition.id}/round/${contest.id}`} className="link">
-            {contest.title}
-          </Link>
+          {contest.tasks ? (
+            <Link href={`/edition/${edition.id}/round/${contest.id}`} className="link">
+              {contest.title}
+            </Link>
+          ) : (
+            <>{contest.title}</>
+          )}
         </div>
       ))}
     </>

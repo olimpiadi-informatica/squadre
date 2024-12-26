@@ -5,10 +5,14 @@ export function Score({
   maxScore,
   className,
 }: {
-  score: number;
-  maxScore: number;
+  score: number | null;
+  maxScore: number | null;
   className?: string;
 }) {
+  if (score === null || maxScore === null) {
+    return score;
+  }
+
   const percent = Math.floor((score / maxScore) * 100);
 
   return (
