@@ -4,30 +4,34 @@ import { z } from "zod";
 
 import { highlightSchema, medalsSchema } from "./common";
 
-const teamSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  institute: z.string(),
-  inst_id: z.string(),
-  region: z.string(),
-  fullregion: z.string(),
-  coach: z.string(),
-  members: z.string().max(0),
-  finalist: z.boolean(),
-  medals: medalsSchema,
-  rank_reg: z.number(),
-  rank_tot: z.number(),
-  rank_excl: z.number(),
-  bestrank: z.number(),
-  avgrank: z.number(),
-  points: z.number(),
-});
+const teamSchema = z
+  .object({
+    avgrank: z.number(),
+    bestrank: z.number(),
+    coach: z.string(),
+    finalist: z.boolean().nullable(),
+    fullregion: z.string(),
+    id: z.string(),
+    inst_id: z.string(),
+    institute: z.string(),
+    medals: medalsSchema,
+    members: z.string().max(0),
+    name: z.string(),
+    points: z.number(),
+    rank_excl: z.number(),
+    rank_reg: z.number(),
+    rank_tot: z.number(),
+    region: z.string(),
+  })
+  .strict();
 
-const teamResultSchema = z.object({
-  rank: z.number(),
-  score: z.number(),
-  team: teamSchema,
-});
+const teamResultSchema = z
+  .object({
+    rank: z.number(),
+    score: z.number(),
+    team: teamSchema,
+  })
+  .strict();
 
 const taskSchema = z.object({
   ed_id: z.number(),

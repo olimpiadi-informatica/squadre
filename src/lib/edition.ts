@@ -23,7 +23,7 @@ const contestSchema = z
 
 const teamSchema = z
   .object({
-    finalist: z.boolean(),
+    finalist: z.boolean().nullable(),
     fullregion: z.string(),
     id: z.string(),
     inst_id: z.string(),

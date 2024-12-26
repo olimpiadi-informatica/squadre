@@ -10,7 +10,7 @@ const teamSchema = z
     bestrank: z.number(),
     coach: z.string(),
     edition: z.number(),
-    finalist: z.boolean(),
+    finalist: z.boolean().nullable(),
     fullregion: z.string(),
     id: z.string(),
     inst_id: z.string(),
