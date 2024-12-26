@@ -20,7 +20,7 @@ export async function generateStaticParams() {
   const params = await Promise.all(
     editions.editions.map(async ({ id }) => {
       const edition = await getEdition(id);
-      const rounds = edition.contests.map(({ id }) => id);
+      const rounds = edition.contests.filter(({ tasks }) => tasks).map(({ id }) => id);
       if (edition.final) rounds.push("final");
       return Promise.all(
         rounds.map(async (roundId) => {
