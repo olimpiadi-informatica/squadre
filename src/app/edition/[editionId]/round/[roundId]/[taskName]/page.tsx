@@ -64,7 +64,7 @@ export default async function Page({ params: { editionId, roundId, taskName } }:
             <Link href={`/edition/${task.ed_id}`}>{task.edition}</Link>
           </li>
           <li>
-            <Link href={`/edition/${task.ed_id}`}>{task.round}</Link>
+            <Link href={`/edition/${task.ed_id}/round/${task.r_id}`}>{task.round}</Link>
           </li>
           <li>{task.title}</li>
         </ul>
@@ -86,7 +86,7 @@ export default async function Page({ params: { editionId, roundId, taskName } }:
           <p>{task.statement}</p>
           <CardActions>
             <a
-              href={`https://training.olinfo.it/#/task/ois_${task.name}`}
+              href={`https://training.olinfo.it/task/ois_${task.name}`}
               target="_blank"
               className="btn btn-primary"
               rel="noreferrer">
