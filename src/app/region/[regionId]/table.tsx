@@ -33,7 +33,7 @@ function TableHeaders() {
 function TableRow({ item: institute }: { item: Region["institutes"][number] }) {
   return (
     <>
-      <div>
+      <div className="min-w-56 text-wrap text-sm">
         <Link href={`/region/${institute.region}/${institute.id}`} className="link">
           {institute.name}
         </Link>
