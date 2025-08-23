@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import { Card, CardBody } from "@olinfo/react-components";
+import type { ParamsOf } from "routes";
 
 import { Highlights } from "~/components/highlights";
 import { getEdition } from "~/lib/edition";
@@ -11,27 +12,27 @@ import { getTeam } from "~/lib/team";
 
 import { TeamTable } from "./table";
 
-type Props = {
-  params: { editionId: string; teamId: string };
-};
-
 export async function generateStaticParams() {
   const editions = await getEditions();
   const params = await Promise.all(
     editions.editions.map(async ({ id }) => {
       const edition = await getEdition(id);
-      return edition.rounds.map((team): Props["params"] => ({
-        editionId: id.toString(),
-        teamId: team.team.id,
-      }));
+      return edition.rounds.map(
+        (team): ParamsOf<"/edition/[editionId]/team/[teamId]"> => ({
+          editionId: id.toString(),
+          teamId: team.team.id,
+        }),
+      );
     }),
   );
   return params.flat();
 }
 
 export async function generateMetadata({
-  params: { editionId, teamId },
-}: Props): Promise<Metadata> {
+  params,
+}: PageProps<"/edition/[editionId]/team/[teamId]">): Promise<Metadata> {
+  const { editionId, teamId } = await params;
+
   const team = await getTeam(editionId, teamId);
 
   return {
@@ -39,7 +40,9 @@ export async function generateMetadata({
   };
 }
 
-export default async function Page({ params: { editionId, teamId } }: Props) {
+export default async function Page({ params }: PageProps<"/edition/[editionId]/team/[teamId]">) {
+  const { editionId, teamId } = await params;
+
   const team = await getTeam(editionId, teamId);
 
   const maxTasks = Math.max(...team.contests.map((round) => round.tasks.length));

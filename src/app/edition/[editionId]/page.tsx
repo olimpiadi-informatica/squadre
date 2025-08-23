@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Card, CardBody } from "@olinfo/react-components";
+import type { ParamsOf } from "routes";
 
 import { Highlights } from "~/components/highlights";
 import { getEdition } from "~/lib/edition";
@@ -9,16 +10,20 @@ import { getEditions } from "~/lib/editions";
 
 import { EditionTable } from "./table";
 
-type Props = {
-  params: { editionId: string };
-};
-
 export async function generateStaticParams() {
   const editions = await getEditions();
-  return editions.editions.map(({ id }): Props["params"] => ({ editionId: id.toString() }));
+  return editions.editions.map(
+    ({ id }): ParamsOf<"/edition/[editionId]"> => ({
+      editionId: id.toString(),
+    }),
+  );
 }
 
-export async function generateMetadata({ params: { editionId } }: Props): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps<"/edition/[editionId]">): Promise<Metadata> {
+  const { editionId } = await params;
+
   const edition = await getEdition(editionId);
 
   return {
@@ -26,7 +31,9 @@ export async function generateMetadata({ params: { editionId } }: Props): Promis
   };
 }
 
-export default async function Page({ params: { editionId } }: Props) {
+export default async function Page({ params }: PageProps<"/edition/[editionId]">) {
+  const { editionId } = await params;
+
   const edition = await getEdition(editionId);
 
   return (

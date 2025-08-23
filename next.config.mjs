@@ -5,6 +5,7 @@ const config = {
   output: "export",
   productionBrowserSourceMaps: true,
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
+  typedRoutes: true,
   webpack: (config) => {
     if (config.target[0] === "web") {
       config.target[1] = "es2022";

@@ -1,10 +1,10 @@
 import { GoogleAnalytics } from "@next/third-parties/google";
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 
 import { Layout } from "@olinfo/react-components";
 
 import "./globals.css";
+
 import { Navbar } from "./navbar";
 
 export const metadata: Metadata = {
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: "Rankings and statistics of Italian Informatics Olympiads in Teams (OIS)",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en">
       <head>

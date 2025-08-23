@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import { Card, CardBody } from "@olinfo/react-components";
+import type { ParamsOf } from "routes";
 
 import { Highlights } from "~/components/highlights";
 import { getEdition } from "~/lib/edition";
@@ -11,10 +12,6 @@ import { getRound } from "~/lib/round";
 
 import { RoundTable } from "./table";
 
-type Props = {
-  params: { editionId: string; roundId: string };
-};
-
 export async function generateStaticParams() {
   const editions = await getEditions();
   const params = await Promise.all(
@@ -22,10 +19,12 @@ export async function generateStaticParams() {
       const edition = await getEdition(id);
       const rounds = edition.contests
         .filter(({ tasks }) => tasks)
-        .map(({ id: roundId }): Props["params"] => ({
-          editionId: id.toString(),
-          roundId,
-        }));
+        .map(
+          ({ id: roundId }): ParamsOf<"/edition/[editionId]/round/[roundId]"> => ({
+            editionId: id.toString(),
+            roundId,
+          }),
+        );
       if (edition.final) {
         rounds.push({ editionId: id.toString(), roundId: "final" });
       }
@@ -36,8 +35,10 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({
-  params: { editionId, roundId },
-}: Props): Promise<Metadata> {
+  params,
+}: PageProps<"/edition/[editionId]/round/[roundId]">): Promise<Metadata> {
+  const { editionId, roundId } = await params;
+
   const round = await getRound(editionId, roundId);
 
   return {
@@ -45,7 +46,9 @@ export async function generateMetadata({
   };
 }
 
-export default async function Page({ params: { editionId, roundId } }: Props) {
+export default async function Page({ params }: PageProps<"/edition/[editionId]/round/[roundId]">) {
+  const { editionId, roundId } = await params;
+
   const round = await getRound(editionId, roundId);
 
   return (

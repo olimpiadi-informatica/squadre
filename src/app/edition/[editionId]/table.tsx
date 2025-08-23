@@ -42,7 +42,7 @@ function TableHeaders() {
             Finalist
           </Link>
         ) : (
-          <>Finalist</>
+          "Finalist"
         )}
       </div>
       {edition.contests.map((contest) => (
@@ -52,7 +52,7 @@ function TableHeaders() {
               {contest.title}
             </Link>
           ) : (
-            <>{contest.title}</>
+            contest.title
           )}
         </div>
       ))}

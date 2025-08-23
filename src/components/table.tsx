@@ -7,7 +7,7 @@ import style from "./table.module.css";
 
 export type TableProps<T> = {
   data: T[];
-  header: ComponentType<{ context?: never }>;
+  header: ComponentType<{ context: any }>;
   row: ComponentType<{ item: T }>;
   className?: string;
 };
@@ -21,7 +21,7 @@ function SmallTable<T>({ data, header: Header, row: Row, className }: TableProps
         <div className={clsx(style.scroller, "w-min", className)}>
           <div className="w-min">
             <div>
-              <Header />
+              <Header context />
             </div>
             <div className={style.list}>
               {data.map((item, i) => (

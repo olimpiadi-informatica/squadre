@@ -10,16 +10,16 @@ import { getRegions } from "~/lib/regions";
 
 import { RegionTable } from "./table";
 
-type Props = {
-  params: { regionId: string };
-};
-
 export async function generateStaticParams() {
   const regions = await getRegions();
   return regions.regions.map(({ id }) => ({ regionId: id }));
 }
 
-export async function generateMetadata({ params: { regionId } }: Props): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps<"/region/[regionId]">): Promise<Metadata> {
+  const { regionId } = await params;
+
   const region = await getRegion(regionId);
 
   return {
@@ -27,7 +27,9 @@ export async function generateMetadata({ params: { regionId } }: Props): Promise
   };
 }
 
-export default async function Page({ params: { regionId } }: Props) {
+export default async function Page({ params }: PageProps<"/region/[regionId]">) {
+  const { regionId } = await params;
+
   const region = await getRegion(regionId);
 
   return (

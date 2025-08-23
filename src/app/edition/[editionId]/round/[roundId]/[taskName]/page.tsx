@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Card, CardActions, CardBody } from "@olinfo/react-components";
+import type { ParamsOf } from "routes";
 
 import { Highlights } from "~/components/highlights";
 import { getEdition } from "~/lib/edition";
@@ -10,10 +11,6 @@ import { getRound } from "~/lib/round";
 import { getTask } from "~/lib/task";
 
 import { TaskTable } from "./table";
-
-type Props = {
-  params: { editionId: string; roundId: string; taskName: string };
-};
 
 export async function generateStaticParams() {
   const editions = await getEditions();
@@ -25,11 +22,13 @@ export async function generateStaticParams() {
       return Promise.all(
         rounds.map(async (roundId) => {
           const round = await getRound(id, roundId);
-          return round.tasks.map(({ name: taskName }): Props["params"] => ({
-            editionId: id.toString(),
-            roundId,
-            taskName,
-          }));
+          return round.tasks.map(
+            ({ name: taskName }): ParamsOf<"/edition/[editionId]/round/[roundId]/[taskName]"> => ({
+              editionId: id.toString(),
+              roundId,
+              taskName,
+            }),
+          );
         }),
       );
     }),
@@ -38,8 +37,10 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({
-  params: { editionId, roundId, taskName },
-}: Props): Promise<Metadata> {
+  params,
+}: PageProps<"/edition/[editionId]/round/[roundId]/[taskName]">): Promise<Metadata> {
+  const { editionId, roundId, taskName } = await params;
+
   const task = await getTask(editionId, roundId, taskName);
 
   return {
@@ -47,7 +48,11 @@ export async function generateMetadata({
   };
 }
 
-export default async function Page({ params: { editionId, roundId, taskName } }: Props) {
+export default async function Page({
+  params,
+}: PageProps<"/edition/[editionId]/round/[roundId]/[taskName]">) {
+  const { editionId, roundId, taskName } = await params;
+
   const task = await getTask(editionId, roundId, taskName);
 
   return (

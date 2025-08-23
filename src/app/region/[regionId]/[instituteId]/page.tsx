@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Card, CardBody } from "@olinfo/react-components";
+import type { ParamsOf } from "routes";
 
 import { Highlights } from "~/components/highlights";
 import { getInstitute } from "~/lib/institute";
@@ -10,27 +11,27 @@ import { getRegions } from "~/lib/regions";
 
 import { InstituteTable } from "./table";
 
-type Props = {
-  params: { regionId: string; instituteId: string };
-};
-
 export async function generateStaticParams() {
   const regions = await getRegions();
   const params = await Promise.all(
     regions.regions.map(async ({ id: regionId }) => {
       const region = await getRegion(regionId);
-      return region.institutes.map(({ id: instituteId }): Props["params"] => ({
-        regionId,
-        instituteId,
-      }));
+      return region.institutes.map(
+        ({ id: instituteId }): ParamsOf<"/region/[regionId]/[instituteId]"> => ({
+          regionId,
+          instituteId,
+        }),
+      );
     }),
   );
   return params.flat();
 }
 
 export async function generateMetadata({
-  params: { regionId, instituteId },
-}: Props): Promise<Metadata> {
+  params,
+}: PageProps<"/region/[regionId]/[instituteId]">): Promise<Metadata> {
+  const { regionId, instituteId } = await params;
+
   const institute = await getInstitute(regionId, instituteId);
 
   return {
@@ -38,7 +39,9 @@ export async function generateMetadata({
   };
 }
 
-export default async function Page({ params: { regionId, instituteId } }: Props) {
+export default async function Page({ params }: PageProps<"/region/[regionId]/[instituteId]">) {
+  const { regionId, instituteId } = await params;
+
   const institute = await getInstitute(regionId, instituteId);
 
   return (
