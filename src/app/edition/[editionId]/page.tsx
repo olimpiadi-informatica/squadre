@@ -5,18 +5,16 @@ import { Card, CardBody } from "@olinfo/react-components";
 import type { ParamsOf } from "routes";
 
 import { Highlights } from "~/components/highlights";
-import { getEdition } from "~/lib/edition";
-import { getEditions } from "~/lib/editions";
+import { getEdition, getEditionStats, listEditions } from "~/lib/edition";
+import { listRounds } from "~/lib/round";
+import { listRoundScores } from "~/lib/score";
+import { listEditionTeams, listRoundTeams } from "~/lib/team";
 
 import { EditionTable } from "./table";
 
-export async function generateStaticParams() {
-  const editions = await getEditions();
-  return editions.editions.map(
-    ({ id }): ParamsOf<"/edition/[editionId]"> => ({
-      editionId: id.toString(),
-    }),
-  );
+export async function generateStaticParams(): Promise<ParamsOf<"/edition/[editionId]">[]> {
+  const editions = await listEditions();
+  return editions.map((e) => ({ editionId: e.id }));
 }
 
 export async function generateMetadata({
@@ -27,7 +25,7 @@ export async function generateMetadata({
   const edition = await getEdition(editionId);
 
   return {
-    title: `OIS - ${edition.title}`,
+    title: `OIS - ${edition.name}`,
   };
 }
 
@@ -35,6 +33,12 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]">
   const { editionId } = await params;
 
   const edition = await getEdition(editionId);
+  const stats = await getEditionStats(editionId);
+  const topFinalist = await listRoundTeams(editionId, "final", 3);
+
+  const teams = await listEditionTeams(editionId);
+  const rounds = await listRounds(editionId);
+  const scores = await listRoundScores(editionId);
 
   return (
     <div className="flex flex-col gap-4">
@@ -46,31 +50,28 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]">
           <li>
             <Link href="/edition">Rankings</Link>
           </li>
-          <li>{edition.title}</li>
+          <li>{edition.name}</li>
         </ul>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardBody title={`OIS ${edition.year}`}>
             <p>
-              {edition.teams} teams from {edition.instnum} schools participated in this edition of
-              the OIS, scoring a total of {edition.points} points on {edition.tasks} tasks.
-              {edition.final && (
-                <> The top {edition.final.ranking.length} teams at the finals were:</>
-              )}
+              {stats.totalTeams} teams from {stats.totalInstitutes} schools participated in this
+              edition of the OIS, scoring a total of {stats.totalPoints} points on{" "}
+              {stats.totalTasks} tasks.
+              {topFinalist.length && <> The top {topFinalist.length} teams at the finals were:</>}
             </p>
-            {edition.final && (
+            {topFinalist.length && (
               <ol className="list-decimal pl-6">
-                {edition.final.ranking.map((team, i) => (
-                  <li key={i} value={team.rank}>
-                    <Link href={`/edition/${editionId}/team/${team.team.id}`} className="link">
-                      {team.team.name}
+                {topFinalist.map((team) => (
+                  <li key={team.id} value={team.rank}>
+                    <Link href={`/edition/${editionId}/team/${team.id}`} className="link">
+                      {team.name}
                     </Link>{" "}
                     from{" "}
-                    <Link
-                      href={`/region/${team.team.region}/${team.team.inst_id}`}
-                      className="link">
-                      {team.team.institute}
+                    <Link href={`/region/${team.regionId}/${team.instituteId}`} className="link">
+                      {team.instituteName}, {team.instituteCity}
                     </Link>
                   </li>
                 ))}
@@ -78,10 +79,10 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]">
             )}
           </CardBody>
         </Card>
-        <Highlights highlights={edition.highlights} />
+        <Highlights page={`/edition/${editionId}`} />
       </div>
       <div className="w-full">
-        <EditionTable edition={edition} />
+        <EditionTable teams={teams} rounds={rounds} scores={scores} />
       </div>
     </div>
   );

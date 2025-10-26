@@ -1,20 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useContext } from "react";
+import { createContext, use } from "react";
 
 import { RegionImage } from "~/components/region";
 import { Score } from "~/components/score";
 import { Table } from "~/components/table";
-import type { Round } from "~/lib/round";
+import type { ScoreItem } from "~/lib/score";
+import type { TaskItem } from "~/lib/task";
+import type { TeamResultItem } from "~/lib/team";
 
-const RoundContext = createContext<Round | undefined>(undefined);
+const RoundContext = createContext<{ tasks: TaskItem[]; scores: ScoreItem[] }>({
+  tasks: [],
+  scores: [],
+});
 
-export function RoundTable({ round }: { round: Round }) {
+export function RoundTable({
+  tasks,
+  teams,
+  scores,
+}: {
+  tasks: TaskItem[];
+  teams: TeamResultItem[];
+  scores: ScoreItem[];
+}) {
   return (
-    <RoundContext.Provider value={round}>
+    <RoundContext.Provider value={{ tasks, scores }}>
       <Table
-        data={round.ranking}
+        data={teams}
         header={TableHeaders}
         row={TableRow}
         className="grid-cols-[repeat(5,auto)_repeat(var(--cols),4rem)_4.5rem]"
@@ -24,7 +37,7 @@ export function RoundTable({ round }: { round: Round }) {
 }
 
 function TableHeaders() {
-  const round = useContext(RoundContext)!;
+  const { tasks } = use(RoundContext)!;
   return (
     <>
       <div>Rank</div>
@@ -33,10 +46,10 @@ function TableHeaders() {
       <div>Institute</div>
       <div>Region</div>
       <div>Total</div>
-      {round.tasks.map((task) => (
+      {tasks.map((task) => (
         <div key={task.name}>
           <Link
-            href={`/edition/${round.ed_num}/round/${round.id}/${task.name}`}
+            href={`/edition/${task.editionId}/round/${task.roundId}/${task.name}`}
             className="link block w-full truncate">
             {task.name}
           </Link>
@@ -46,32 +59,37 @@ function TableHeaders() {
   );
 }
 
-function TableRow({ item: team }: { item: Round["ranking"][number] }) {
-  const round = useContext(RoundContext)!;
+function TableRow({ item: team }: { item: TeamResultItem }) {
+  const { tasks, scores } = use(RoundContext)!;
 
   return (
     <>
       <div>{team.rank}</div>
-      <div>{team.rank_reg}</div>
+      <div>{team.regionalRank}</div>
       <div className="min-w-32 text-wrap break-words text-sm">
-        <Link href={`/edition/${round.ed_num}/team/${team.team.id}`} className="link">
-          {team.team.name}
+        <Link href={`/edition/${team.editionId}/team/${team.id}`} className="link">
+          {team.name}
         </Link>
       </div>
       <div className="min-w-48 text-wrap text-sm">
-        <Link href={`/region/${team.team.region}/${team.team.inst_id}`} className="link">
-          {team.team.institute}
+        <Link href={`/region/${team.regionId}/${team.instituteId}`} className="link">
+          {team.instituteName}, {team.instituteCity}
         </Link>
       </div>
       <div>
-        <Link href={`/region/${team.team.region}`}>
-          <RegionImage id={team.team.region} name={team.team.fullregion} className="inline-block" />
+        <Link href={`/region/${team.regionId}`}>
+          <RegionImage id={team.regionId} name={team.regionName} className="inline-block" />
         </Link>
       </div>
-      <div>{team.total}</div>
-      {team.scores.map((score, i) => (
-        <Score key={i} score={score} maxScore={100} className="min-w-16" />
-      ))}
+      <div>{team.points}</div>
+      {tasks.map((task) => {
+        const score = scores.find(
+          (score) => score.teamId === team.id && score.taskName === task.name,
+        );
+        return (
+          <Score key={task.name} score={score?.score ?? 0} maxScore={100} className="min-w-16" />
+        );
+      })}
     </>
   );
 }

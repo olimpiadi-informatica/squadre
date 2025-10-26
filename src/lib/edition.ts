@@ -1,103 +1,77 @@
-import { readFile } from "node:fs/promises";
+import { cache } from "react";
 
-import { z } from "zod";
+import { and, countDistinct, desc, eq, max, sum } from "drizzle-orm";
 
-import { highlightSchema } from "./common";
+import { db } from "~/lib/db";
+import { edition, task, taskScore, team } from "~/lib/db/schema";
+import { coalesce, concat } from "~/lib/utils";
 
-const taskSchema = z
-  .object({
-    name: z.string(),
-    title: z.string(),
-  })
-  .strict();
+export type Edition = {
+  name: string;
+  year: string;
+};
 
-const contestSchema = z
-  .object({
-    average: z.number().nullish(),
-    avgpos: z.number().nullish(),
-    edition: z.string().optional(),
-    fullscore: z.number().nullable(),
-    highest: z.number().nullish(),
-    id: z.string(),
-    medpos: z.number().nullish(),
-    name: z.string(),
-    positive: z.number().nullish(),
-    tasks: taskSchema.array().nullable(),
-    title: z.string(),
-  })
-  .strict();
+export const getEdition = cache(async (id: string): Promise<Edition> => {
+  const [result] = await db
+    .select({
+      name: edition.title,
+      year: edition.year,
+    })
+    .from(edition)
+    .where(eq(edition.id, id));
+  if (!result) throw new Error(`Edition ${id} not found`);
+  return result;
+});
 
-const teamSchema = z
-  .object({
-    average: z.number().optional(),
-    avgpos: z.number().optional(),
-    edition: z.string().optional(),
-    finalist: z.boolean().nullable(),
-    fullregion: z.string(),
-    highest: z.number().optional(),
-    id: z.string(),
-    inst_id: z.string(),
-    institute: z.string(),
-    medpos: z.number().optional(),
-    name: z.string(),
-    positive: z.number().optional(),
-    region: z.string(),
-  })
-  .strict();
+export type EditionStats = {
+  totalTasks: number;
+  totalTeams: number;
+  totalInstitutes: number;
+  totalPoints: number;
+};
 
-const medalist = z
-  .object({
-    rank: z.number(),
-    rank_reg: z.number(),
-    total: z.number(),
-    scores: z.number().array(),
-    team: teamSchema,
-  })
-  .strict();
+export const getEditionStats = cache(async (id?: string): Promise<EditionStats> => {
+  const [result] = await db
+    .select({
+      totalTasks: countDistinct(taskScore.taskName),
+      totalTeams: countDistinct(concat(team.editionId, "-", team.id)),
+      totalInstitutes: countDistinct(team.instId),
+      totalPoints: coalesce(sum(taskScore.score), 0),
+    })
+    .from(team)
+    .leftJoin(
+      taskScore,
+      and(eq(team.editionId, taskScore.editionId), eq(team.id, taskScore.teamId)),
+    )
+    .where(eq(team.editionId, id ?? "").if(id));
+  return result;
+});
 
-const teamResultSchema = z
-  .object({
-    rank_excl: z.number(),
-    rank_reg: z.number(),
-    rank_tot: z.number(),
-    rounds: z.number().nullable().array(),
-    team: teamSchema,
-    total: z.number(),
-  })
-  .strict();
+export type EditionItem = {
+  id: string;
+  name: string;
+  year: string;
+  totalInstitutes: number;
+  totalTeams: number;
+  totalPoints: number;
+  totalTasks: number;
+  highestPoints: number;
+};
 
-const editionSchema = z
-  .object({
-    average: z.number(),
-    avgpos: z.number(),
-    fullscore: z.number(),
-    highest: z.number(),
-    id: z.number(),
-    instnum: z.number(),
-    lastEd: z.number(),
-    medpos: z.number(),
-    name: z.string(),
-    points: z.number(),
-    positive: z.number(),
-    regions: z.number(),
-    tasks: z.number(),
-    teams: z.number(),
-    title: z.string(),
-    year: z.string(),
-    contests: contestSchema.array(),
-    final: z
-      .object({ ranking: medalist.array().length(3) })
-      .strict()
-      .nullable(),
-    rounds: teamResultSchema.array(),
-    highlights: highlightSchema.array(),
-  })
-  .strict();
-
-export type Edition = z.infer<typeof editionSchema>;
-
-export async function getEdition(id: string | number): Promise<Edition> {
-  return editionSchema.parseAsync(
-    JSON.parse(await readFile(`data/json/edition.${id}.json`, "utf8")),
-  );
-}
+export const listEditions = cache((): Promise<EditionItem[]> => {
+  return db
+    .select({
+      id: edition.id,
+      name: edition.title,
+      year: edition.year,
+      totalInstitutes: countDistinct(team.instId),
+      totalTeams: countDistinct(concat(team.editionId, "-", team.id)),
+      totalPoints: coalesce(sum(team.points), 0),
+      highestPoints: coalesce(max(team.points), 0),
+      totalTasks: db.$count(task, eq(task.editionId, edition.id)),
+    })
+    .from(edition)
+    .innerJoin(team, eq(team.editionId, edition.id))
+    .groupBy(edition.id)
+    .orderBy(desc(edition.year));
+});

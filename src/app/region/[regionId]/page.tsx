@@ -2,17 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Card, CardBody } from "@olinfo/react-components";
+import type { ParamsOf } from "routes";
 
 import { Highlights } from "~/components/highlights";
+import { Rank } from "~/components/rank";
 import { RegionImage } from "~/components/region";
-import { getRegion } from "~/lib/region";
-import { getRegions } from "~/lib/regions";
+import { listInstitutes } from "~/lib/institute";
+import { getRegion, getRegionStats, listRegions } from "~/lib/region";
 
 import { RegionTable } from "./table";
 
-export async function generateStaticParams() {
-  const regions = await getRegions();
-  return regions.regions.map(({ id }) => ({ regionId: id }));
+export async function generateStaticParams(): Promise<ParamsOf<"/region/[regionId]">[]> {
+  const regions = await listRegions();
+  return regions.map((r) => ({ regionId: r.id }));
 }
 
 export async function generateMetadata({
@@ -31,6 +33,8 @@ export default async function Page({ params }: PageProps<"/region/[regionId]">) 
   const { regionId } = await params;
 
   const region = await getRegion(regionId);
+  const stats = await getRegionStats(regionId);
+  const institutes = await listInstitutes(regionId);
 
   return (
     <div className="flex flex-col gap-4">
@@ -55,21 +59,21 @@ export default async function Page({ params }: PageProps<"/region/[regionId]">) 
               </>
             }>
             <p>
-              {region.teams} teams from {region.instnum} schools participated in{" "}
-              {region.participations.length} OIS editions from {region.name}, scoring a total of{" "}
-              {region.points} points.
+              {stats.totalTeams} teams from {stats.totalInstitutes} schools participated in{" "}
+              {stats.totalEditions} OIS editions from {region.name}, scoring a total of{" "}
+              {stats.totalPoints} points.
             </p>
             <p>
-              Schools in {region.name} have an average ranking of {Math.round(region.bestavgrank)}%,
-              and the best rank ever achieved by a team is {region.bestedrank} in an edition (
-              {region.bestrank} in a contest).
+              The best rank ever achieved by a team in {region.name} is{" "}
+              <Rank position={stats.bestEditionRank} /> in an edition (
+              <Rank position={stats.bestEditionRank} /> in a contest).
             </p>
           </CardBody>
         </Card>
-        <Highlights highlights={region.highlights} />
+        <Highlights page={`/region/${regionId}`} />
       </div>
       <div className="w-full">
-        <RegionTable region={region} />
+        <RegionTable institutes={institutes} />
       </div>
     </div>
   );

@@ -5,12 +5,12 @@ import Link from "next/link";
 import { Medals } from "~/components/medal";
 import { RegionImage } from "~/components/region";
 import { Table } from "~/components/table";
-import type { Regions } from "~/lib/regions";
+import type { RegionItem } from "~/lib/region";
 
-export function RegionsTable({ regions }: { regions: Regions }) {
+export function RegionsTable({ regions }: { regions: RegionItem[] }) {
   return (
     <Table
-      data={regions.regions}
+      data={regions}
       header={TableHeaders}
       row={TableRow}
       className="grid-cols-[repeat(6,auto)]"
@@ -31,7 +31,7 @@ function TableHeaders() {
   );
 }
 
-function TableRow({ item: region }: { item: Regions["regions"][number] }) {
+function TableRow({ item: region }: { item: RegionItem }) {
   return (
     <>
       <div>
@@ -42,10 +42,10 @@ function TableRow({ item: region }: { item: Regions["regions"][number] }) {
           {region.name}
         </Link>
       </div>
-      <div>{region.instnum}</div>
-      <div>{region.teams}</div>
-      <Medals medals={region.medals} />
-      <div>{region.points}</div>
+      <div>{region.totalInstitutes}</div>
+      <div>{region.totalTeams}</div>
+      <Medals medals={region.totalMedals} />
+      <div>{region.totalPoints}</div>
     </>
   );
 }

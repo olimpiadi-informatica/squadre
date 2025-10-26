@@ -1,66 +1,92 @@
-import { readFile } from "node:fs/promises";
+import { cache } from "react";
 
-import { z } from "zod";
+import { and, count, countDistinct, eq, isNotNull, min, sql, sum } from "drizzle-orm";
 
-import { highlightSchema, medalsSchema } from "./common";
+import { db } from "~/lib/db";
+import { institute, region, roundScore, team } from "~/lib/db/schema";
+import { coalesce, concat, jsonAggregate } from "~/lib/utils";
 
-const teamSchema = z
-  .object({
-    avgrank: z.number(),
-    bestrank: z.number(),
-    coach: z.string(),
-    edition: z.number(),
-    finalist: z.boolean().nullable(),
-    fullregion: z.string(),
-    id: z.string(),
-    inst_id: z.string(),
-    institute: z.string(),
-    medals: medalsSchema,
-    members: z.string().max(0),
-    name: z.string(),
-    points: z.number(),
-    rank_excl: z.number(),
-    rank_reg: z.number(),
-    rank_tot: z.number(),
-    region: z.string(),
-  })
-  .strict();
+export type Institute = {
+  id: string;
+  name: string;
+  city: string;
+  regionId: string;
+  regionName: string;
+  totalEditions: number;
+  totalTeams: number;
+  totalPoints: number;
+  totalMedals: Record<number, number>;
+};
 
-const editionSchema = z
-  .object({
-    avgrank: z.number(),
-    medals: medalsSchema,
-    num: z.number(),
-    points: z.number(),
-    teams: teamSchema.array(),
-    title: z.string(),
-    year: z.string(),
-  })
-  .strict();
+const medalCte = db.$with("medals").as(
+  db
+    .select({
+      instituteId: team.instId,
+      medal: roundScore.medal,
+      count: count().as("count"),
+    })
+    .from(roundScore)
+    .innerJoin(team, and(eq(roundScore.teamId, team.id), eq(roundScore.editionId, team.editionId)))
+    .where(and(isNotNull(roundScore.medal)))
+    .groupBy(team.instId, roundScore.medal),
+);
 
-const instituteSchema = z
-  .object({
-    avgrank: z.number(),
-    bestavgrank: z.number(),
-    bestedrank: z.number(),
-    bestrank: z.number(),
-    city: z.string(),
-    editions: editionSchema.array(),
-    fullregion: z.string(),
-    highlights: highlightSchema.array(),
-    medals: medalsSchema,
-    name: z.string(),
-    participations: z.number().array(),
-    points: z.number(),
-    region: z.string(),
-    teams: z.number(),
-  })
-  .strict();
+export const listInstitutes = cache(
+  (regionId?: string, instituteId?: string): Promise<Institute[]> => {
+    return db
+      .with(medalCte)
+      .select({
+        id: institute.id,
+        name: institute.name,
+        city: institute.city,
+        regionId: institute.region,
+        regionName: region.name,
+        totalEditions: countDistinct(team.editionId),
+        totalTeams: countDistinct(concat(team.editionId, "-", team.id)),
+        totalPoints: coalesce(sum(team.points), 0),
+        totalMedals: sql`${db
+          .select({
+            medals: jsonAggregate(medalCte.medal, medalCte.count),
+          })
+          .from(medalCte)
+          .where(eq(institute.id, medalCte.instituteId))}`.mapWith(JSON.parse),
+      })
+      .from(institute)
+      .innerJoin(team, eq(team.instId, institute.id))
+      .innerJoin(region, eq(region.id, institute.region))
+      .where(
+        and(
+          eq(institute.region, regionId ?? "").if(regionId),
+          eq(institute.id, instituteId ?? "").if(instituteId),
+        ),
+      )
+      .groupBy(institute.id)
+      .orderBy(institute.city, institute.name);
+  },
+);
 
-export type Institute = z.infer<typeof instituteSchema>;
-
-export async function getInstitute(region: string, id: string): Promise<Institute> {
-  return instituteSchema.parseAsync(
-    JSON.parse(await readFile(`data/json/region.${region}.${id}.json`, "utf8")),
-  );
+export async function getInstitute(id: string): Promise<Institute> {
+  const [result] = await listInstitutes(undefined, id);
+  if (!result) throw new Error(`Institute ${id} not found`);
+  return result;
 }
+
+export type InstituteStats = {
+  bestEditionRank: number;
+  bestRoundRank: number;
+};
+
+export const getInstituteStats = cache(async (id: string): Promise<InstituteStats> => {
+  const [result] = await db
+    .select({
+      bestEditionRank: coalesce(min(team.rankTot), 0),
+      bestRoundRank: coalesce(min(roundScore.rankTot), 0),
+    })
+    .from(team)
+    .innerJoin(
+      roundScore,
+      and(eq(team.editionId, roundScore.editionId), eq(team.id, roundScore.teamId)),
+    )
+    .where(eq(team.instId, id));
+  return result;
+});

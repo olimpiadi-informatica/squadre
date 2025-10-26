@@ -4,12 +4,12 @@ import Link from "next/link";
 
 import { Medals } from "~/components/medal";
 import { Table } from "~/components/table";
-import type { Region } from "~/lib/region";
+import type { Institute } from "~/lib/institute";
 
-export function RegionTable({ region }: { region: Region }) {
+export function RegionTable({ institutes }: { institutes: Institute[] }) {
   return (
     <Table
-      data={region.institutes}
+      data={institutes}
       header={TableHeaders}
       row={TableRow}
       className="grid-cols-[repeat(6,auto)]"
@@ -30,19 +30,19 @@ function TableHeaders() {
   );
 }
 
-function TableRow({ item: institute }: { item: Region["institutes"][number] }) {
+function TableRow({ item: institute }: { item: Institute }) {
   return (
     <>
       <div className="min-w-56 text-wrap text-sm">
-        <Link href={`/region/${institute.region}/${institute.id}`} className="link">
+        <Link href={`/region/${institute.regionId}/${institute.id}`} className="link">
           {institute.name}
         </Link>
       </div>
       <div>{institute.city}</div>
-      <div>{institute.participations.length}</div>
-      <div>{institute.teams}</div>
-      <Medals medals={institute.medals} />
-      <div>{institute.points}</div>
+      <div>{institute.totalEditions}</div>
+      <div>{institute.totalTeams}</div>
+      <Medals medals={institute.totalMedals} />
+      <div>{institute.totalPoints}</div>
     </>
   );
 }

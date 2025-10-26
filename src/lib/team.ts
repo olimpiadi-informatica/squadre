@@ -1,75 +1,191 @@
-import { readFile } from "node:fs/promises";
+import { cache } from "react";
 
-import { z } from "zod";
+import { and, avg, count, eq, gt, isNotNull, min, sql, sum } from "drizzle-orm";
 
-import { highlightSchema, medalsSchema } from "./common";
+import { db } from "~/lib/db";
+import { edition, institute, region, roundScore, team } from "~/lib/db/schema";
+import { coalesce, jsonAggregate } from "~/lib/utils";
 
-const taskSchema = z
-  .object({
-    average: z.number(),
-    fullscores: z.number(),
-    name: z.string(),
-    title: z.string(),
-  })
-  .strict();
+export type Team = {
+  name: string;
+  coach: string;
+  rank: number;
+  regionalRank: number;
+  editionId: string;
+  editionName: string;
+  editionYear: string;
+  instituteId: string;
+  instituteName: string;
+  instituteCity: string;
+  regionId: string;
+  regionName: string;
+};
 
-const roundSchema = z
-  .object({
-    average: z.number(),
-    avgpos: z.number(),
-    ed_num: z.number(),
-    edition: z.string(),
-    fullscore: z.number(),
-    highest: z.number(),
-    highlights: highlightSchema.array(),
-    id: z.string(),
-    lastEd: z.number(),
-    lastRound: z.string(),
-    medpos: z.number(),
-    name: z.string(),
-    points: z.number(),
-    positive: z.number(),
-    provisional: z.boolean(),
-    rank_reg: z.number(),
-    rank_tot: z.number(),
-    scores: z.number().array(),
-    tasks: taskSchema.array(),
-    teams: z.number(),
-    title: z.string(),
-    total: z.number(),
-  })
-  .strict();
+export const getTeam = cache(async (editionId: string, id: string): Promise<Team> => {
+  const [result] = await db
+    .select({
+      name: team.name,
+      coach: team.coach,
+      rank: team.rankTot,
+      regionalRank: team.rankReg,
+      editionId: team.editionId,
+      editionName: edition.title,
+      editionYear: edition.year,
+      instituteId: team.instId,
+      instituteName: institute.name,
+      instituteCity: institute.city,
+      regionId: institute.region,
+      regionName: region.name,
+    })
+    .from(team)
+    .innerJoin(edition, eq(team.editionId, edition.id))
+    .innerJoin(institute, eq(team.instId, institute.id))
+    .innerJoin(region, eq(institute.region, region.id))
+    .where(and(eq(team.editionId, editionId), eq(team.id, id)));
+  if (!result) throw new Error(`Team ${editionId}-${id} not found`);
+  return result;
+});
 
-const teamSchema = z
-  .object({
-    avgrank: z.number(),
-    bestrank: z.number(),
-    coach: z.string(),
-    ed_num: z.number(),
-    edition: z.string(),
-    finalist: z.boolean().nullable(),
-    fullregion: z.string(),
-    id: z.string(),
-    inst_id: z.string(),
-    institute: z.string(),
-    medals: medalsSchema,
-    members: z.string().max(0),
-    name: z.string(),
-    points: z.number(),
-    rank_excl: z.number(),
-    rank_reg: z.number(),
-    rank_tot: z.number(),
-    region: z.string(),
-    year: z.string(),
-    highlights: highlightSchema.array(),
-    contests: roundSchema.array(),
-  })
-  .strict();
+export type TeamStats = {
+  totalPoints: number;
+  avgRoundRank: number;
+  bestRoundRank: number;
+};
 
-export type Team = z.infer<typeof teamSchema>;
+export const getTeamStats = cache(async (editionId: string, id: string): Promise<TeamStats> => {
+  const [result] = await db
+    .select({
+      totalPoints: coalesce(sum(roundScore.score), 0),
+      avgRoundRank: coalesce(avg(roundScore.rankTot), 0),
+      bestRoundRank: coalesce(min(roundScore.rankTot), 0),
+    })
+    .from(roundScore)
+    .where(and(eq(roundScore.editionId, editionId), eq(roundScore.teamId, id)));
+  return result;
+});
 
-export async function getTeam(edition: string | number, id: string): Promise<Team> {
-  return teamSchema.parseAsync(
-    JSON.parse(await readFile(`data/json/edition.${edition}.team.${id}.json`, "utf8")),
-  );
-}
+export type TeamItem = {
+  id: string;
+  name: string;
+  coach: string;
+  rank: number;
+  regionalRank: number;
+  points: number;
+  editionId: string;
+  finalist: boolean;
+  totalMedals: Record<number, number>;
+};
+
+const medalCte = db.$with("medals").as(
+  db
+    .select({
+      teamId: roundScore.teamId,
+      editionId: roundScore.editionId,
+      medal: roundScore.medal,
+      count: count().as("count"),
+    })
+    .from(roundScore)
+    .where(and(isNotNull(roundScore.medal)))
+    .groupBy(roundScore.teamId, roundScore.editionId, roundScore.medal),
+);
+
+export const listTeams = cache((instituteId?: string): Promise<TeamItem[]> => {
+  return db
+    .with(medalCte)
+    .select({
+      id: team.id,
+      name: team.name,
+      coach: team.coach,
+      rank: team.rankTot,
+      regionalRank: team.rankReg,
+      points: team.points,
+      editionId: team.editionId,
+      finalist: sql`${team.finalist}`.mapWith(Boolean),
+      totalMedals: sql`${db
+        .select({
+          medals: jsonAggregate(medalCte.medal, medalCte.count),
+        })
+        .from(medalCte)
+        .where(and(eq(medalCte.teamId, team.id), eq(medalCte.editionId, team.editionId)))}`.mapWith(
+        JSON.parse,
+      ),
+    })
+    .from(team)
+    .where(eq(team.instId, instituteId ?? "").if(instituteId))
+    .orderBy(team.rankTot);
+});
+
+export type TeamResultItem = {
+  id: string;
+  name: string;
+  rank: number;
+  regionalRank: number;
+  finalist: boolean;
+  points: number;
+  editionId: string;
+  instituteId: string;
+  instituteName: string;
+  instituteCity: string;
+  regionId: string;
+  regionName: string;
+};
+
+export const listRoundTeams = cache(
+  (editionId: string, roundId: string, limit?: number): Promise<TeamResultItem[]> => {
+    const query = db
+      .select({
+        id: team.id,
+        name: team.name,
+        rank: roundScore.rankTot,
+        regionalRank: roundScore.rankReg,
+        finalist: sql`${team.finalist}`.mapWith(Boolean),
+        points: roundScore.score,
+        editionId: team.editionId,
+        instituteId: institute.id,
+        instituteName: institute.name,
+        instituteCity: institute.city,
+        regionId: region.id,
+        regionName: region.name,
+      })
+      .from(roundScore)
+      .innerJoin(
+        team,
+        and(eq(roundScore.editionId, team.editionId), eq(roundScore.teamId, team.id)),
+      )
+      .innerJoin(institute, eq(team.instId, institute.id))
+      .innerJoin(region, eq(institute.region, region.id))
+      .where(
+        and(
+          eq(roundScore.editionId, editionId),
+          eq(roundScore.roundId, roundId),
+          gt(roundScore.score, 0),
+        ),
+      )
+      .orderBy(roundScore.rankTot, institute.region, institute.name, institute.city, team.name);
+
+    return limit ? query.limit(limit) : query;
+  },
+);
+
+export const listEditionTeams = cache((editionId: string): Promise<TeamResultItem[]> => {
+  return db
+    .select({
+      id: team.id,
+      name: team.name,
+      rank: team.rankTot,
+      regionalRank: team.rankReg,
+      finalist: sql`${team.finalist}`.mapWith(Boolean),
+      points: team.points,
+      editionId: team.editionId,
+      instituteId: institute.id,
+      instituteName: institute.name,
+      instituteCity: institute.city,
+      regionId: region.id,
+      regionName: region.name,
+    })
+    .from(team)
+    .innerJoin(institute, eq(team.instId, institute.id))
+    .innerJoin(region, eq(institute.region, region.id))
+    .where(and(eq(team.editionId, editionId)))
+    .orderBy(roundScore.rankTot, institute.region, institute.name, institute.city, team.name);
+});

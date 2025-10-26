@@ -3,12 +3,13 @@ import Link from "next/link";
 import { Card, CardBody } from "@olinfo/react-components";
 
 import { Highlights } from "~/components/highlights";
-import { getRegions } from "~/lib/regions";
+import { getRegionStats, listRegions } from "~/lib/region";
 
 import { RegionsTable } from "./table";
 
 export default async function Page() {
-  const regions = await getRegions();
+  const regions = await listRegions();
+  const stats = await getRegionStats();
 
   return (
     <div className="flex flex-col gap-4">
@@ -24,17 +25,12 @@ export default async function Page() {
         <Card>
           <CardBody title="OIS Regions">
             <p>
-              {regions.teams} teams from {regions.instnum} schools participated in{" "}
-              {regions.editions} OIS editions. Overall, {regions.points} points were scored on{" "}
-              {regions.tasks} tasks.
-            </p>
-            <p>
-              Regions participated in average to {Math.round(regions.avgpart * 10) / 10} editions,
-              with {regions.allpart} regions participating to all of them.
+              {stats.totalTeams} teams from {stats.totalInstitutes} schools participated in{" "}
+              {stats.totalEditions} OIS editions. Overall, {stats.totalPoints} points were scored.
             </p>
           </CardBody>
         </Card>
-        <Highlights highlights={regions.highlights} />
+        <Highlights page="/region" />
       </div>
       <div className="w-full">
         <RegionsTable regions={regions} />

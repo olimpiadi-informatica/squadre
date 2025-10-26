@@ -1,66 +1,79 @@
-import { readFile } from "node:fs/promises";
+import { cache } from "react";
 
-import { z } from "zod";
+import { and, avg, count, eq, gt, min, sum } from "drizzle-orm";
 
-import { highlightSchema } from "./common";
+import { db } from "~/lib/db";
+import { edition, round, roundScore } from "~/lib/db/schema";
+import { coalesce, median } from "~/lib/utils";
 
-const taskSchema = z
-  .object({
-    name: z.string(),
-    title: z.string(),
-  })
-  .strict();
+export type Round = {
+  id: string;
+  name: string;
+  editionId: string;
+  editionName: string;
+};
 
-const teamSchema = z
-  .object({
-    finalist: z.boolean().nullable(),
-    fullregion: z.string(),
-    id: z.string(),
-    inst_id: z.string(),
-    institute: z.string(),
-    name: z.string(),
-    region: z.string(),
-  })
-  .strict();
+export const getRound = cache(async (editionId: string, roundId: string): Promise<Round> => {
+  const [result] = await db
+    .select({
+      id: round.id,
+      name: round.title,
+      editionId: round.editionId,
+      editionName: edition.title,
+    })
+    .from(round)
+    .innerJoin(edition, eq(round.editionId, edition.id))
+    .where(and(eq(round.editionId, editionId), eq(round.id, roundId)));
+  if (!result) throw new Error(`Round ${editionId}-${roundId} not found`);
+  return result;
+});
 
-const teamResultSchema = z
-  .object({
-    rank_reg: z.number(),
-    rank: z.number(),
-    scores: z.number().array(),
-    team: teamSchema,
-    total: z.number(),
-  })
-  .strict();
+export type RoundStats = {
+  teamScored: number;
+  totalScores: number;
+  maxScore: number;
+  avgScore: number;
+  medianScore: number;
+};
 
-const roundSchema = z
-  .object({
-    average: z.number(),
-    avgpos: z.number(),
-    ed_num: z.number(),
-    edition: z.string(),
-    fullscore: z.number(),
-    highest: z.number(),
-    highlights: highlightSchema.array(),
-    id: z.string(),
-    lastEd: z.number(),
-    lastRound: z.string(),
-    medpos: z.number(),
-    name: z.string(),
-    points: z.number(),
-    positive: z.number(),
-    provisional: z.boolean(),
-    ranking: teamResultSchema.array(),
-    tasks: taskSchema.array(),
-    teams: z.number(),
-    title: z.string(),
-  })
-  .strict();
+export const getRoundStats = cache(
+  async (editionId: string, roundId: string): Promise<RoundStats> => {
+    const [result] = await db
+      .select({
+        teamScored: count(),
+        totalScores: coalesce(sum(roundScore.score), 0),
+        maxScore: coalesce(min(roundScore.score), 0),
+        avgScore: coalesce(avg(roundScore.score), 0),
+        medianScore: coalesce(median(roundScore.score), 0),
+      })
+      .from(roundScore)
+      .where(
+        and(
+          eq(roundScore.editionId, editionId),
+          eq(roundScore.roundId, roundId),
+          gt(roundScore.score, 0),
+        ),
+      );
+    return result;
+  },
+);
 
-export type Round = z.infer<typeof roundSchema>;
+export type RoundItem = {
+  id: string;
+  name: string;
+  editionId: string;
+  maxScore: number;
+};
 
-export async function getRound(edition: string | number, id: string): Promise<Round> {
-  return roundSchema.parseAsync(
-    JSON.parse(await readFile(`data/json/edition.${edition}.round.${id}.json`, "utf8")),
-  );
-}
+export const listRounds = cache((editionId?: string): Promise<RoundItem[]> => {
+  return db
+    .select({
+      id: round.id,
+      name: round.title,
+      editionId: round.editionId,
+      maxScore: round.fullscore,
+    })
+    .from(round)
+    .where(eq(round.editionId, editionId ?? "").if(editionId))
+    .orderBy(round.title);
+});

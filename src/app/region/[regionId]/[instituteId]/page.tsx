@@ -5,34 +5,26 @@ import { Card, CardBody } from "@olinfo/react-components";
 import type { ParamsOf } from "routes";
 
 import { Highlights } from "~/components/highlights";
-import { getInstitute } from "~/lib/institute";
-import { getRegion } from "~/lib/region";
-import { getRegions } from "~/lib/regions";
+import { Rank } from "~/components/rank";
+import { listEditions } from "~/lib/edition";
+import { getInstitute, getInstituteStats, listInstitutes } from "~/lib/institute";
+import { listTeams } from "~/lib/team";
 
 import { InstituteTable } from "./table";
 
-export async function generateStaticParams() {
-  const regions = await getRegions();
-  const params = await Promise.all(
-    regions.regions.map(async ({ id: regionId }) => {
-      const region = await getRegion(regionId);
-      return region.institutes.map(
-        ({ id: instituteId }): ParamsOf<"/region/[regionId]/[instituteId]"> => ({
-          regionId,
-          instituteId,
-        }),
-      );
-    }),
-  );
-  return params.flat();
+export async function generateStaticParams(): Promise<
+  ParamsOf<"/region/[regionId]/[instituteId]">[]
+> {
+  const institutes = await listInstitutes();
+  return institutes.map((i) => ({ regionId: i.regionId, instituteId: i.id }));
 }
 
 export async function generateMetadata({
   params,
 }: PageProps<"/region/[regionId]/[instituteId]">): Promise<Metadata> {
-  const { regionId, instituteId } = await params;
+  const { instituteId } = await params;
 
-  const institute = await getInstitute(regionId, instituteId);
+  const institute = await getInstitute(instituteId);
 
   return {
     title: `OIS - ${institute.name}, ${institute.city}`,
@@ -42,7 +34,10 @@ export async function generateMetadata({
 export default async function Page({ params }: PageProps<"/region/[regionId]/[instituteId]">) {
   const { regionId, instituteId } = await params;
 
-  const institute = await getInstitute(regionId, instituteId);
+  const institute = await getInstitute(instituteId);
+  const stats = await getInstituteStats(instituteId);
+  const teams = await listTeams(instituteId);
+  const editions = await listEditions();
 
   return (
     <div className="flex flex-col gap-4">
@@ -55,31 +50,30 @@ export default async function Page({ params }: PageProps<"/region/[regionId]/[in
             <Link href="/region">Teams</Link>
           </li>
           <li>
-            <Link href={`/region/${institute.region}`}>{institute.fullregion}</Link>
+            <Link href={`/region/${institute.regionId}`}>{institute.regionName}</Link>
           </li>
           <li>{institute.name}</li>
         </ul>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardBody title={`${institute.name}, ${institute.city}, ${institute.fullregion}`}>
+          <CardBody title={`${institute.name}, ${institute.city}, ${institute.regionName}`}>
             <p>
-              {institute.teams} teams from this institute participated in{" "}
-              {institute.participations.length} OIS editions, scoring a total of {institute.points}{" "}
+              {institute.totalTeams} teams from this institute participated in{" "}
+              {institute.totalEditions} OIS editions, scoring a total of {institute.totalPoints}{" "}
               points.
             </p>
             <p>
-              Teams of {institute.name} have an average ranking of{" "}
-              {Math.round(institute.bestavgrank)}
-              %, and the best rank ever achieved by a team is {institute.bestedrank} in an edition (
-              {institute.bestrank} in a contest).
+              The best rank ever achieved by a team of {institute.name} is{" "}
+              <Rank position={stats.bestEditionRank} /> in an edition (
+              <Rank position={stats.bestRoundRank} /> in a contest).
             </p>
           </CardBody>
         </Card>
-        <Highlights highlights={institute.highlights} />
+        <Highlights page={`/region/${regionId}/${instituteId}`} />
       </div>
       <div className="w-full">
-        <InstituteTable institute={institute} />
+        <InstituteTable editions={editions} teams={teams} />
       </div>
     </div>
   );

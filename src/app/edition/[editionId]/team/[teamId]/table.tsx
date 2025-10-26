@@ -1,20 +1,27 @@
 "use client";
 
 import Link from "next/link";
+import { createContext, use } from "react";
 
 import { Medal } from "~/components/medal";
 import { Score } from "~/components/score";
 import { Table } from "~/components/table";
-import type { Team } from "~/lib/team";
+import type { RoundScoreItem, ScoreItem } from "~/lib/score";
 
-export function TeamTable({ team }: { team: Team }) {
+const TeamContext = createContext<{ scores: ScoreItem[] }>({
+  scores: [],
+});
+
+export function TeamTable({ rounds, scores }: { rounds: RoundScoreItem[]; scores: ScoreItem[] }) {
   return (
-    <Table
-      data={team.contests}
-      header={TableHeaders}
-      row={TableRow}
-      className="grid-cols-[repeat(3,auto)_repeat(var(--cols),4rem)_4.5rem]"
-    />
+    <TeamContext.Provider value={{ scores }}>
+      <Table
+        data={rounds}
+        header={TableHeaders}
+        row={TableRow}
+        className="grid-cols-[repeat(3,auto)_repeat(var(--cols),4rem)_4.5rem]"
+      />
+    </TeamContext.Provider>
   );
 }
 
@@ -30,27 +37,29 @@ function TableHeaders() {
   );
 }
 
-function TableRow({ item: round }: { item: Team["contests"][number] }) {
+function TableRow({ item: round }: { item: RoundScoreItem }) {
+  const { scores } = use(TeamContext);
+
+  const roundScores = scores.filter((score) => score.roundId === round.roundId);
   return (
     <>
-      <Link href={`/edition/${round.ed_num}/round/${round.id}`} className="link">
-        {round.title}
+      <Link href={`/edition/${round.editionId}/round/${round.roundId}`} className="link">
+        {round.roundName}
       </Link>
       <div>
-        <Medal rank={round.rank_tot} teams={round.teams} />
+        <Medal rank={round.rank} medal={round.medal} />
       </div>
-      <div>{round.rank_reg}</div>
-      <div>{round.total}</div>
-      {round.scores.map((score, i) => {
-        const task = round.tasks[i];
-        return (
-          <Link key={i} href={`/edition/${round.ed_num}/round/${round.id}/${task.name}`}>
-            <abbr title={`${task.title} (${task.name})`} className="text-black">
-              <Score score={score} maxScore={100} />
-            </abbr>
-          </Link>
-        );
-      })}
+      <div>{round.regionalRank}</div>
+      <div>{round.totalPoints}</div>
+      {roundScores.map((score) => (
+        <Link
+          key={score.taskName}
+          href={`/edition/${round.editionId}/round/${score.roundId}/${score.taskName}`}>
+          <abbr title={`${score.taskTitle} (${score.taskName})`} className="text-black">
+            <Score score={score.score} maxScore={100} />
+          </abbr>
+        </Link>
+      ))}
     </>
   );
 }

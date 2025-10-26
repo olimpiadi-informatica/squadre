@@ -6,32 +6,18 @@ import { Card, CardBody } from "@olinfo/react-components";
 import type { ParamsOf } from "routes";
 
 import { Highlights } from "~/components/highlights";
-import { getEdition } from "~/lib/edition";
-import { getEditions } from "~/lib/editions";
-import { getRound } from "~/lib/round";
+import { getRound, getRoundStats, listRounds } from "~/lib/round";
+import { listScores } from "~/lib/score";
+import { listTasks } from "~/lib/task";
+import { listRoundTeams } from "~/lib/team";
 
 import { RoundTable } from "./table";
 
-export async function generateStaticParams() {
-  const editions = await getEditions();
-  const params = await Promise.all(
-    editions.editions.map(async ({ id }) => {
-      const edition = await getEdition(id);
-      const rounds = edition.contests
-        .filter(({ tasks }) => tasks)
-        .map(
-          ({ id: roundId }): ParamsOf<"/edition/[editionId]/round/[roundId]"> => ({
-            editionId: id.toString(),
-            roundId,
-          }),
-        );
-      if (edition.final) {
-        rounds.push({ editionId: id.toString(), roundId: "final" });
-      }
-      return rounds;
-    }),
-  );
-  return params.flat();
+export async function generateStaticParams(): Promise<
+  ParamsOf<"/edition/[editionId]/round/[roundId]">[]
+> {
+  const tasks = await listRounds();
+  return tasks.map((r) => ({ editionId: r.editionId, roundId: r.id }));
 }
 
 export async function generateMetadata({
@@ -42,7 +28,7 @@ export async function generateMetadata({
   const round = await getRound(editionId, roundId);
 
   return {
-    title: `OIS - ${round.title}, ${round.edition}`,
+    title: `OIS - ${round.name}, ${round.editionName}`,
   };
 }
 
@@ -50,6 +36,11 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]/r
   const { editionId, roundId } = await params;
 
   const round = await getRound(editionId, roundId);
+  const stats = await getRoundStats(editionId, roundId);
+
+  const tasks = await listTasks(editionId, roundId);
+  const teams = await listRoundTeams(editionId, roundId);
+  const scores = await listScores(editionId, roundId);
 
   return (
     <div className="flex flex-col gap-4">
@@ -62,25 +53,25 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]/r
             <Link href="/edition">Rankings</Link>
           </li>
           <li>
-            <Link href={`/edition/${round.ed_num}`}>{round.edition}</Link>
+            <Link href={`/edition/${round.editionId}`}>{round.editionName}</Link>
           </li>
-          <li>{round.title}</li>
+          <li>{round.name}</li>
         </ul>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardBody title={round.title}>
+          <CardBody title={round.name}>
             <p>
-              {round.positive} teams scored {round.points} points on {round.tasks.length} tasks, for
-              an average score of {Math.round(round.avgpos)} and a median score of{" "}
-              {Math.round(round.medpos)}.
+              {stats.teamScored} teams scored {stats.totalScores} points on {tasks.length} tasks,
+              for an average score of {Math.round(stats.avgScore)} and a median score of{" "}
+              {Math.round(stats.medianScore)}.
             </p>
           </CardBody>
         </Card>
-        <Highlights highlights={round.highlights} />
+        <Highlights page={`/edition/${editionId}/round/${roundId}`} />
       </div>
-      <div className="w-full" style={{ "--cols": round.tasks.length } as CSSProperties}>
-        <RoundTable round={round} />
+      <div className="w-full" style={{ "--cols": tasks.length } as CSSProperties}>
+        <RoundTable tasks={tasks} teams={teams} scores={scores} />
       </div>
     </div>
   );

@@ -1,67 +1,80 @@
-import { readFile } from "node:fs/promises";
+import { cache } from "react";
 
-import { z } from "zod";
+import { and, avg, count, eq, gt, max, sum } from "drizzle-orm";
 
-import { highlightSchema, medalsSchema } from "./common";
+import { db } from "~/lib/db";
+import { edition, round, task, taskScore } from "~/lib/db/schema";
+import { coalesce, median } from "~/lib/utils";
 
-const teamSchema = z
-  .object({
-    avgrank: z.number(),
-    bestrank: z.number(),
-    coach: z.string(),
-    finalist: z.boolean().nullable(),
-    fullregion: z.string(),
-    id: z.string(),
-    inst_id: z.string(),
-    institute: z.string(),
-    medals: medalsSchema,
-    members: z.string().max(0),
-    name: z.string(),
-    points: z.number(),
-    rank_excl: z.number(),
-    rank_reg: z.number(),
-    rank_tot: z.number(),
-    region: z.string(),
-  })
-  .strict();
+export type Task = {
+  name: string;
+  title: string;
+  editionId: string;
+  editionName: string;
+  roundId: string;
+  roundName: string;
+  statement: string;
+};
 
-const teamResultSchema = z
-  .object({
-    rank: z.number(),
-    score: z.number(),
-    team: teamSchema,
-  })
-  .strict();
-
-const taskSchema = z.object({
-  ed_id: z.number(),
-  edition: z.string(),
-  year: z.string(),
-  round: z.string(),
-  r_id: z.string(),
-  ranking: teamResultSchema.array(),
-  name: z.string(),
-  title: z.string(),
-  statement: z.string(),
-  points: z.number(),
-  medpos: z.number(),
-  avgpos: z.number(),
-  average: z.number(),
-  highest: z.number(),
-  positive: z.number(),
-  fullscore: z.number(),
-  fullscores: z.number(),
-  highlights: highlightSchema.array(),
+export const getTask = cache(async (name: string): Promise<Task> => {
+  const [result] = await db
+    .select({
+      name: task.name,
+      title: task.title,
+      editionId: task.editionId,
+      editionName: edition.title,
+      roundId: task.roundId,
+      roundName: round.title,
+      statement: task.statement,
+    })
+    .from(task)
+    .innerJoin(edition, eq(task.editionId, edition.id))
+    .innerJoin(round, and(eq(round.id, task.roundId), eq(round.editionId, edition.id)))
+    .where(eq(task.name, name));
+  if (!result) throw new Error(`Task ${name} not found`);
+  return result;
 });
 
-export type Task = z.infer<typeof taskSchema>;
+export type TaskStats = {
+  teamScored: number;
+  totalScores: number;
+  maxScore: number;
+  avgScore: number;
+  medianScore: number;
+};
 
-export async function getTask(
-  edition: string | number,
-  round: string,
-  name: string,
-): Promise<Task> {
-  return taskSchema.parseAsync(
-    JSON.parse(await readFile(`data/json/edition.${edition}.round.${round}.${name}.json`, "utf8")),
-  );
-}
+export const getTaskStats = cache(async (name: string): Promise<TaskStats> => {
+  const [result] = await db
+    .select({
+      teamScored: count(),
+      totalScores: coalesce(sum(taskScore.score), 0),
+      maxScore: coalesce(max(taskScore.score), 0),
+      avgScore: coalesce(avg(taskScore.score), 0),
+      medianScore: coalesce(median(taskScore.score), 0),
+    })
+    .from(taskScore)
+    .where(and(eq(taskScore.taskName, name), gt(taskScore.score, 0)));
+  return result;
+});
+
+export type TaskItem = {
+  name: string;
+  editionId: string;
+  roundId: string;
+};
+
+export const listTasks = cache((editionId?: string, roundId?: string): Promise<TaskItem[]> => {
+  return db
+    .select({
+      name: task.name,
+      editionId: task.editionId,
+      roundId: task.roundId,
+    })
+    .from(task)
+    .where(
+      and(
+        eq(task.editionId, editionId ?? "").if(editionId),
+        eq(task.roundId, roundId ?? "").if(roundId),
+      ),
+    );
+});

@@ -6,22 +6,34 @@ import { Check } from "lucide-react";
 
 import { Medals } from "~/components/medal";
 import { Table } from "~/components/table";
-import type { Institute } from "~/lib/institute";
+import type { EditionItem } from "~/lib/edition";
+import type { TeamItem } from "~/lib/team";
 
-export function InstituteTable({ institute }: { institute: Institute }) {
-  return institute.editions.map((edition) => (
-    <div key={edition.num}>
-      <Link href={`/edition/${edition.num}`} className="link m-4 mb-2 block text-xl font-bold">
-        {edition.title} ({edition.year})
-      </Link>
-      <Table
-        data={edition.teams}
-        header={TableHeaders}
-        row={TableRow}
-        className="grid-cols-[auto_auto_1fr_1fr_auto_9rem_auto]"
-      />
-    </div>
-  ));
+export function InstituteTable({
+  editions,
+  teams,
+}: {
+  editions: EditionItem[];
+  teams: TeamItem[];
+}) {
+  const editionTeams = Object.groupBy(teams, (team) => team.editionId);
+
+  return editions
+    .map((edition) => [edition, editionTeams[edition.id]] as const)
+    .filter(([, teams]) => teams?.length)
+    .map(([edition, teams]) => (
+      <div key={edition.id}>
+        <Link href={`/edition/${edition.id}`} className="link m-4 mb-2 block text-xl font-bold">
+          {edition.name} ({edition.year})
+        </Link>
+        <Table
+          data={teams ?? []}
+          header={TableHeaders}
+          row={TableRow}
+          className="grid-cols-[auto_auto_1fr_1fr_auto_9rem_auto]"
+        />
+      </div>
+    ));
 }
 
 function TableHeaders() {
@@ -38,19 +50,19 @@ function TableHeaders() {
   );
 }
 
-function TableRow({ item: team }: { item: Institute["editions"][number]["teams"][number] }) {
+function TableRow({ item: team }: { item: TeamItem }) {
   return (
     <>
-      <div>{team.rank_tot}</div>
-      <div>{team.rank_reg}</div>
+      <div>{team.rank}</div>
+      <div>{team.regionalRank}</div>
       <div>
-        <Link href={`/edition/${team.edition}/team/${team.id}`} className="link">
+        <Link href={`/edition/${team.editionId}/team/${team.id}`} className="link">
           {team.name}
         </Link>
       </div>
       <div>{team.coach}</div>
       <div>{team.finalist && <Check className="inline-block stroke-success" />}</div>
-      <Medals medals={team.medals} />
+      <Medals medals={team.totalMedals} />
       <div>{team.points}</div>
     </>
   );

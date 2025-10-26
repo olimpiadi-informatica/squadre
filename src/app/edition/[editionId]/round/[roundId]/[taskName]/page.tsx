@@ -5,43 +5,28 @@ import { Card, CardActions, CardBody } from "@olinfo/react-components";
 import type { ParamsOf } from "routes";
 
 import { Highlights } from "~/components/highlights";
-import { getEdition } from "~/lib/edition";
-import { getEditions } from "~/lib/editions";
-import { getRound } from "~/lib/round";
-import { getTask } from "~/lib/task";
+import { listTaskScores } from "~/lib/score";
+import { getTask, getTaskStats, listTasks } from "~/lib/task";
 
 import { TaskTable } from "./table";
 
-export async function generateStaticParams() {
-  const editions = await getEditions();
-  const params = await Promise.all(
-    editions.editions.map(async ({ id }) => {
-      const edition = await getEdition(id);
-      const rounds = edition.contests.filter(({ tasks }) => tasks).map(({ id }) => id);
-      if (edition.final) rounds.push("final");
-      return Promise.all(
-        rounds.map(async (roundId) => {
-          const round = await getRound(id, roundId);
-          return round.tasks.map(
-            ({ name: taskName }): ParamsOf<"/edition/[editionId]/round/[roundId]/[taskName]"> => ({
-              editionId: id.toString(),
-              roundId,
-              taskName,
-            }),
-          );
-        }),
-      );
-    }),
-  );
-  return params.flat(2);
+export async function generateStaticParams(): Promise<
+  ParamsOf<"/edition/[editionId]/round/[roundId]/[taskName]">[]
+> {
+  const tasks = await listTasks();
+  return tasks.map((t) => ({
+    editionId: t.editionId,
+    roundId: t.roundId,
+    taskName: t.name,
+  }));
 }
 
 export async function generateMetadata({
   params,
 }: PageProps<"/edition/[editionId]/round/[roundId]/[taskName]">): Promise<Metadata> {
-  const { editionId, roundId, taskName } = await params;
+  const { taskName } = await params;
 
-  const task = await getTask(editionId, roundId, taskName);
+  const task = await getTask(taskName);
 
   return {
     title: `OIS - ${task.title} (${task.name})`,
@@ -53,7 +38,9 @@ export default async function Page({
 }: PageProps<"/edition/[editionId]/round/[roundId]/[taskName]">) {
   const { editionId, roundId, taskName } = await params;
 
-  const task = await getTask(editionId, roundId, taskName);
+  const task = await getTask(taskName);
+  const stats = await getTaskStats(taskName);
+  const scores = await listTaskScores(taskName);
 
   return (
     <div className="flex flex-col gap-4">
@@ -66,10 +53,10 @@ export default async function Page({
             <Link href="/edition">Rankings</Link>
           </li>
           <li>
-            <Link href={`/edition/${task.ed_id}`}>{task.edition}</Link>
+            <Link href={`/edition/${task.editionId}`}>{task.editionName}</Link>
           </li>
           <li>
-            <Link href={`/edition/${task.ed_id}/round/${task.r_id}`}>{task.round}</Link>
+            <Link href={`/edition/${task.editionId}/round/${task.roundId}`}>{task.roundName}</Link>
           </li>
           <li>{task.title}</li>
         </ul>
@@ -78,13 +65,13 @@ export default async function Page({
         <Card>
           <CardBody title={`${task.title} (${task.name})`}>
             <p>
-              {task.positive} teams scored {task.points} points on this task, for a maximum score of{" "}
-              {task.highest}, an average score of {Math.round(task.avgpos)} and a median score of{" "}
-              {task.medpos}.
+              {stats.teamScored} teams scored {stats.totalScores} points on this task, for a maximum
+              score of {stats.maxScore}, an average score of {Math.round(stats.avgScore * 10) / 10}{" "}
+              and a median score of {stats.medianScore}.
             </p>
           </CardBody>
         </Card>
-        <Highlights highlights={task.highlights} />
+        <Highlights page={`/edition/${editionId}/round/${roundId}/${taskName}`} />
       </div>
       <Card>
         <CardBody title="Statement">
@@ -101,7 +88,7 @@ export default async function Page({
         </CardBody>
       </Card>
       <div className="w-full">
-        <TaskTable task={task} />
+        <TaskTable scores={scores} />
       </div>
     </div>
   );
