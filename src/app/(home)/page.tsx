@@ -5,12 +5,12 @@ import { Schedule } from "./schedule";
 
 export default function Page() {
   const rounds = [
-    tzDate("2024-11-11 14:30", "Europe/Rome"),
-    tzDate("2024-12-10 14:30", "Europe/Rome"),
-    tzDate("2025-01-15 14:30", "Europe/Rome"),
-    tzDate("2025-02-06 14:30", "Europe/Rome"),
+    tzDate("2025-11-10 14:30", "Europe/Rome"),
+    tzDate("2025-12-09 14:30", "Europe/Rome"),
+    tzDate("2026-01-14 14:30", "Europe/Rome"),
+    tzDate("2026-02-12 14:30", "Europe/Rome"),
   ];
-  const final = tzDate("2025-03-14 14:30", "Europe/Rome");
+  const final = tzDate("2026-03-13 14:30", "Europe/Rome");
 
   const year = rounds[0].getFullYear();
   const years = `${year}/${(year + 1) % 100}`;
