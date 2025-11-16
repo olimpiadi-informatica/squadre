@@ -1,16 +1,13 @@
 import createMDX from "@next/mdx";
+import type { NextConfig } from "next";
 
-/** @type {import('next').NextConfig} */
-const config = {
+const config: NextConfig = {
   output: "export",
   productionBrowserSourceMaps: true,
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
   typedRoutes: true,
-  webpack: (config) => {
-    if (config.target[0] === "web") {
-      config.target[1] = "es2022";
-    }
-    return config;
+  experimental: {
+    turbopackFileSystemCacheForDev: true,
   },
 };
 
