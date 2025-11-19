@@ -187,5 +187,5 @@ export const listEditionTeams = cache((editionId: string): Promise<TeamResultIte
     .innerJoin(institute, eq(team.instId, institute.id))
     .innerJoin(region, eq(institute.region, region.id))
     .where(and(eq(team.editionId, editionId)))
-    .orderBy(roundScore.rankTot, institute.region, institute.name, institute.city, team.name);
+    .orderBy(team.rankTot, institute.region, institute.name, institute.city, team.name);
 });

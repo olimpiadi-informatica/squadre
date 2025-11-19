@@ -60,9 +60,11 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]">
               {stats.totalTeams} teams from {stats.totalInstitutes} schools participated in this
               edition of the OIS, scoring a total of {stats.totalPoints} points on{" "}
               {stats.totalTasks} tasks.
-              {topFinalist.length && <> The top {topFinalist.length} teams at the finals were:</>}
+              {topFinalist.length > 0 && (
+                <> The top {topFinalist.length} teams at the finals were:</>
+              )}
             </p>
-            {topFinalist.length && (
+            {topFinalist.length > 0 && (
               <ol className="list-decimal pl-6">
                 {topFinalist.map((team) => (
                   <li key={team.id} value={team.rank}>

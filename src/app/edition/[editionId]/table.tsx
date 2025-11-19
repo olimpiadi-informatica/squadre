@@ -41,6 +41,8 @@ export function EditionTable({
 function TableHeaders() {
   const { rounds } = use(EditionContext)!;
 
+  const allRoundNames = ["Final", "Round 1", "Round 2", "Round 3", "Round 4"];
+
   return (
     <>
       <div>Rank</div>
@@ -49,13 +51,20 @@ function TableHeaders() {
       <div>Institute</div>
       <div>Region</div>
       <div>Total</div>
-      {rounds.map((round) => (
-        <div key={round.id}>
-          <Link href={`/edition/${round.editionId}/round/${round.id}`} className="link">
-            {round.name}
-          </Link>
-        </div>
-      ))}
+      {allRoundNames.map((roundName) => {
+        const round = rounds.find((round) => round.name === roundName);
+        return (
+          <div key={roundName}>
+            {round ? (
+              <Link href={`/edition/${round.editionId}/round/${round.id}`} className="link">
+                {roundName}
+              </Link>
+            ) : (
+              <span>{roundName}</span>
+            )}
+          </div>
+        );
+      })}
     </>
   );
 }
