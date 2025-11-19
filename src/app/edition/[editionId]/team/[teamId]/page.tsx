@@ -42,10 +42,15 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]/t
   const scores = await listScores(editionId, undefined, teamId);
 
   const tasks = await listTasks(editionId);
-  const roundTasks = Object.groupBy(tasks, (task) => task.roundId);
-  const maxTasks = Math.max(
-    ...Object.values(roundTasks).map((roundTasks) => roundTasks?.length ?? 0),
+
+  const roundTasks = tasks.reduce(
+    (acc, task) => {
+      acc[task.roundId] = (acc[task.roundId] ?? 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
   );
+  const maxTasks = Math.max(...Object.values(roundTasks));
 
   return (
     <div className="flex flex-col gap-4">

@@ -16,10 +16,11 @@ export function InstituteTable({
   editions: EditionItem[];
   teams: TeamItem[];
 }) {
-  const editionTeams = Object.groupBy(teams, (team) => team.editionId);
-
   return editions
-    .map((edition) => [edition, editionTeams[edition.id]] as const)
+    .map((edition) => {
+      const editionTeams = teams.filter((team) => team.editionId === edition.id);
+      return [edition, editionTeams] as const;
+    })
     .filter(([, teams]) => teams?.length)
     .map(([edition, teams]) => (
       <div key={edition.id}>
