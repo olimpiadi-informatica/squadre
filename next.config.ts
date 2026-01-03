@@ -6,9 +6,6 @@ const config: NextConfig = {
   productionBrowserSourceMaps: true,
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
   typedRoutes: true,
-  experimental: {
-    turbopackFileSystemCacheForDev: true,
-  },
 };
 
 export default createMDX({ extension: /\.mdx?$/ })(config);

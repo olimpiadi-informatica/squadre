@@ -1,12 +1,7 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "files": {
-    "includes": ["*.ts", "src/**"]
-  },
-  "vcs": {
-    "enabled": true,
-    "clientKind": "git",
-    "useIgnoreFile": true
+    "includes": ["packages/*/src/**", "packages/*/*.mjs", "packages/*/*.json"]
   },
   "formatter": {
     "indentStyle": "space",
@@ -30,8 +25,7 @@
         "useUniqueElementIds": "off"
       },
       "nursery": {
-        "noFloatingPromises": "error",
-        "noImportCycles": "error"
+        "noFloatingPromises": "error"
       },
       "performance": {
         "noImgElement": "off"
@@ -66,6 +60,7 @@
       "suspicious": {
         "noArrayIndexKey": "off",
         "noExplicitAny": "off",
+        "noImportCycles": "error",
         "useAwait": "error"
       }
     }
