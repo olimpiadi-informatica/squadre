@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ParamsOf } from "next/routes";
+import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 
 import { Card, CardBody } from "@olinfo/react-components";
@@ -9,16 +9,9 @@ import { Highlights } from "~/components/highlights";
 import { Rank } from "~/components/rank";
 import { listRoundScores, listScores } from "~/lib/score";
 import { listTasks } from "~/lib/task";
-import { getTeam, getTeamStats, listTeams } from "~/lib/team";
+import { getTeam, getTeamStats } from "~/lib/team";
 
 import { TeamTable } from "./table";
-
-export async function generateStaticParams(): Promise<
-  ParamsOf<"/edition/[editionId]/team/[teamId]">[]
-> {
-  const teams = await listTeams();
-  return teams.map((t) => ({ editionId: t.editionId, teamId: t.id }));
-}
 
 export async function generateMetadata({
   params,
@@ -26,6 +19,7 @@ export async function generateMetadata({
   const { editionId, teamId } = await params;
 
   const team = await getTeam(editionId, teamId);
+  if (!team) notFound();
 
   return {
     title: `OIS - ${team.name}`,
@@ -36,6 +30,7 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]/t
   const { editionId, teamId } = await params;
 
   const team = await getTeam(editionId, teamId);
+  if (!team) notFound();
   const stats = await getTeamStats(editionId, teamId);
 
   const rounds = await listRoundScores(editionId, teamId);

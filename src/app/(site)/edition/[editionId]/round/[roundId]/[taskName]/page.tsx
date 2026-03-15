@@ -1,25 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ParamsOf } from "next/routes";
+import { notFound } from "next/navigation";
 
 import { Card, CardActions, CardBody } from "@olinfo/react-components";
 
 import { Highlights } from "~/components/highlights";
 import { listTaskScores } from "~/lib/score";
-import { getTask, getTaskStats, listTasks } from "~/lib/task";
+import { getTask, getTaskStats } from "~/lib/task";
 
 import { TaskTable } from "./table";
-
-export async function generateStaticParams(): Promise<
-  ParamsOf<"/edition/[editionId]/round/[roundId]/[taskName]">[]
-> {
-  const tasks = await listTasks();
-  return tasks.map((t) => ({
-    editionId: t.editionId,
-    roundId: t.roundId,
-    taskName: t.name,
-  }));
-}
 
 export async function generateMetadata({
   params,
@@ -27,6 +16,7 @@ export async function generateMetadata({
   const { taskName } = await params;
 
   const task = await getTask(taskName);
+  if (!task) notFound();
 
   return {
     title: `OIS - ${task.title} (${task.name})`,
@@ -39,6 +29,7 @@ export default async function Page({
   const { editionId, roundId, taskName } = await params;
 
   const task = await getTask(taskName);
+  if (!task) notFound();
   const stats = await getTaskStats(taskName);
   const scores = await listTaskScores(taskName);
 

@@ -11,7 +11,7 @@ export type Region = {
   name: string;
 };
 
-export const getRegion = cache(async (regionId: string): Promise<Region> => {
+export const getRegion = cache(async (regionId: string): Promise<Region | undefined> => {
   const [result] = await db
     .select({
       id: region.id,
@@ -19,7 +19,6 @@ export const getRegion = cache(async (regionId: string): Promise<Region> => {
     })
     .from(region)
     .where(eq(region.id, regionId));
-  if (!result) throw new Error(`Region ${regionId} not found`);
   return result;
 });
 
@@ -48,7 +47,14 @@ export const getRegionStats = cache(async (regionId?: string): Promise<RegionSta
       roundScore,
       and(eq(team.editionId, roundScore.editionId), eq(team.id, roundScore.teamId)),
     )
-    .innerJoin(round, and(eq(roundScore.roundId, round.id), eq(roundScore.editionId, round.editionId), eq(round.public, 1)))
+    .innerJoin(
+      round,
+      and(
+        eq(roundScore.roundId, round.id),
+        eq(roundScore.editionId, round.editionId),
+        eq(round.public, 1),
+      ),
+    )
     .innerJoin(institute, eq(team.instId, institute.id))
     .where(eq(institute.region, regionId ?? "").if(regionId));
   return result;
@@ -73,7 +79,14 @@ const medalCte = db.$with("medals").as(
     .from(roundScore)
     .innerJoin(team, and(eq(roundScore.teamId, team.id), eq(roundScore.editionId, team.editionId)))
     .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
-    .innerJoin(round, and(eq(roundScore.roundId, round.id), eq(roundScore.editionId, round.editionId), eq(round.public, 1)))
+    .innerJoin(
+      round,
+      and(
+        eq(roundScore.roundId, round.id),
+        eq(roundScore.editionId, round.editionId),
+        eq(round.public, 1),
+      ),
+    )
     .innerJoin(institute, eq(team.instId, institute.id))
     .where(and(isNotNull(roundScore.medal)))
     .groupBy(institute.region, roundScore.medal),

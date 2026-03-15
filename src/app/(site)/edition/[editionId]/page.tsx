@@ -1,21 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ParamsOf } from "next/routes";
+import { notFound } from "next/navigation";
 
 import { Card, CardBody } from "@olinfo/react-components";
 
 import { Highlights } from "~/components/highlights";
-import { getEdition, getEditionStats, listEditions } from "~/lib/edition";
+import { getEdition, getEditionStats } from "~/lib/edition";
 import { listRounds } from "~/lib/round";
 import { listRoundScores } from "~/lib/score";
 import { listEditionTeams, listRoundTeams } from "~/lib/team";
 
 import { EditionTable } from "./table";
-
-export async function generateStaticParams(): Promise<ParamsOf<"/edition/[editionId]">[]> {
-  const editions = await listEditions();
-  return editions.map((e) => ({ editionId: e.id }));
-}
 
 export async function generateMetadata({
   params,
@@ -23,6 +18,7 @@ export async function generateMetadata({
   const { editionId } = await params;
 
   const edition = await getEdition(editionId);
+  if (!edition) notFound();
 
   return {
     title: `OIS - ${edition.name}`,
@@ -33,6 +29,7 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]">
   const { editionId } = await params;
 
   const edition = await getEdition(editionId);
+  if (!edition) notFound();
   const stats = await getEditionStats(editionId);
   const topFinalist = await listRoundTeams(editionId, "final", 3);
 

@@ -1,18 +1,14 @@
 import { GoogleAnalytics } from "@next/third-parties/google";
 import type { Metadata } from "next";
 
-import { Layout } from "@olinfo/react-components";
-
 import "./globals.css";
-
-import { Navbar } from "./navbar";
 
 export const metadata: Metadata = {
   title: "OIS Stats",
   description: "Rankings and statistics of Italian Informatics Olympiads in Teams (OIS)",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -20,12 +16,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <meta name="theme-color" content="#15191e" media="(prefers-color-scheme: dark)" />
       </head>
       <body>
-        <Layout>
-          <Navbar />
-          <div className="mx-auto flex w-full max-w-screen-xl grow flex-col p-4 pb-8 isolate">
-            {children}
-          </div>
-        </Layout>
+        {children}
         {process.env.NODE_ENV === "production" && <GoogleAnalytics gaId="G-Q25K1YDNFL" />}
       </body>
     </html>
