@@ -3,7 +3,7 @@ import { cache } from "react";
 import { and, count, countDistinct, eq, isNotNull, min, sql, sum } from "drizzle-orm";
 
 import { db } from "~/lib/db";
-import { institute, region, roundScore, team } from "~/lib/db/schema";
+import { edition, institute, region, round, roundScore, team } from "~/lib/db/schema";
 import { coalesce, concat, jsonAggregate } from "~/lib/utils";
 
 export type Region = {
@@ -43,10 +43,12 @@ export const getRegionStats = cache(async (regionId?: string): Promise<RegionSta
       bestRoundRank: coalesce(min(roundScore.rankTot), 0),
     })
     .from(team)
+    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
     .innerJoin(
       roundScore,
       and(eq(team.editionId, roundScore.editionId), eq(team.id, roundScore.teamId)),
     )
+    .innerJoin(round, and(eq(roundScore.roundId, round.id), eq(roundScore.editionId, round.editionId), eq(round.public, 1)))
     .innerJoin(institute, eq(team.instId, institute.id))
     .where(eq(institute.region, regionId ?? "").if(regionId));
   return result;
@@ -70,6 +72,8 @@ const medalCte = db.$with("medals").as(
     })
     .from(roundScore)
     .innerJoin(team, and(eq(roundScore.teamId, team.id), eq(roundScore.editionId, team.editionId)))
+    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
+    .innerJoin(round, and(eq(roundScore.roundId, round.id), eq(roundScore.editionId, round.editionId), eq(round.public, 1)))
     .innerJoin(institute, eq(team.instId, institute.id))
     .where(and(isNotNull(roundScore.medal)))
     .groupBy(institute.region, roundScore.medal),
@@ -94,5 +98,6 @@ export const listRegions = cache((): Promise<RegionItem[]> => {
     .from(region)
     .innerJoin(institute, eq(region.id, institute.region))
     .innerJoin(team, eq(team.instId, institute.id))
+    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
     .groupBy(region.id);
 });

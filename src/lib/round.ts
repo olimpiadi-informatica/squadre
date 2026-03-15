@@ -22,8 +22,8 @@ export const getRound = cache(async (editionId: string, roundId: string): Promis
       editionName: edition.title,
     })
     .from(round)
-    .innerJoin(edition, eq(round.editionId, edition.id))
-    .where(and(eq(round.editionId, editionId), eq(round.id, roundId)));
+    .innerJoin(edition, and(eq(round.editionId, edition.id), eq(edition.public, 1)))
+    .where(and(eq(round.editionId, editionId), eq(round.id, roundId), eq(round.public, 1)));
   if (!result) throw new Error(`Round ${editionId}-${roundId} not found`);
   return result;
 });
@@ -47,6 +47,8 @@ export const getRoundStats = cache(
         medianScore: coalesce(median(roundScore.score), 0),
       })
       .from(roundScore)
+      .innerJoin(edition, and(eq(roundScore.editionId, edition.id), eq(edition.public, 1)))
+      .innerJoin(round, and(eq(roundScore.roundId, round.id), eq(roundScore.editionId, round.editionId), eq(round.public, 1)))
       .where(
         and(
           eq(roundScore.editionId, editionId),
@@ -74,6 +76,7 @@ export const listRounds = cache((editionId?: string): Promise<RoundItem[]> => {
       maxScore: round.fullscore,
     })
     .from(round)
-    .where(eq(round.editionId, editionId ?? "").if(editionId))
+    .innerJoin(edition, and(eq(round.editionId, edition.id), eq(edition.public, 1)))
+    .where(and(eq(round.editionId, editionId ?? "").if(editionId), eq(round.public, 1)))
     .orderBy(round.title);
 });

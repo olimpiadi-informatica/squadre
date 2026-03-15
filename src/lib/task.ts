@@ -28,8 +28,8 @@ export const getTask = cache(async (name: string): Promise<Task> => {
       statement: task.statement,
     })
     .from(task)
-    .innerJoin(edition, eq(task.editionId, edition.id))
-    .innerJoin(round, and(eq(round.id, task.roundId), eq(round.editionId, edition.id)))
+    .innerJoin(edition, and(eq(task.editionId, edition.id), eq(edition.public, 1)))
+    .innerJoin(round, and(eq(round.id, task.roundId), eq(round.editionId, edition.id), eq(round.public, 1)))
     .where(eq(task.name, name));
   if (!result) throw new Error(`Task ${name} not found`);
   return result;
@@ -53,6 +53,9 @@ export const getTaskStats = cache(async (name: string): Promise<TaskStats> => {
       medianScore: coalesce(median(taskScore.score), 0),
     })
     .from(taskScore)
+    .innerJoin(task, eq(taskScore.taskName, task.name))
+    .innerJoin(edition, and(eq(task.editionId, edition.id), eq(edition.public, 1)))
+    .innerJoin(round, and(eq(task.roundId, round.id), eq(task.editionId, round.editionId), eq(round.public, 1)))
     .where(and(eq(taskScore.taskName, name), gt(taskScore.score, 0)));
   return result;
 });
@@ -71,6 +74,8 @@ export const listTasks = cache((editionId?: string, roundId?: string): Promise<T
       roundId: task.roundId,
     })
     .from(task)
+    .innerJoin(edition, and(eq(task.editionId, edition.id), eq(edition.public, 1)))
+    .innerJoin(round, and(eq(task.roundId, round.id), eq(task.editionId, round.editionId), eq(round.public, 1)))
     .where(
       and(
         eq(task.editionId, editionId ?? "").if(editionId),

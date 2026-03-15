@@ -18,7 +18,7 @@ export const getEdition = cache(async (id: string): Promise<Edition> => {
       year: edition.year,
     })
     .from(edition)
-    .where(eq(edition.id, id));
+    .where(and(eq(edition.id, id), eq(edition.public, 1)));
   if (!result) throw new Error(`Edition ${id} not found`);
   return result;
 });
@@ -39,6 +39,7 @@ export const getEditionStats = cache(async (id?: string): Promise<EditionStats> 
       totalPoints: coalesce(sum(taskScore.score), 0),
     })
     .from(team)
+    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
     .leftJoin(
       taskScore,
       and(eq(team.editionId, taskScore.editionId), eq(team.id, taskScore.teamId)),
@@ -72,6 +73,7 @@ export const listEditions = cache((): Promise<EditionItem[]> => {
     })
     .from(edition)
     .innerJoin(team, eq(team.editionId, edition.id))
+    .where(eq(edition.public, 1))
     .groupBy(edition.id)
     .orderBy(desc(edition.year));
 });

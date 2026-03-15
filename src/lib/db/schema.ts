@@ -9,6 +9,7 @@ export const edition = sqliteTable("edition", {
   id: text().primaryKey().notNull(),
   year: text().notNull(),
   title: text().notNull(),
+  public: integer().notNull().default(1),
 });
 
 export const round = sqliteTable(
@@ -20,6 +21,7 @@ export const round = sqliteTable(
       .references(() => edition.id),
     title: text().notNull(),
     fullscore: integer().notNull(),
+    public: integer().notNull().default(1),
   },
   (table) => [
     index("idx_round_edition_title_id").on(table.editionId, table.title, table.id),
