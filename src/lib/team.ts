@@ -3,7 +3,7 @@ import { cache } from "react";
 import { and, avg, count, eq, gt, isNotNull, min, sql, sum } from "drizzle-orm";
 
 import { db } from "~/lib/db";
-import { edition, institute, region, roundScore, team } from "~/lib/db/schema";
+import { edition, institute, region, round, roundScore, team } from "~/lib/db/schema";
 import { coalesce, jsonAggregate } from "~/lib/utils";
 
 export type Team = {
@@ -38,7 +38,7 @@ export const getTeam = cache(async (editionId: string, id: string): Promise<Team
       regionName: region.name,
     })
     .from(team)
-    .innerJoin(edition, eq(team.editionId, edition.id))
+    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
     .innerJoin(institute, eq(team.instId, institute.id))
     .innerJoin(region, eq(institute.region, region.id))
     .where(and(eq(team.editionId, editionId), eq(team.id, id)));
@@ -60,6 +60,8 @@ export const getTeamStats = cache(async (editionId: string, id: string): Promise
       bestRoundRank: coalesce(min(roundScore.rankTot), 0),
     })
     .from(roundScore)
+    .innerJoin(edition, and(eq(roundScore.editionId, edition.id), eq(edition.public, 1)))
+    .innerJoin(round, and(eq(roundScore.roundId, round.id), eq(roundScore.editionId, round.editionId), eq(round.public, 1)))
     .where(and(eq(roundScore.editionId, editionId), eq(roundScore.teamId, id)));
   return result;
 });
@@ -85,6 +87,8 @@ const medalCte = db.$with("medals").as(
       count: count().as("count"),
     })
     .from(roundScore)
+    .innerJoin(edition, and(eq(roundScore.editionId, edition.id), eq(edition.public, 1)))
+    .innerJoin(round, and(eq(roundScore.roundId, round.id), eq(roundScore.editionId, round.editionId), eq(round.public, 1)))
     .where(and(isNotNull(roundScore.medal)))
     .groupBy(roundScore.teamId, roundScore.editionId, roundScore.medal),
 );
@@ -111,6 +115,7 @@ export const listTeams = cache((instituteId?: string): Promise<TeamItem[]> => {
       ),
     })
     .from(team)
+    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
     .where(eq(team.instId, instituteId ?? "").if(instituteId))
     .orderBy(team.rankTot);
 });
@@ -148,6 +153,8 @@ export const listRoundTeams = cache(
         regionName: region.name,
       })
       .from(roundScore)
+      .innerJoin(edition, and(eq(roundScore.editionId, edition.id), eq(edition.public, 1)))
+      .innerJoin(round, and(eq(roundScore.roundId, round.id), eq(roundScore.editionId, round.editionId), eq(round.public, 1)))
       .innerJoin(
         team,
         and(eq(roundScore.editionId, team.editionId), eq(roundScore.teamId, team.id)),
@@ -184,6 +191,7 @@ export const listEditionTeams = cache((editionId: string): Promise<TeamResultIte
       regionName: region.name,
     })
     .from(team)
+    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
     .innerJoin(institute, eq(team.instId, institute.id))
     .innerJoin(region, eq(institute.region, region.id))
     .where(and(eq(team.editionId, editionId)))
