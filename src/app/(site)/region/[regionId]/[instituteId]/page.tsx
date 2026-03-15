@@ -1,23 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ParamsOf } from "next/routes";
+import { notFound } from "next/navigation";
 
 import { Card, CardBody } from "@olinfo/react-components";
 
 import { Highlights } from "~/components/highlights";
 import { Rank } from "~/components/rank";
 import { listEditions } from "~/lib/edition";
-import { getInstitute, getInstituteStats, listInstitutes } from "~/lib/institute";
+import { getInstitute, getInstituteStats } from "~/lib/institute";
 import { listTeams } from "~/lib/team";
 
 import { InstituteTable } from "./table";
-
-export async function generateStaticParams(): Promise<
-  ParamsOf<"/region/[regionId]/[instituteId]">[]
-> {
-  const institutes = await listInstitutes();
-  return institutes.map((i) => ({ regionId: i.regionId, instituteId: i.id }));
-}
 
 export async function generateMetadata({
   params,
@@ -25,6 +18,7 @@ export async function generateMetadata({
   const { instituteId } = await params;
 
   const institute = await getInstitute(instituteId);
+  if (!institute) notFound();
 
   return {
     title: `OIS - ${institute.name}, ${institute.city}`,
@@ -35,6 +29,7 @@ export default async function Page({ params }: PageProps<"/region/[regionId]/[in
   const { regionId, instituteId } = await params;
 
   const institute = await getInstitute(instituteId);
+  if (!institute) notFound();
   const stats = await getInstituteStats(instituteId);
   const teams = await listTeams(instituteId);
   const editions = await listEditions();

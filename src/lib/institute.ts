@@ -28,7 +28,14 @@ const medalCte = db.$with("medals").as(
     .from(roundScore)
     .innerJoin(team, and(eq(roundScore.teamId, team.id), eq(roundScore.editionId, team.editionId)))
     .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
-    .innerJoin(round, and(eq(roundScore.roundId, round.id), eq(roundScore.editionId, round.editionId), eq(round.public, 1)))
+    .innerJoin(
+      round,
+      and(
+        eq(roundScore.roundId, round.id),
+        eq(roundScore.editionId, round.editionId),
+        eq(round.public, 1),
+      ),
+    )
     .where(and(isNotNull(roundScore.medal)))
     .groupBy(team.instId, roundScore.medal),
 );
@@ -68,9 +75,8 @@ export const listInstitutes = cache(
   },
 );
 
-export async function getInstitute(id: string): Promise<Institute> {
+export async function getInstitute(id: string): Promise<Institute | undefined> {
   const [result] = await listInstitutes(undefined, id);
-  if (!result) throw new Error(`Institute ${id} not found`);
   return result;
 }
 
@@ -91,7 +97,14 @@ export const getInstituteStats = cache(async (id: string): Promise<InstituteStat
       roundScore,
       and(eq(team.editionId, roundScore.editionId), eq(team.id, roundScore.teamId)),
     )
-    .innerJoin(round, and(eq(roundScore.roundId, round.id), eq(roundScore.editionId, round.editionId), eq(round.public, 1)))
+    .innerJoin(
+      round,
+      and(
+        eq(roundScore.roundId, round.id),
+        eq(roundScore.editionId, round.editionId),
+        eq(round.public, 1),
+      ),
+    )
     .where(eq(team.instId, id));
   return result;
 });

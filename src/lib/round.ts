@@ -13,20 +13,21 @@ export type Round = {
   editionName: string;
 };
 
-export const getRound = cache(async (editionId: string, roundId: string): Promise<Round> => {
-  const [result] = await db
-    .select({
-      id: round.id,
-      name: round.title,
-      editionId: round.editionId,
-      editionName: edition.title,
-    })
-    .from(round)
-    .innerJoin(edition, and(eq(round.editionId, edition.id), eq(edition.public, 1)))
-    .where(and(eq(round.editionId, editionId), eq(round.id, roundId), eq(round.public, 1)));
-  if (!result) throw new Error(`Round ${editionId}-${roundId} not found`);
-  return result;
-});
+export const getRound = cache(
+  async (editionId: string, roundId: string): Promise<Round | undefined> => {
+    const [result] = await db
+      .select({
+        id: round.id,
+        name: round.title,
+        editionId: round.editionId,
+        editionName: edition.title,
+      })
+      .from(round)
+      .innerJoin(edition, and(eq(round.editionId, edition.id), eq(edition.public, 1)))
+      .where(and(eq(round.editionId, editionId), eq(round.id, roundId), eq(round.public, 1)));
+    return result;
+  },
+);
 
 export type RoundStats = {
   teamScored: number;
@@ -48,7 +49,14 @@ export const getRoundStats = cache(
       })
       .from(roundScore)
       .innerJoin(edition, and(eq(roundScore.editionId, edition.id), eq(edition.public, 1)))
-      .innerJoin(round, and(eq(roundScore.roundId, round.id), eq(roundScore.editionId, round.editionId), eq(round.public, 1)))
+      .innerJoin(
+        round,
+        and(
+          eq(roundScore.roundId, round.id),
+          eq(roundScore.editionId, round.editionId),
+          eq(round.public, 1),
+        ),
+      )
       .where(
         and(
           eq(roundScore.editionId, editionId),

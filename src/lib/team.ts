@@ -21,7 +21,7 @@ export type Team = {
   regionName: string;
 };
 
-export const getTeam = cache(async (editionId: string, id: string): Promise<Team> => {
+export const getTeam = cache(async (editionId: string, id: string): Promise<Team | undefined> => {
   const [result] = await db
     .select({
       name: team.name,
@@ -42,7 +42,6 @@ export const getTeam = cache(async (editionId: string, id: string): Promise<Team
     .innerJoin(institute, eq(team.instId, institute.id))
     .innerJoin(region, eq(institute.region, region.id))
     .where(and(eq(team.editionId, editionId), eq(team.id, id)));
-  if (!result) throw new Error(`Team ${editionId}-${id} not found`);
   return result;
 });
 
@@ -61,7 +60,14 @@ export const getTeamStats = cache(async (editionId: string, id: string): Promise
     })
     .from(roundScore)
     .innerJoin(edition, and(eq(roundScore.editionId, edition.id), eq(edition.public, 1)))
-    .innerJoin(round, and(eq(roundScore.roundId, round.id), eq(roundScore.editionId, round.editionId), eq(round.public, 1)))
+    .innerJoin(
+      round,
+      and(
+        eq(roundScore.roundId, round.id),
+        eq(roundScore.editionId, round.editionId),
+        eq(round.public, 1),
+      ),
+    )
     .where(and(eq(roundScore.editionId, editionId), eq(roundScore.teamId, id)));
   return result;
 });
@@ -88,7 +94,14 @@ const medalCte = db.$with("medals").as(
     })
     .from(roundScore)
     .innerJoin(edition, and(eq(roundScore.editionId, edition.id), eq(edition.public, 1)))
-    .innerJoin(round, and(eq(roundScore.roundId, round.id), eq(roundScore.editionId, round.editionId), eq(round.public, 1)))
+    .innerJoin(
+      round,
+      and(
+        eq(roundScore.roundId, round.id),
+        eq(roundScore.editionId, round.editionId),
+        eq(round.public, 1),
+      ),
+    )
     .where(and(isNotNull(roundScore.medal)))
     .groupBy(roundScore.teamId, roundScore.editionId, roundScore.medal),
 );
@@ -154,7 +167,14 @@ export const listRoundTeams = cache(
       })
       .from(roundScore)
       .innerJoin(edition, and(eq(roundScore.editionId, edition.id), eq(edition.public, 1)))
-      .innerJoin(round, and(eq(roundScore.roundId, round.id), eq(roundScore.editionId, round.editionId), eq(round.public, 1)))
+      .innerJoin(
+        round,
+        and(
+          eq(roundScore.roundId, round.id),
+          eq(roundScore.editionId, round.editionId),
+          eq(round.public, 1),
+        ),
+      )
       .innerJoin(
         team,
         and(eq(roundScore.editionId, team.editionId), eq(roundScore.teamId, team.id)),

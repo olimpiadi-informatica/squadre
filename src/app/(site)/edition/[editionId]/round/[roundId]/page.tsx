@@ -1,24 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ParamsOf } from "next/routes";
+import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 
 import { Card, CardBody } from "@olinfo/react-components";
 
 import { Highlights } from "~/components/highlights";
-import { getRound, getRoundStats, listRounds } from "~/lib/round";
+import { getRound, getRoundStats } from "~/lib/round";
 import { listScores } from "~/lib/score";
 import { listTasks } from "~/lib/task";
 import { listRoundTeams } from "~/lib/team";
 
 import { RoundTable } from "./table";
-
-export async function generateStaticParams(): Promise<
-  ParamsOf<"/edition/[editionId]/round/[roundId]">[]
-> {
-  const tasks = await listRounds();
-  return tasks.map((r) => ({ editionId: r.editionId, roundId: r.id }));
-}
 
 export async function generateMetadata({
   params,
@@ -26,6 +19,7 @@ export async function generateMetadata({
   const { editionId, roundId } = await params;
 
   const round = await getRound(editionId, roundId);
+  if (!round) notFound();
 
   return {
     title: `OIS - ${round.name}, ${round.editionName}`,
@@ -36,6 +30,7 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]/r
   const { editionId, roundId } = await params;
 
   const round = await getRound(editionId, roundId);
+  if (!round) notFound();
   const stats = await getRoundStats(editionId, roundId);
 
   const tasks = await listTasks(editionId, roundId);

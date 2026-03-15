@@ -11,7 +11,7 @@ export type Edition = {
   year: string;
 };
 
-export const getEdition = cache(async (id: string): Promise<Edition> => {
+export const getEdition = cache(async (id: string): Promise<Edition | undefined> => {
   const [result] = await db
     .select({
       name: edition.title,
@@ -19,7 +19,6 @@ export const getEdition = cache(async (id: string): Promise<Edition> => {
     })
     .from(edition)
     .where(and(eq(edition.id, id), eq(edition.public, 1)));
-  if (!result) throw new Error(`Edition ${id} not found`);
   return result;
 });
 
