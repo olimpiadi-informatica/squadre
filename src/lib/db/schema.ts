@@ -40,11 +40,11 @@ export const task = sqliteTable(
   },
   (table) => [
     index("idx_task_edition_round_id_name").on(table.editionId, table.roundId, table.name),
-    foreignKey(() => ({
+    foreignKey({
       columns: [table.roundId, table.editionId],
       foreignColumns: [round.id, round.editionId],
       name: "task_round_id_edition_id_round_id_edition_id_fk",
-    })),
+    }),
   ],
 );
 
@@ -128,16 +128,16 @@ export const roundScore = sqliteTable(
       table.teamId,
       table.score,
     ),
-    foreignKey(() => ({
+    foreignKey({
       columns: [table.teamId, table.editionId],
       foreignColumns: [team.id, team.editionId],
       name: "round_score_team_id_edition_id_team_id_edition_id_fk",
-    })),
-    foreignKey(() => ({
+    }),
+    foreignKey({
       columns: [table.roundId, table.editionId],
       foreignColumns: [round.id, round.editionId],
       name: "round_score_round_id_edition_id_round_id_edition_id_fk",
-    })),
+    }),
     primaryKey({
       columns: [table.roundId, table.editionId, table.teamId],
       name: "round_score_round_id_edition_id_team_id_pk",
@@ -160,16 +160,16 @@ export const taskScore = sqliteTable(
   (table) => [
     index("idx_task_score_task_name_score").on(table.taskName, table.score),
     index("idx_task_score_edition_team_id").on(table.editionId, table.teamId),
-    foreignKey(() => ({
+    foreignKey({
       columns: [table.teamId, table.editionId],
       foreignColumns: [team.id, team.editionId],
       name: "task_score_team_id_edition_id_team_id_edition_id_fk",
-    })),
-    foreignKey(() => ({
+    }),
+    foreignKey({
       columns: [table.taskName, table.editionId],
       foreignColumns: [task.name, task.editionId],
       name: "task_score_task_name_edition_id_task_name_edition_id_fk",
-    })),
+    }),
     primaryKey({
       columns: [table.taskName, table.teamId],
       name: "task_score_task_name_team_id_pk",

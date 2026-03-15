@@ -1,7 +1,7 @@
 import Link from "next/link";
+import type { AppRoutes } from "next/routes";
 
 import { Card, CardBody } from "@olinfo/react-components";
-import type { AppRoutes } from "routes";
 
 import { getHighlights } from "~/lib/highlights";
 

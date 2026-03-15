@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { ParamsOf } from "next/routes";
 
 import { Card, CardBody } from "@olinfo/react-components";
-import type { ParamsOf } from "routes";
 
 import { Highlights } from "~/components/highlights";
 import { Rank } from "~/components/rank";
