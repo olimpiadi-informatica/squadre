@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ParamsOf } from "next/routes";
+import { notFound } from "next/navigation";
 
 import { Card, CardBody } from "@olinfo/react-components";
 
@@ -8,14 +8,9 @@ import { Highlights } from "~/components/highlights";
 import { Rank } from "~/components/rank";
 import { RegionImage } from "~/components/region";
 import { listInstitutes } from "~/lib/institute";
-import { getRegion, getRegionStats, listRegions } from "~/lib/region";
+import { getRegion, getRegionStats } from "~/lib/region";
 
 import { RegionTable } from "./table";
-
-export async function generateStaticParams(): Promise<ParamsOf<"/region/[regionId]">[]> {
-  const regions = await listRegions();
-  return regions.map((r) => ({ regionId: r.id }));
-}
 
 export async function generateMetadata({
   params,
@@ -23,6 +18,7 @@ export async function generateMetadata({
   const { regionId } = await params;
 
   const region = await getRegion(regionId);
+  if (!region) notFound();
 
   return {
     title: `OIS - ${region.name}`,
@@ -33,6 +29,7 @@ export default async function Page({ params }: PageProps<"/region/[regionId]">) 
   const { regionId } = await params;
 
   const region = await getRegion(regionId);
+  if (!region) notFound();
   const stats = await getRegionStats(regionId);
   const institutes = await listInstitutes(regionId);
 
