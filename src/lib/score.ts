@@ -3,7 +3,7 @@ import { cache } from "react";
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 
 import { db } from "~/lib/db";
-import { institute, region, round, roundScore, task, taskScore, team } from "~/lib/db/schema";
+import { edition, institute, region, round, roundScore, task, taskScore, team } from "~/lib/db/schema";
 
 export type ScoreItem = {
   score: number;
@@ -25,6 +25,8 @@ export const listScores = cache(
       })
       .from(taskScore)
       .innerJoin(task, eq(taskScore.taskName, task.name))
+      .innerJoin(edition, and(eq(task.editionId, edition.id), eq(edition.public, 1)))
+      .innerJoin(round, and(eq(task.roundId, round.id), eq(task.editionId, round.editionId), eq(round.public, 1)))
       .where(
         and(
           eq(task.editionId, editionId ?? "").if(editionId),
@@ -64,6 +66,9 @@ export const listTaskScores = cache((taskName?: string): Promise<TaskScoreItem[]
       regionName: region.name,
     })
     .from(taskScore)
+    .innerJoin(task, eq(taskScore.taskName, task.name))
+    .innerJoin(edition, and(eq(task.editionId, edition.id), eq(edition.public, 1)))
+    .innerJoin(round, and(eq(task.roundId, round.id), eq(task.editionId, round.editionId), eq(round.public, 1)))
     .innerJoin(team, and(eq(taskScore.editionId, team.editionId), eq(taskScore.teamId, team.id)))
     .innerJoin(institute, eq(team.instId, institute.id))
     .innerJoin(region, eq(institute.region, region.id))
@@ -96,9 +101,10 @@ export const listRoundScores = cache(
         editionId: roundScore.editionId,
       })
       .from(roundScore)
+      .innerJoin(edition, and(eq(roundScore.editionId, edition.id), eq(edition.public, 1)))
       .innerJoin(
         round,
-        and(eq(roundScore.editionId, round.editionId), eq(roundScore.roundId, round.id)),
+        and(eq(roundScore.editionId, round.editionId), eq(roundScore.roundId, round.id), eq(round.public, 1)),
       )
       .where(
         and(eq(roundScore.editionId, editionId), eq(roundScore.teamId, teamId ?? "").if(teamId)),
