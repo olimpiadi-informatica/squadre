@@ -58,6 +58,8 @@ export type EditionItem = {
   highestPoints: number;
 };
 
+export type EditionAdminItem = EditionItem & { public: number };
+
 export const listEditions = cache((): Promise<EditionItem[]> => {
   return db
     .select({
@@ -73,6 +75,25 @@ export const listEditions = cache((): Promise<EditionItem[]> => {
     .from(edition)
     .innerJoin(team, eq(team.editionId, edition.id))
     .where(eq(edition.public, 1))
+    .groupBy(edition.id)
+    .orderBy(desc(edition.year));
+});
+
+export const listEditionsAdmin = cache((): Promise<EditionAdminItem[]> => {
+  return db
+    .select({
+      id: edition.id,
+      name: edition.title,
+      year: edition.year,
+      public: edition.public,
+      totalInstitutes: countDistinct(team.instId),
+      totalTeams: countDistinct(concat(team.editionId, "-", team.id)),
+      totalPoints: coalesce(sum(team.points), 0),
+      highestPoints: coalesce(max(team.points), 0),
+      totalTasks: db.$count(task, eq(task.editionId, edition.id)),
+    })
+    .from(edition)
+    .leftJoin(team, eq(team.editionId, edition.id))
     .groupBy(edition.id)
     .orderBy(desc(edition.year));
 });
