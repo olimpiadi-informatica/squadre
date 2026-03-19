@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { foreignKey, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const region = sqliteTable("region", {
@@ -22,6 +23,7 @@ export const round = sqliteTable(
     title: text().notNull(),
     fullscore: integer().notNull(),
     public: integer().notNull().default(1),
+    startsAt: integer("starts_at", { mode: "timestamp" }).notNull().default(sql`0`),
   },
   (table) => [
     index("idx_round_edition_title_id").on(table.editionId, table.title, table.id),

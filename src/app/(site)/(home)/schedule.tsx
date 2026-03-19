@@ -1,7 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
-
 import { format, isAfter } from "@formkit/tempo";
 import clsx from "clsx";
 
@@ -25,8 +21,7 @@ function ScheduleItem({
   date: Date;
   hideTime?: boolean;
 }) {
-  const [finished, setFinished] = useState(false);
-  useEffect(() => setFinished(isAfter(new Date(), date)), [date]);
+  const finished = isAfter(new Date(), date);
 
   return (
     <li

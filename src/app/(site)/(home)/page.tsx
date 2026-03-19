@@ -1,19 +1,16 @@
-import { tzDate } from "@formkit/tempo";
 import { Card, CardActions, CardBody } from "@olinfo/react-components";
+
+import { getLatestSchedule } from "~/lib/edition";
 
 import { Schedule } from "./schedule";
 
-export default function Page() {
-  const rounds = [
-    tzDate("2026-11-16 14:30", "Europe/Rome"),
-    tzDate("2026-12-15 14:30", "Europe/Rome"),
-    tzDate("2027-01-13 14:30", "Europe/Rome"),
-    tzDate("2027-02-11 14:30", "Europe/Rome"),
-  ];
-  const final = tzDate("2027-03-12 14:30", "Europe/Rome");
+export const dynamic = "force-dynamic";
+export default async function Page() {
+  const schedule = await getLatestSchedule();
 
-  const year = rounds[0].getFullYear();
-  const years = `${year}/${(year + 1) % 100}`;
+  const years = schedule.year;
+  const rounds = schedule.rounds;
+  const final = schedule.final;
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
