@@ -12,10 +12,9 @@ import {
   NavbarContent,
 } from "@olinfo/react-components";
 
+import logoDark from "~/app/logo-dark.svg";
+import logoLight from "~/app/logo-light.svg";
 import { authClient } from "~/lib/auth-client";
-
-import logoDark from "../../logo-dark.svg";
-import logoLight from "../../logo-light.svg";
 
 export function AdminNavbar({ name }: { name: string }) {
   return (

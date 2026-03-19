@@ -7,8 +7,8 @@ import {
   NavbarMenuItem,
 } from "@olinfo/react-components";
 
-import logoDark from "../logo-dark.svg";
-import logoLight from "../logo-light.svg";
+import logoDark from "~/app/logo-dark.svg";
+import logoLight from "~/app/logo-light.svg";
 
 export function Navbar() {
   return (

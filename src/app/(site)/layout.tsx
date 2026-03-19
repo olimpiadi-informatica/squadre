@@ -1,8 +1,10 @@
+import type { ReactNode } from "react";
+
 import { Layout } from "@olinfo/react-components";
 
 import { Navbar } from "./navbar";
 
-export default function SiteLayout({ children }: { children: React.ReactNode }) {
+export default function SiteLayout({ children }: { children: ReactNode }) {
   return (
     <Layout>
       <Navbar />
