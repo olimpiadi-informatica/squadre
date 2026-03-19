@@ -3,8 +3,29 @@ import { cache } from "react";
 import { and, countDistinct, desc, eq, max, sum } from "drizzle-orm";
 
 import { db } from "~/lib/db";
-import { edition, task, taskScore, team } from "~/lib/db/schema";
+import { edition, round, task, taskScore, team } from "~/lib/db/schema";
 import { coalesce, concat } from "~/lib/utils";
+
+export type ScheduleEdition = {
+  year: string;
+  rounds: Date[];
+  final: Date;
+};
+
+export const getLatestSchedule = cache(async (): Promise<ScheduleEdition> => {
+  const [latestEdition] = await db.select().from(edition).orderBy(desc(edition.id)).limit(1);
+  if (!latestEdition) throw new Error("No edition found");
+
+  const roundsData = await db.select().from(round).where(eq(round.editionId, latestEdition.id));
+  const order = ["1", "2", "3", "4", "final"];
+  roundsData.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+
+  return {
+    year: latestEdition.year,
+    rounds: roundsData.filter((r) => r.id !== "final").map((r) => r.startsAt),
+    final: roundsData.find((r) => r.id === "final")?.startsAt || new Date(0),
+  };
+});
 
 export type Edition = {
   name: string;
