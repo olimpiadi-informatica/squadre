@@ -1,8 +1,20 @@
-export default function AdminPage() {
+import { listEditionsAdmin } from "~/lib/edition";
+
+import { AdminEditionsTable } from "./editions-table";
+
+export default async function AdminPage() {
+  const editions = await listEditionsAdmin();
+
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-      <p className="text-base-content/60">Benvenuto nel pannello di amministrazione di OIS.</p>
+    <div className="flex flex-col gap-4">
+      <div className="breadcrumbs mx-4 text-sm">
+        <ul>
+          <li>Editions</li>
+        </ul>
+      </div>
+      <div className="w-full">
+        <AdminEditionsTable editions={editions} />
+      </div>
     </div>
   );
 }
