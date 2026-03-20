@@ -1,5 +1,5 @@
-import { format, isAfter } from "@formkit/tempo";
 import clsx from "clsx";
+import { intlFormat, isPast } from "date-fns";
 
 export function Schedule({ rounds, final }: { rounds: Date[]; final: Date }) {
   return (
@@ -21,7 +21,7 @@ function ScheduleItem({
   date: Date;
   hideTime?: boolean;
 }) {
-  const finished = isAfter(new Date(), date);
+  const finished = isPast(date);
 
   return (
     <li
@@ -30,19 +30,18 @@ function ScheduleItem({
       <div className="py-4">
         <h3 className="text-lg font-bold">{round}</h3>
         {hideTime ? (
-          format({ date, format: { date: "long" }, locale: "en", tz: "Europe/Rome" })
+          intlFormat(date, { dateStyle: "long", timeZone: "Europe/Rome" }, { locale: "en-GB" })
         ) : (
           <a
             href={`https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+${round}&iso=${encodeURIComponent(date.toISOString())}&ah=3`}
             className="link"
             target="_blank"
             rel="noreferrer">
-            {format({
+            {intlFormat(
               date,
-              format: { date: "long", time: "short" },
-              locale: "en",
-              tz: "Europe/Rome",
-            })}
+              { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Rome" },
+              { locale: "en-GB" },
+            )}
           </a>
         )}
       </div>
