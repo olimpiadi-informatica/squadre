@@ -8,10 +8,10 @@ import {
   institute,
   region,
   round,
-  roundScore,
   task,
   taskScore,
   team,
+  teamRound,
 } from "~/lib/db/schema";
 
 export type ScoreItem = {
@@ -106,27 +106,27 @@ export const listRoundScores = cache(
   (editionId: string, teamId?: string): Promise<RoundScoreItem[]> => {
     return db
       .select({
-        rank: roundScore.rankTot,
-        regionalRank: roundScore.rankReg,
-        totalPoints: roundScore.score,
-        medal: roundScore.medal,
-        teamId: roundScore.teamId,
-        roundId: roundScore.roundId,
+        rank: teamRound.rankTot,
+        regionalRank: teamRound.rankReg,
+        totalPoints: teamRound.score,
+        medal: teamRound.medal,
+        teamId: teamRound.teamId,
+        roundId: teamRound.roundId,
         roundName: round.title,
-        editionId: roundScore.editionId,
+        editionId: teamRound.editionId,
       })
-      .from(roundScore)
-      .innerJoin(edition, and(eq(roundScore.editionId, edition.id), eq(edition.public, 1)))
+      .from(teamRound)
+      .innerJoin(edition, and(eq(teamRound.editionId, edition.id), eq(edition.public, 1)))
       .innerJoin(
         round,
         and(
-          eq(roundScore.editionId, round.editionId),
-          eq(roundScore.roundId, round.id),
+          eq(teamRound.editionId, round.editionId),
+          eq(teamRound.roundId, round.id),
           eq(round.public, 1),
         ),
       )
       .where(
-        and(eq(roundScore.editionId, editionId), eq(roundScore.teamId, teamId ?? "").if(teamId)),
+        and(eq(teamRound.editionId, editionId), eq(teamRound.teamId, teamId ?? "").if(teamId)),
       );
   },
 );
