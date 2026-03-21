@@ -15,7 +15,10 @@ import { createNewEdition, type EditionData } from "~/lib/new-edition";
 
 const csvRowSchema = z.object({
   "ID concorrente": z.coerce.number().int(),
-  "Nome concorrente": z.string().min(1),
+  "Nome concorrente": z
+    .string()
+    .min(1)
+    .transform((s) => s.replaceAll(/\p{White_Space}+/gu, " ").trim()),
   "Approvato/a": z.enum(["True", "False", ""]),
   "Idoneo/a": z.enum(["True", "False"]),
   "ID scuola": z.coerce.number().int(),
