@@ -1,5 +1,8 @@
+import { random } from "lodash";
+
 import { db } from "~/lib/db";
-import { edition, institute, round, team } from "~/lib/db/schema";
+import { edition, institute, round, team, teamRound } from "~/lib/db/schema";
+import { generateWord } from "~/lib/password";
 
 export type EditionData = {
   id: string;
@@ -46,6 +49,24 @@ export async function createNewEdition(
 
   if (teams.length > 0) {
     await db.insert(team).values(teams);
+
+    const delays = Object.fromEntries(teams.map((t) => [t.instId, random(0, 600)]));
+
+    const roundIds = ["1", "2", "3", "4", "final"];
+    const teamRoundRows = teams.flatMap((t) =>
+      roundIds.map((roundId) => ({
+        roundId,
+        editionId: id,
+        teamId: t.id,
+        score: 0,
+        rankTot: 0,
+        rankReg: 0,
+        password: generateWord(),
+        delay: delays[t.instId]!,
+      })),
+    );
+
+    await db.insert(teamRound).values(teamRoundRows);
   }
   // });
 }

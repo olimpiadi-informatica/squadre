@@ -3,7 +3,7 @@ import { cache } from "react";
 import { and, avg, count, eq, gt, isNotNull, min, sql, sum } from "drizzle-orm";
 
 import { db } from "~/lib/db";
-import { edition, institute, region, round, roundScore, team } from "~/lib/db/schema";
+import { edition, institute, region, round, team, teamRound } from "~/lib/db/schema";
 import { coalesce, jsonAggregate } from "~/lib/utils";
 
 export type Team = {
@@ -54,21 +54,21 @@ export type TeamStats = {
 export const getTeamStats = cache(async (editionId: string, id: string): Promise<TeamStats> => {
   const [result] = await db
     .select({
-      totalPoints: coalesce(sum(roundScore.score), 0),
-      avgRoundRank: coalesce(avg(roundScore.rankTot), 0),
-      bestRoundRank: coalesce(min(roundScore.rankTot), 0),
+      totalPoints: coalesce(sum(teamRound.score), 0),
+      avgRoundRank: coalesce(avg(teamRound.rankTot), 0),
+      bestRoundRank: coalesce(min(teamRound.rankTot), 0),
     })
-    .from(roundScore)
-    .innerJoin(edition, and(eq(roundScore.editionId, edition.id), eq(edition.public, 1)))
+    .from(teamRound)
+    .innerJoin(edition, and(eq(teamRound.editionId, edition.id), eq(edition.public, 1)))
     .innerJoin(
       round,
       and(
-        eq(roundScore.roundId, round.id),
-        eq(roundScore.editionId, round.editionId),
+        eq(teamRound.roundId, round.id),
+        eq(teamRound.editionId, round.editionId),
         eq(round.public, 1),
       ),
     )
-    .where(and(eq(roundScore.editionId, editionId), eq(roundScore.teamId, id)));
+    .where(and(eq(teamRound.editionId, editionId), eq(teamRound.teamId, id)));
   return result;
 });
 
@@ -87,23 +87,23 @@ export type TeamItem = {
 const medalCte = db.$with("medals").as(
   db
     .select({
-      teamId: roundScore.teamId,
-      editionId: roundScore.editionId,
-      medal: roundScore.medal,
+      teamId: teamRound.teamId,
+      editionId: teamRound.editionId,
+      medal: teamRound.medal,
       count: count().as("count"),
     })
-    .from(roundScore)
-    .innerJoin(edition, and(eq(roundScore.editionId, edition.id), eq(edition.public, 1)))
+    .from(teamRound)
+    .innerJoin(edition, and(eq(teamRound.editionId, edition.id), eq(edition.public, 1)))
     .innerJoin(
       round,
       and(
-        eq(roundScore.roundId, round.id),
-        eq(roundScore.editionId, round.editionId),
+        eq(teamRound.roundId, round.id),
+        eq(teamRound.editionId, round.editionId),
         eq(round.public, 1),
       ),
     )
-    .where(and(isNotNull(roundScore.medal)))
-    .groupBy(roundScore.teamId, roundScore.editionId, roundScore.medal),
+    .where(and(isNotNull(teamRound.medal)))
+    .groupBy(teamRound.teamId, teamRound.editionId, teamRound.medal),
 );
 
 export const listTeams = cache((instituteId?: string): Promise<TeamItem[]> => {
@@ -154,10 +154,10 @@ export const listRoundTeams = cache(
       .select({
         id: team.id,
         name: team.name,
-        rank: roundScore.rankTot,
-        regionalRank: roundScore.rankReg,
+        rank: teamRound.rankTot,
+        regionalRank: teamRound.rankReg,
         finalist: sql`${team.finalist}`.mapWith(Boolean),
-        points: roundScore.score,
+        points: teamRound.score,
         editionId: team.editionId,
         instituteId: institute.id,
         instituteName: institute.name,
@@ -165,30 +165,27 @@ export const listRoundTeams = cache(
         regionId: region.id,
         regionName: region.name,
       })
-      .from(roundScore)
-      .innerJoin(edition, and(eq(roundScore.editionId, edition.id), eq(edition.public, 1)))
+      .from(teamRound)
+      .innerJoin(edition, and(eq(teamRound.editionId, edition.id), eq(edition.public, 1)))
       .innerJoin(
         round,
         and(
-          eq(roundScore.roundId, round.id),
-          eq(roundScore.editionId, round.editionId),
+          eq(teamRound.roundId, round.id),
+          eq(teamRound.editionId, round.editionId),
           eq(round.public, 1),
         ),
       )
-      .innerJoin(
-        team,
-        and(eq(roundScore.editionId, team.editionId), eq(roundScore.teamId, team.id)),
-      )
+      .innerJoin(team, and(eq(teamRound.editionId, team.editionId), eq(teamRound.teamId, team.id)))
       .innerJoin(institute, eq(team.instId, institute.id))
       .innerJoin(region, eq(institute.region, region.id))
       .where(
         and(
-          eq(roundScore.editionId, editionId),
-          eq(roundScore.roundId, roundId),
-          gt(roundScore.score, 0),
+          eq(teamRound.editionId, editionId),
+          eq(teamRound.roundId, roundId),
+          gt(teamRound.score, 0),
         ),
       )
-      .orderBy(roundScore.rankTot, institute.region, institute.name, institute.city, team.name);
+      .orderBy(teamRound.rankTot, institute.region, institute.name, institute.city, team.name);
 
     return limit ? query.limit(limit) : query;
   },
