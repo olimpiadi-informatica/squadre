@@ -3,7 +3,7 @@ import { cache } from "react";
 import { and, count, countDistinct, eq, isNotNull, min, sql, sum } from "drizzle-orm";
 
 import { db } from "~/lib/db";
-import { edition, institute, region, round, roundScore, team } from "~/lib/db/schema";
+import { edition, institute, region, round, team, teamRound } from "~/lib/db/schema";
 import { coalesce, concat, jsonAggregate } from "~/lib/utils";
 
 export type Institute = {
@@ -22,22 +22,22 @@ const medalCte = db.$with("medals").as(
   db
     .select({
       instituteId: team.instId,
-      medal: roundScore.medal,
+      medal: teamRound.medal,
       count: count().as("count"),
     })
-    .from(roundScore)
-    .innerJoin(team, and(eq(roundScore.teamId, team.id), eq(roundScore.editionId, team.editionId)))
+    .from(teamRound)
+    .innerJoin(team, and(eq(teamRound.teamId, team.id), eq(teamRound.editionId, team.editionId)))
     .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
     .innerJoin(
       round,
       and(
-        eq(roundScore.roundId, round.id),
-        eq(roundScore.editionId, round.editionId),
+        eq(teamRound.roundId, round.id),
+        eq(teamRound.editionId, round.editionId),
         eq(round.public, 1),
       ),
     )
-    .where(and(isNotNull(roundScore.medal)))
-    .groupBy(team.instId, roundScore.medal),
+    .where(and(isNotNull(teamRound.medal)))
+    .groupBy(team.instId, teamRound.medal),
 );
 
 export const listInstitutes = cache(
@@ -89,19 +89,19 @@ export const getInstituteStats = cache(async (id: string): Promise<InstituteStat
   const [result] = await db
     .select({
       bestEditionRank: coalesce(min(team.rankTot), 0),
-      bestRoundRank: coalesce(min(roundScore.rankTot), 0),
+      bestRoundRank: coalesce(min(teamRound.rankTot), 0),
     })
     .from(team)
     .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
     .innerJoin(
-      roundScore,
-      and(eq(team.editionId, roundScore.editionId), eq(team.id, roundScore.teamId)),
+      teamRound,
+      and(eq(team.editionId, teamRound.editionId), eq(team.id, teamRound.teamId)),
     )
     .innerJoin(
       round,
       and(
-        eq(roundScore.roundId, round.id),
-        eq(roundScore.editionId, round.editionId),
+        eq(teamRound.roundId, round.id),
+        eq(teamRound.editionId, round.editionId),
         eq(round.public, 1),
       ),
     )
