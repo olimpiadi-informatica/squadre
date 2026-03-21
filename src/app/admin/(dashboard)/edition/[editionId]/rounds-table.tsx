@@ -1,0 +1,131 @@
+"use client";
+
+import { type RefObject, useRef, useState } from "react";
+
+import { Button, Modal } from "@olinfo/react-components";
+
+import { Table } from "~/components/table";
+import type { RoundAdminItem } from "~/lib/round";
+
+import { toggleRoundVisibility } from "./actions";
+
+export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
+  const makePublicModalRef = useRef<HTMLDialogElement>(null);
+  const makePrivateModalRef = useRef<HTMLDialogElement>(null);
+
+  const [selectedRound, setSelectedRound] = useState<RoundAdminItem | null>(null);
+
+  async function confirmMakePublic() {
+    await toggleRoundVisibility(selectedRound!.editionId, selectedRound!.id, selectedRound!.public);
+    makePublicModalRef.current?.close();
+  }
+
+  async function confirmMakePrivate() {
+    await toggleRoundVisibility(selectedRound!.editionId, selectedRound!.id, selectedRound!.public);
+    makePrivateModalRef.current?.close();
+  }
+
+  return (
+    <>
+      <Table
+        data={rounds}
+        header={TableHeaders}
+        row={(props) => (
+          <TableRow
+            {...props}
+            setSelectedRound={setSelectedRound}
+            makePrivateModalRef={makePrivateModalRef}
+            makePublicModalRef={makePublicModalRef}
+          />
+        )}
+        className="grid-cols-[repeat(3,auto)]"
+      />
+      <Modal ref={makePublicModalRef} title="Rendi pubblico il round?">
+        <p>{`Il round "${selectedRound?.title}" sarà visibile al pubblico.`}</p>
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button
+            className="btn btn-info"
+            onClick={() => makePublicModalRef.current?.close()}
+            type="button">
+            Annulla
+          </button>
+          <Button onClick={confirmMakePublic} className="btn-warning">
+            Conferma
+          </Button>
+        </div>
+      </Modal>
+      <Modal ref={makePrivateModalRef} title="Rendi privato il round?">
+        <p>{`Il round "${selectedRound?.title}" sarà nascosto al pubblico.`}</p>
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button
+            className="btn btn-info"
+            onClick={() => makePrivateModalRef.current?.close()}
+            type="button">
+            Annulla
+          </button>
+          <Button onClick={confirmMakePrivate} className="btn-warning">
+            Conferma
+          </Button>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+function TableHeaders() {
+  return (
+    <>
+      <div>Titolo</div>
+      <div>Data</div>
+      <div>Visibilità</div>
+    </>
+  );
+}
+
+function TableRow({
+  item: round,
+  setSelectedRound,
+  makePrivateModalRef,
+  makePublicModalRef,
+}: {
+  item: RoundAdminItem;
+  setSelectedRound: (round: RoundAdminItem) => void;
+  makePrivateModalRef: RefObject<HTMLDialogElement | null>;
+  makePublicModalRef: RefObject<HTMLDialogElement | null>;
+}) {
+  const isPublic = round.public === 1;
+
+  return (
+    <>
+      <div>{round.title}</div>
+      <div>
+        {round.startsAt.toLocaleDateString("it-IT", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })}
+      </div>
+      <div>
+        {isPublic ? (
+          <Button
+            onClick={() => {
+              setSelectedRound(round);
+              makePrivateModalRef.current?.showModal();
+            }}
+            className="btn-warning btn-sm">
+            Rendi privato
+          </Button>
+        ) : (
+          <Button
+            onClick={() => {
+              setSelectedRound(round);
+              makePublicModalRef.current?.showModal();
+            }}
+            className="btn-error btn-sm">
+            Rendi pubblico
+          </Button>
+        )}
+      </div>
+    </>
+  );
+}

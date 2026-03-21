@@ -10,7 +10,7 @@ export default async function AdminPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="breadcrumbs mx-4 text-sm">
+      <div className="breadcrumbs text-sm mb-4">
         <ul>
           <li>Editions</li>
         </ul>
