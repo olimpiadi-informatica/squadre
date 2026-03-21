@@ -39,7 +39,7 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
             makePublicModalRef={makePublicModalRef}
           />
         )}
-        className="grid-cols-[repeat(4,auto)]"
+        className="grid-cols-[repeat(3,auto)]"
       />
       <Modal ref={makePublicModalRef} title="Rendi pubblico il round?">
         <p>{`Il round "${selectedRound?.title}" sarà visibile al pubblico.`}</p>
@@ -78,8 +78,7 @@ function TableHeaders() {
     <>
       <div>Titolo</div>
       <div>Data</div>
-      <div>Credenziali</div>
-      <div>Visibilità</div>
+      <div>Azioni</div>
     </>
   );
 }
@@ -107,12 +106,10 @@ function TableRow({
           { locale: "it-IT" },
         )}
       </div>
-      <div>
+      <div className="flex flex-wrap justify-center gap-2">
         <Button onClick={downloadCredentials} className="btn-info btn-sm">
           Scarica contest.yaml
         </Button>
-      </div>
-      <div>
         {isPublic ? (
           <Button
             onClick={() => {
