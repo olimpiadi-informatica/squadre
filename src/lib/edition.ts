@@ -3,11 +3,22 @@ import { cache } from "react";
 import { and, countDistinct, desc, eq, max, sum } from "drizzle-orm";
 
 import { db } from "~/lib/db";
-import { edition, round, task, taskScore, team } from "~/lib/db/schema";
+import { edition, round, task, taskScore, team, teamRound } from "~/lib/db/schema";
 import { coalesce, concat } from "~/lib/utils";
 
 export async function updateEditionVisibility(id: string, isPublic: number): Promise<void> {
   await db.update(edition).set({ public: isPublic }).where(eq(edition.id, id));
+}
+
+export async function deleteEdition(id: string): Promise<void> {
+  // await db.transaction(async (tx) => {
+  await db.delete(taskScore).where(eq(taskScore.editionId, id));
+  await db.delete(teamRound).where(eq(teamRound.editionId, id));
+  await db.delete(task).where(eq(task.editionId, id));
+  await db.delete(team).where(eq(team.editionId, id));
+  await db.delete(round).where(eq(round.editionId, id));
+  await db.delete(edition).where(eq(edition.id, id));
+  // });
 }
 
 export type ScheduleEdition = {
