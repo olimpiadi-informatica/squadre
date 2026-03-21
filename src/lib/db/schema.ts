@@ -1,19 +1,29 @@
 import { sql } from "drizzle-orm";
-import { foreignKey, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  bigserial,
+  boolean,
+  foreignKey,
+  index,
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
-export const region = sqliteTable("region", {
+export const region = pgTable("region", {
   id: text().primaryKey().notNull(),
   name: text().notNull(),
 });
 
-export const edition = sqliteTable("edition", {
+export const edition = pgTable("edition", {
   id: text().primaryKey().notNull(),
   year: text().notNull(),
   title: text().notNull(),
-  public: integer().notNull().default(1),
+  public: boolean().notNull().default(true),
 });
 
-export const round = sqliteTable(
+export const round = pgTable(
   "round",
   {
     id: text().notNull(),
@@ -22,8 +32,8 @@ export const round = sqliteTable(
       .references(() => edition.id),
     title: text().notNull(),
     fullscore: integer().notNull(),
-    public: integer().notNull().default(1),
-    startsAt: integer("starts_at", { mode: "timestamp" }).notNull().default(sql`0`),
+    public: boolean().notNull().default(true),
+    startsAt: timestamp("starts_at").notNull().default(sql`'1970-01-01 00:00:00'`),
   },
   (table) => [
     index("idx_round_edition_title_id").on(table.editionId, table.title, table.id),
@@ -31,7 +41,7 @@ export const round = sqliteTable(
   ],
 );
 
-export const task = sqliteTable(
+export const task = pgTable(
   "task",
   {
     name: text().primaryKey().notNull(),
@@ -52,7 +62,7 @@ export const task = sqliteTable(
   ],
 );
 
-export const institute = sqliteTable(
+export const institute = pgTable(
   "institute",
   {
     id: text().primaryKey().notNull(),
@@ -68,7 +78,7 @@ export const institute = sqliteTable(
   ],
 );
 
-export const team = sqliteTable(
+export const team = pgTable(
   "team",
   {
     id: text().notNull(),
@@ -80,7 +90,7 @@ export const team = sqliteTable(
       .notNull()
       .references(() => institute.id),
     coach: text().notNull(),
-    finalist: integer(),
+    finalist: boolean(),
     rankReg: integer("rank_reg").notNull(),
     rankTot: integer("rank_tot").notNull(),
     points: integer().notNull(),
@@ -105,7 +115,7 @@ export const team = sqliteTable(
   ],
 );
 
-export const teamRound = sqliteTable(
+export const teamRound = pgTable(
   "team_round",
   {
     roundId: text("round_id").notNull(),
@@ -147,7 +157,7 @@ export const teamRound = sqliteTable(
   ],
 );
 
-export const taskScore = sqliteTable(
+export const taskScore = pgTable(
   "task_score",
   {
     taskName: text("task_name")
@@ -167,11 +177,6 @@ export const taskScore = sqliteTable(
       foreignColumns: [team.id, team.editionId],
       name: "task_score_team_id_edition_id_team_id_edition_id_fk",
     }),
-    foreignKey({
-      columns: [table.taskName, table.editionId],
-      foreignColumns: [task.name, task.editionId],
-      name: "task_score_task_name_edition_id_task_name_edition_id_fk",
-    }),
     primaryKey({
       columns: [table.taskName, table.teamId],
       name: "task_score_task_name_team_id_pk",
@@ -179,10 +184,10 @@ export const taskScore = sqliteTable(
   ],
 );
 
-export const highlight = sqliteTable(
+export const highlight = pgTable(
   "highlight",
   {
-    id: integer().primaryKey({ autoIncrement: true }),
+    id: bigserial({ mode: "number" }).primaryKey(),
     page: text().notNull(),
     link: text().notNull(),
     name: text().notNull(),
@@ -193,22 +198,22 @@ export const highlight = sqliteTable(
 
 // ─── Better Auth tables ───────────────────────────────────────────────────────
 
-export const user = sqliteTable("user", {
+export const user = pgTable("user", {
   id: text().primaryKey().notNull(),
   name: text().notNull(),
   email: text().notNull().unique(),
-  emailVerified: integer("email_verified", { mode: "boolean" }).notNull(),
+  emailVerified: boolean("email_verified").notNull(),
   image: text(),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
 });
 
-export const session = sqliteTable("session", {
+export const session = pgTable("session", {
   id: text().primaryKey().notNull(),
-  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
   token: text().notNull().unique(),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   userId: text("user_id")
@@ -216,7 +221,7 @@ export const session = sqliteTable("session", {
     .references(() => user.id, { onDelete: "cascade" }),
 });
 
-export const account = sqliteTable("account", {
+export const account = pgTable("account", {
   id: text().primaryKey().notNull(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
@@ -226,19 +231,19 @@ export const account = sqliteTable("account", {
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   idToken: text("id_token"),
-  accessTokenExpiresAt: integer("access_token_expires_at", { mode: "timestamp" }),
-  refreshTokenExpiresAt: integer("refresh_token_expires_at", { mode: "timestamp" }),
+  accessTokenExpiresAt: timestamp("access_token_expires_at"),
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
   scope: text(),
   password: text(),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
 });
 
-export const verification = sqliteTable("verification", {
+export const verification = pgTable("verification", {
   id: text().primaryKey().notNull(),
   identifier: text().notNull(),
   value: text().notNull(),
-  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }),
-  updatedAt: integer("updated_at", { mode: "timestamp" }),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at"),
+  updatedAt: timestamp("updated_at"),
 });

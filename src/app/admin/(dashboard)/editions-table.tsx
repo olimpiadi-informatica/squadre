@@ -117,8 +117,6 @@ function TableRow({
   makePublicModalRef: RefObject<HTMLDialogElement | null>;
   deleteModalRef: RefObject<HTMLDialogElement | null>;
 }) {
-  const isPublic = edition.public === 1;
-
   return (
     <>
       <div>
@@ -128,7 +126,7 @@ function TableRow({
       </div>
       <div>{edition.year}</div>
       <div className="flex flex-wrap justify-center gap-2">
-        {isPublic ? (
+        {edition.public ? (
           <Button
             onClick={() => {
               setSelectedEdition(edition);
