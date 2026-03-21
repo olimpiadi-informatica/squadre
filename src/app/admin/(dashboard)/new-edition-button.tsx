@@ -24,8 +24,9 @@ import {
 import { maxBy } from "lodash";
 
 import type { EditionAdminItem } from "~/lib/edition";
+import type { EditionData } from "~/lib/new-edition";
 
-import { createEdition, type EditionData } from "./actions";
+import { createEdition } from "./actions";
 
 function ordinalSuffix(n: number): string {
   const pr = new Intl.PluralRules("en-US", { type: "ordinal" });
