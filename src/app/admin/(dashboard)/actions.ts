@@ -10,7 +10,7 @@ import { isString, uniqBy } from "lodash";
 import Papa from "papaparse";
 import { z } from "zod";
 
-import { updateEditionVisibility } from "~/lib/edition";
+import { deleteEdition, updateEditionVisibility } from "~/lib/edition";
 import { createNewEdition, type EditionData } from "~/lib/new-edition";
 
 const csvRowSchema = z.object({
@@ -39,6 +39,11 @@ const csvRowSchema = z.object({
 
 export async function toggleEditionVisibility(id: string, currentPublic: number) {
   await updateEditionVisibility(id, currentPublic === 1 ? 0 : 1);
+  revalidatePath("/admin");
+}
+
+export async function deleteEditionAction(id: string) {
+  await deleteEdition(id);
   revalidatePath("/admin");
 }
 
