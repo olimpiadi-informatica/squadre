@@ -40,7 +40,7 @@ export default async function AdminPage() {
               </li>
             </ul>
             <CardActions>
-              <NewEditionButton />
+              <NewEditionButton editions={editions} />
             </CardActions>
           </CardBody>
         </Card>
