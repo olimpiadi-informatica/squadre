@@ -25,6 +25,22 @@ export async function updateRoundVisibility(
     .where(and(eq(round.editionId, editionId), eq(round.id, roundId)));
 }
 
+export const getRoundAdmin = cache(
+  async (editionId: string, roundId: string): Promise<RoundAdminItem | undefined> => {
+    const [result] = await db
+      .select({
+        id: round.id,
+        title: round.title,
+        editionId: round.editionId,
+        startsAt: round.startsAt,
+        public: round.public,
+      })
+      .from(round)
+      .where(and(eq(round.editionId, editionId), eq(round.id, roundId)));
+    return result;
+  },
+);
+
 export const listRoundsAdmin = cache((editionId: string): Promise<RoundAdminItem[]> => {
   return db
     .select({
@@ -36,7 +52,7 @@ export const listRoundsAdmin = cache((editionId: string): Promise<RoundAdminItem
     })
     .from(round)
     .where(eq(round.editionId, editionId))
-    .orderBy(round.title);
+    .orderBy(round.startsAt);
 });
 
 export type Round = {

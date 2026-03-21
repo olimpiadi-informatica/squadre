@@ -7,6 +7,7 @@
     "lint": "biome check --write"
   },
   "dependencies": {
+    "@date-fns/tz": "^1.4.1",
     "@libsql/client": "^0.17.2",
     "@mdx-js/loader": "^3.1.1",
     "@mdx-js/react": "^3.1.1",
@@ -34,6 +35,7 @@
     "react-virtuoso": "^4.18.3",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
+    "yaml": "^2.8.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
