@@ -6,6 +6,10 @@ import { db } from "~/lib/db";
 import { edition, round, task, taskScore, team } from "~/lib/db/schema";
 import { coalesce, concat } from "~/lib/utils";
 
+export async function updateEditionVisibility(id: string, isPublic: number): Promise<void> {
+  await db.update(edition).set({ public: isPublic }).where(eq(edition.id, id));
+}
+
 export type ScheduleEdition = {
   year: string;
   rounds: Date[];
