@@ -105,8 +105,8 @@ export const team = sqliteTable(
   ],
 );
 
-export const roundScore = sqliteTable(
-  "round_score",
+export const teamRound = sqliteTable(
+  "team_round",
   {
     roundId: text("round_id").notNull(),
     editionId: text("edition_id")
@@ -117,15 +117,13 @@ export const roundScore = sqliteTable(
     rankTot: integer("rank_tot").notNull(),
     rankReg: integer("rank_reg").notNull(),
     medal: integer(),
+    password: text().notNull().default(""),
+    delay: integer().notNull().default(0),
   },
   (table) => [
-    index("idx_round_score_medal_team_id_edition_id").on(
-      table.medal,
-      table.teamId,
-      table.editionId,
-    ),
-    index("idx_round_score_edition_team_id").on(table.editionId, table.teamId),
-    index("idx_round_score_edition_round_id_rank_tot_team_id_total_score").on(
+    index("idx_team_round_medal_team_id_edition_id").on(table.medal, table.teamId, table.editionId),
+    index("idx_team_round_edition_team_id").on(table.editionId, table.teamId),
+    index("idx_team_round_edition_round_id_rank_tot_team_id_total_score").on(
       table.editionId,
       table.roundId,
       table.rankTot,
@@ -135,16 +133,16 @@ export const roundScore = sqliteTable(
     foreignKey({
       columns: [table.teamId, table.editionId],
       foreignColumns: [team.id, team.editionId],
-      name: "round_score_team_id_edition_id_team_id_edition_id_fk",
+      name: "team_round_team_id_edition_id_team_id_edition_id_fk",
     }),
     foreignKey({
       columns: [table.roundId, table.editionId],
       foreignColumns: [round.id, round.editionId],
-      name: "round_score_round_id_edition_id_round_id_edition_id_fk",
+      name: "team_round_round_id_edition_id_round_id_edition_id_fk",
     }),
     primaryKey({
       columns: [table.roundId, table.editionId, table.teamId],
-      name: "round_score_round_id_edition_id_team_id_pk",
+      name: "team_round_round_id_edition_id_team_id_pk",
     }),
   ],
 );

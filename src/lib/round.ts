@@ -3,7 +3,7 @@ import { cache } from "react";
 import { and, avg, count, eq, gt, min, sum } from "drizzle-orm";
 
 import { db } from "~/lib/db";
-import { edition, round, roundScore } from "~/lib/db/schema";
+import { edition, round, teamRound } from "~/lib/db/schema";
 import { coalesce, median } from "~/lib/utils";
 
 export type RoundAdminItem = {
@@ -75,26 +75,26 @@ export const getRoundStats = cache(
     const [result] = await db
       .select({
         teamScored: count(),
-        totalScores: coalesce(sum(roundScore.score), 0),
-        maxScore: coalesce(min(roundScore.score), 0),
-        avgScore: coalesce(avg(roundScore.score), 0),
-        medianScore: coalesce(median(roundScore.score), 0),
+        totalScores: coalesce(sum(teamRound.score), 0),
+        maxScore: coalesce(min(teamRound.score), 0),
+        avgScore: coalesce(avg(teamRound.score), 0),
+        medianScore: coalesce(median(teamRound.score), 0),
       })
-      .from(roundScore)
-      .innerJoin(edition, and(eq(roundScore.editionId, edition.id), eq(edition.public, 1)))
+      .from(teamRound)
+      .innerJoin(edition, and(eq(teamRound.editionId, edition.id), eq(edition.public, 1)))
       .innerJoin(
         round,
         and(
-          eq(roundScore.roundId, round.id),
-          eq(roundScore.editionId, round.editionId),
+          eq(teamRound.roundId, round.id),
+          eq(teamRound.editionId, round.editionId),
           eq(round.public, 1),
         ),
       )
       .where(
         and(
-          eq(roundScore.editionId, editionId),
-          eq(roundScore.roundId, roundId),
-          gt(roundScore.score, 0),
+          eq(teamRound.editionId, editionId),
+          eq(teamRound.roundId, roundId),
+          gt(teamRound.score, 0),
         ),
       );
     return result;
