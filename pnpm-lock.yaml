@@ -24,8 +24,8 @@ importers:
         specifier: ^16.2.1
         version: 16.2.1(next@16.2.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)
       '@olinfo/react-components':
-        specifier: ^0.12.2
-        version: 0.12.2(react@19.2.4)
+        specifier: ^0.12.3
+        version: 0.12.3(react@19.2.4)
       '@olinfo/tailwind':
         specifier: ^0.1.0
         version: 0.1.0(postcss@8.5.8)(tsx@4.21.0)(yaml@2.8.1)
@@ -1012,8 +1012,8 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
-  '@olinfo/react-components@0.12.2':
-    resolution: {integrity: sha512-QjEHwu4YzsKpwGqDGNrlNGKbIXUIP3YiheJk4d9B7VisOj6mq3bKS/wnMIqLFTPw1fusUNpLe6tE46WikeDYSA==}
+  '@olinfo/react-components@0.12.3':
+    resolution: {integrity: sha512-H4pVUFC8rkpGM6Bq4cE+X1x+vHv+unIUD686ypsLi4ovSURlFFf/TtbC2Z3KDN/7Yr8HPDjxczjV44lKt11+OA==}
     peerDependencies:
       react: ^19
 
@@ -2971,7 +2971,7 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
 
-  '@olinfo/react-components@0.12.2(react@19.2.4)':
+  '@olinfo/react-components@0.12.3(react@19.2.4)':
     dependencies:
       clsx: 2.1.1
       date-fns: 4.1.0

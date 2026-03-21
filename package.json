@@ -12,7 +12,7 @@
     "@mdx-js/react": "^3.1.1",
     "@next/mdx": "^16.2.1",
     "@next/third-parties": "^16.2.1",
-    "@olinfo/react-components": "^0.12.2",
+    "@olinfo/react-components": "^0.12.3",
     "@olinfo/tailwind": "^0.1.0",
     "@types/mdx": "^2.0.13",
     "@types/node": "^25.5.0",
