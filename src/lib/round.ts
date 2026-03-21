@@ -11,13 +11,13 @@ export type RoundAdminItem = {
   title: string;
   editionId: string;
   startsAt: Date;
-  public: number;
+  public: boolean;
 };
 
 export async function updateRoundVisibility(
   editionId: string,
   roundId: string,
-  isPublic: number,
+  isPublic: boolean,
 ): Promise<void> {
   await db
     .update(round)
@@ -72,8 +72,8 @@ export const getRound = cache(
         editionName: edition.title,
       })
       .from(round)
-      .innerJoin(edition, and(eq(round.editionId, edition.id), eq(edition.public, 1)))
-      .where(and(eq(round.editionId, editionId), eq(round.id, roundId), eq(round.public, 1)));
+      .innerJoin(edition, and(eq(round.editionId, edition.id), eq(edition.public, true)))
+      .where(and(eq(round.editionId, editionId), eq(round.id, roundId), eq(round.public, true)));
     return result;
   },
 );
@@ -97,13 +97,13 @@ export const getRoundStats = cache(
         medianScore: coalesce(median(teamRound.score), 0),
       })
       .from(teamRound)
-      .innerJoin(edition, and(eq(teamRound.editionId, edition.id), eq(edition.public, 1)))
+      .innerJoin(edition, and(eq(teamRound.editionId, edition.id), eq(edition.public, true)))
       .innerJoin(
         round,
         and(
           eq(teamRound.roundId, round.id),
           eq(teamRound.editionId, round.editionId),
-          eq(round.public, 1),
+          eq(round.public, true),
         ),
       )
       .where(
@@ -133,7 +133,7 @@ export const listRounds = cache((editionId?: string): Promise<RoundItem[]> => {
       maxScore: round.fullscore,
     })
     .from(round)
-    .innerJoin(edition, and(eq(round.editionId, edition.id), eq(edition.public, 1)))
-    .where(and(eq(round.editionId, editionId ?? "").if(editionId), eq(round.public, 1)))
+    .innerJoin(edition, and(eq(round.editionId, edition.id), eq(edition.public, true)))
+    .where(and(eq(round.editionId, editionId ?? "").if(editionId), eq(round.public, true)))
     .orderBy(round.title);
 });

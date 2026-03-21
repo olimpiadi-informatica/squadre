@@ -36,13 +36,13 @@ export const getRegionStats = cache(async (regionId?: string): Promise<RegionSta
     .select({
       totalInstitutes: countDistinct(team.instId),
       totalEditions: countDistinct(team.editionId),
-      totalTeams: countDistinct(concat(team.editionId, "-", team.id)),
+      totalTeams: countDistinct(concat(team.editionId, sql`'-'`, team.id)),
       totalPoints: coalesce(sum(teamRound.score), 0),
       bestEditionRank: coalesce(min(team.rankTot), 0),
       bestRoundRank: coalesce(min(teamRound.rankTot), 0),
     })
     .from(team)
-    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
+    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
     .innerJoin(
       teamRound,
       and(eq(team.editionId, teamRound.editionId), eq(team.id, teamRound.teamId)),
@@ -52,7 +52,7 @@ export const getRegionStats = cache(async (regionId?: string): Promise<RegionSta
       and(
         eq(teamRound.roundId, round.id),
         eq(teamRound.editionId, round.editionId),
-        eq(round.public, 1),
+        eq(round.public, true),
       ),
     )
     .innerJoin(institute, eq(team.instId, institute.id))
@@ -78,13 +78,13 @@ const medalCte = db.$with("medals").as(
     })
     .from(teamRound)
     .innerJoin(team, and(eq(teamRound.teamId, team.id), eq(teamRound.editionId, team.editionId)))
-    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
+    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
     .innerJoin(
       round,
       and(
         eq(teamRound.roundId, round.id),
         eq(teamRound.editionId, round.editionId),
-        eq(round.public, 1),
+        eq(round.public, true),
       ),
     )
     .innerJoin(institute, eq(team.instId, institute.id))
@@ -99,18 +99,18 @@ export const listRegions = cache((): Promise<RegionItem[]> => {
       id: region.id,
       name: region.name,
       totalInstitutes: countDistinct(team.instId),
-      totalTeams: countDistinct(concat(team.editionId, "-", team.id)),
+      totalTeams: countDistinct(concat(team.editionId, sql`'-'`, team.id)),
       totalPoints: coalesce(sum(team.points), 0),
-      totalMedals: sql`${db
+      totalMedals: sql<Record<number, number>>`${db
         .select({
           medals: jsonAggregate(medalCte.medal, medalCte.count),
         })
         .from(medalCte)
-        .where(eq(medalCte.regionId, region.id))}`.mapWith(JSON.parse),
+        .where(eq(medalCte.regionId, region.id))}`,
     })
     .from(region)
     .innerJoin(institute, eq(region.id, institute.region))
     .innerJoin(team, eq(team.instId, institute.id))
-    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
+    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
     .groupBy(region.id);
 });

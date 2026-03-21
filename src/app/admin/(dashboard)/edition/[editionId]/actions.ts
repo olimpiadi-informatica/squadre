@@ -13,9 +13,9 @@ import { getRoundAdmin, updateRoundVisibility } from "~/lib/round";
 export async function toggleRoundVisibility(
   editionId: string,
   roundId: string,
-  currentPublic: number,
+  currentPublic: boolean,
 ) {
-  await updateRoundVisibility(editionId, roundId, currentPublic === 1 ? 0 : 1);
+  await updateRoundVisibility(editionId, roundId, !currentPublic);
   revalidatePath(`/admin/edition/${editionId}`);
 }
 

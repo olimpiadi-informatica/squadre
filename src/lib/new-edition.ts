@@ -25,48 +25,76 @@ export async function createNewEdition(
 ): Promise<void> {
   const { id, year, title, round1Date, round2Date, round3Date, round4Date, roundFinalDate } = data;
 
-  // await db.transaction(async (tx) => {
-  await db.insert(edition).values({ id, year, title, public: 0 });
+  await db.transaction(async (tx) => {
+    await tx.insert(edition).values({ id, year, title, public: false });
 
-  await db.insert(round).values([
-    { id: "1", editionId: id, title: "Round 1", fullscore: 0, public: 0, startsAt: round1Date },
-    { id: "2", editionId: id, title: "Round 2", fullscore: 0, public: 0, startsAt: round2Date },
-    { id: "3", editionId: id, title: "Round 3", fullscore: 0, public: 0, startsAt: round3Date },
-    { id: "4", editionId: id, title: "Round 4", fullscore: 0, public: 0, startsAt: round4Date },
-    {
-      id: "final",
-      editionId: id,
-      title: "Final",
-      fullscore: 0,
-      public: 0,
-      startsAt: roundFinalDate,
-    },
-  ]);
-
-  if (institutes.length > 0) {
-    await db.insert(institute).values(institutes).onConflictDoNothing();
-  }
-
-  if (teams.length > 0) {
-    await db.insert(team).values(teams);
-
-    const delays = Object.fromEntries(teams.map((t) => [t.instId, random(0, 600)]));
-
-    const roundIds = ["1", "2", "3", "4", "final"];
-    const teamRoundRows = teams.flatMap((t) =>
-      roundIds.map((roundId) => ({
-        roundId,
+    await tx.insert(round).values([
+      {
+        id: "1",
         editionId: id,
-        teamId: t.id,
-        score: 0,
-        rankTot: 0,
-        rankReg: 0,
-        password: generateWord(),
-        delay: delays[t.instId]!,
-      })),
-    );
+        title: "Round 1",
+        fullscore: 0,
+        public: false,
+        startsAt: round1Date,
+      },
+      {
+        id: "2",
+        editionId: id,
+        title: "Round 2",
+        fullscore: 0,
+        public: false,
+        startsAt: round2Date,
+      },
+      {
+        id: "3",
+        editionId: id,
+        title: "Round 3",
+        fullscore: 0,
+        public: false,
+        startsAt: round3Date,
+      },
+      {
+        id: "4",
+        editionId: id,
+        title: "Round 4",
+        fullscore: 0,
+        public: false,
+        startsAt: round4Date,
+      },
+      {
+        id: "final",
+        editionId: id,
+        title: "Final",
+        fullscore: 0,
+        public: false,
+        startsAt: roundFinalDate,
+      },
+    ]);
 
-    await db.insert(teamRound).values(teamRoundRows);
-  }
-  // });
+    if (institutes.length > 0) {
+      await tx.insert(institute).values(institutes).onConflictDoNothing();
+    }
+
+    if (teams.length > 0) {
+      await tx.insert(team).values(teams);
+
+      const delays = Object.fromEntries(teams.map((t) => [t.instId, random(0, 600)]));
+
+      const roundIds = ["1", "2", "3", "4", "final"];
+      const teamRoundRows = teams.flatMap((t) =>
+        roundIds.map((roundId) => ({
+          roundId,
+          editionId: id,
+          teamId: t.id,
+          score: 0,
+          rankTot: 0,
+          rankReg: 0,
+          password: generateWord(),
+          delay: delays[t.instId]!,
+        })),
+      );
+
+      await tx.insert(teamRound).values(teamRoundRows);
+    }
+  });
 }

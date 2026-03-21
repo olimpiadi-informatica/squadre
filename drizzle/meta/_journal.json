@@ -1,40 +1,26 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1773603132217,
-      "tag": "0000_wet_fantastic_four",
+      "version": "7",
+      "when": 1774126894676,
+      "tag": "0000_slim_living_lightning",
       "breakpoints": true
     },
     {
       "idx": 1,
-      "version": "6",
-      "when": 1773603134268,
-      "tag": "0001_real_payback",
+      "version": "7",
+      "when": 1774128643493,
+      "tag": "0001_handy_dreaming_celestial",
       "breakpoints": true
     },
     {
       "idx": 2,
-      "version": "6",
-      "when": 1773955027429,
-      "tag": "0002_wet_omega_sentinel",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1774115167860,
-      "tag": "0003_awesome_gauntlet",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1774115187872,
-      "tag": "0004_known_harrier",
+      "version": "7",
+      "when": 1774128762566,
+      "tag": "0002_thick_zarda",
       "breakpoints": true
     }
   ]

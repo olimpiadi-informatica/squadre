@@ -34,10 +34,14 @@ export const listScores = cache(
       })
       .from(taskScore)
       .innerJoin(task, eq(taskScore.taskName, task.name))
-      .innerJoin(edition, and(eq(task.editionId, edition.id), eq(edition.public, 1)))
+      .innerJoin(edition, and(eq(task.editionId, edition.id), eq(edition.public, true)))
       .innerJoin(
         round,
-        and(eq(task.roundId, round.id), eq(task.editionId, round.editionId), eq(round.public, 1)),
+        and(
+          eq(task.roundId, round.id),
+          eq(task.editionId, round.editionId),
+          eq(round.public, true),
+        ),
       )
       .where(
         and(
@@ -79,10 +83,10 @@ export const listTaskScores = cache((taskName?: string): Promise<TaskScoreItem[]
     })
     .from(taskScore)
     .innerJoin(task, eq(taskScore.taskName, task.name))
-    .innerJoin(edition, and(eq(task.editionId, edition.id), eq(edition.public, 1)))
+    .innerJoin(edition, and(eq(task.editionId, edition.id), eq(edition.public, true)))
     .innerJoin(
       round,
-      and(eq(task.roundId, round.id), eq(task.editionId, round.editionId), eq(round.public, 1)),
+      and(eq(task.roundId, round.id), eq(task.editionId, round.editionId), eq(round.public, true)),
     )
     .innerJoin(team, and(eq(taskScore.editionId, team.editionId), eq(taskScore.teamId, team.id)))
     .innerJoin(institute, eq(team.instId, institute.id))
@@ -116,13 +120,13 @@ export const listRoundScores = cache(
         editionId: teamRound.editionId,
       })
       .from(teamRound)
-      .innerJoin(edition, and(eq(teamRound.editionId, edition.id), eq(edition.public, 1)))
+      .innerJoin(edition, and(eq(teamRound.editionId, edition.id), eq(edition.public, true)))
       .innerJoin(
         round,
         and(
           eq(teamRound.editionId, round.editionId),
           eq(teamRound.roundId, round.id),
-          eq(round.public, 1),
+          eq(round.public, true),
         ),
       )
       .where(

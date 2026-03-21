@@ -1,268 +1,189 @@
 {
-  "id": "00000000-0000-0000-0000-000000000000",
-  "prevId": "",
-  "version": "6",
-  "dialect": "sqlite",
+  "id": "c4c3dcc3-a55b-43a2-8b59-f4395d4c56c5",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "region": {
-      "name": "region",
-      "columns": {
-        "id": {
-          "autoincrement": false,
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "autoincrement": false,
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "compositePrimaryKeys": {},
-      "indexes": {},
-      "foreignKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "edition": {
+    "public.edition": {
       "name": "edition",
+      "schema": "",
       "columns": {
         "id": {
-          "autoincrement": false,
           "name": "id",
           "type": "text",
           "primaryKey": true,
           "notNull": true
         },
         "year": {
-          "autoincrement": false,
           "name": "year",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "title": {
-          "autoincrement": false,
           "name": "title",
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "public": {
+          "name": "public",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         }
       },
-      "compositePrimaryKeys": {},
       "indexes": {},
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
-    "round": {
-      "name": "round",
+    "public.highlight": {
+      "name": "highlight",
+      "schema": "",
       "columns": {
         "id": {
-          "autoincrement": false,
           "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "page": {
+          "name": "page",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "edition_id": {
-          "autoincrement": false,
-          "name": "edition_id",
+        "link": {
+          "name": "link",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "title": {
-          "autoincrement": false,
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "fullscore": {
-          "autoincrement": false,
-          "name": "fullscore",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "compositePrimaryKeys": {
-        "round_id_edition_id_pk": {
-          "columns": [
-            "id",
-            "edition_id"
-          ],
-          "name": "round_id_edition_id_pk"
-        }
-      },
-      "indexes": {
-        "idx_round_edition_title_id": {
-          "name": "idx_round_edition_title_id",
-          "columns": [
-            "edition_id",
-            "title",
-            "id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "round_edition_id_edition_id_fk": {
-          "name": "round_edition_id_edition_id_fk",
-          "tableFrom": "round",
-          "tableTo": "edition",
-          "columnsFrom": [
-            "edition_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "task": {
-      "name": "task",
-      "columns": {
         "name": {
-          "autoincrement": false,
           "name": "name",
           "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "edition_id": {
-          "autoincrement": false,
-          "name": "edition_id",
-          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "round_id": {
-          "autoincrement": false,
-          "name": "round_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title": {
-          "autoincrement": false,
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "statement": {
-          "autoincrement": false,
-          "name": "statement",
+        "description": {
+          "name": "description",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         }
       },
-      "compositePrimaryKeys": {},
       "indexes": {
-        "idx_task_edition_round_id_name": {
-          "name": "idx_task_edition_round_id_name",
+        "idx_highlight_page_id": {
+          "name": "idx_highlight_page_id",
           "columns": [
-            "edition_id",
-            "round_id",
-            "name"
+            {
+              "expression": "page",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
-      "foreignKeys": {
-        "task_round_id_edition_id_round_id_edition_id_fk": {
-          "name": "task_round_id_edition_id_round_id_edition_id_fk",
-          "tableFrom": "task",
-          "tableTo": "round",
-          "columnsFrom": [
-            "round_id",
-            "edition_id"
-          ],
-          "columnsTo": [
-            "id",
-            "edition_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "task_edition_id_edition_id_fk": {
-          "name": "task_edition_id_edition_id_fk",
-          "tableFrom": "task",
-          "tableTo": "edition",
-          "columnsFrom": [
-            "edition_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
-    "institute": {
+    "public.institute": {
       "name": "institute",
+      "schema": "",
       "columns": {
         "id": {
-          "autoincrement": false,
           "name": "id",
           "type": "text",
           "primaryKey": true,
           "notNull": true
         },
         "name": {
-          "autoincrement": false,
           "name": "name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "city": {
-          "autoincrement": false,
           "name": "city",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "region": {
-          "autoincrement": false,
           "name": "region",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         }
       },
-      "compositePrimaryKeys": {},
       "indexes": {
         "idx_institute_region_city_name_id": {
           "name": "idx_institute_region_city_name_id",
           "columns": [
-            "region",
-            "city",
-            "name",
-            "id"
+            {
+              "expression": "region",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "city",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         },
         "idx_institute_name": {
           "name": "idx_institute_name",
           "columns": [
-            "name"
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -280,141 +201,113 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
-    "team": {
-      "name": "team",
+    "public.region": {
+      "name": "region",
+      "schema": "",
       "columns": {
         "id": {
-          "autoincrement": false,
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.round": {
+      "name": "round",
+      "schema": "",
+      "columns": {
+        "id": {
           "name": "id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "edition_id": {
-          "autoincrement": false,
           "name": "edition_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "name": {
-          "autoincrement": false,
-          "name": "name",
+        "title": {
+          "name": "title",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "inst_id": {
-          "autoincrement": false,
-          "name": "inst_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "coach": {
-          "autoincrement": false,
-          "name": "coach",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "finalist": {
-          "autoincrement": false,
-          "name": "finalist",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "rank_reg": {
-          "autoincrement": false,
-          "name": "rank_reg",
+        "fullscore": {
+          "name": "fullscore",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "rank_tot": {
-          "autoincrement": false,
-          "name": "rank_tot",
-          "type": "integer",
+        "public": {
+          "name": "public",
+          "type": "boolean",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": true
         },
-        "points": {
-          "autoincrement": false,
-          "name": "points",
-          "type": "integer",
+        "starts_at": {
+          "name": "starts_at",
+          "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "compositePrimaryKeys": {
-        "team_id_edition_id_pk": {
-          "columns": [
-            "id",
-            "edition_id"
-          ],
-          "name": "team_id_edition_id_pk"
+          "notNull": true,
+          "default": "'1970-01-01 00:00:00'"
         }
       },
       "indexes": {
-        "idx_team_inst_id_points_edition_id_id": {
-          "name": "idx_team_inst_id_points_edition_id_id",
+        "idx_round_edition_title_id": {
+          "name": "idx_round_edition_title_id",
           "columns": [
-            "inst_id",
-            "points",
-            "edition_id",
-            "id"
+            {
+              "expression": "edition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "title",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
-        },
-        "idx_team_edition_rank_tot_id_name_points": {
-          "name": "idx_team_edition_rank_tot_id_name_points",
-          "columns": [
-            "edition_id",
-            "rank_tot",
-            "id",
-            "name",
-            "points"
-          ],
-          "isUnique": false
-        },
-        "idx_team_edition_name": {
-          "name": "idx_team_edition_name",
-          "columns": [
-            "edition_id",
-            "name"
-          ],
-          "isUnique": false
-        },
-        "idx_team_edition_id": {
-          "name": "idx_team_edition_id",
-          "columns": [
-            "edition_id",
-            "id"
-          ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "team_inst_id_institute_id_fk": {
-          "name": "team_inst_id_institute_id_fk",
-          "tableFrom": "team",
-          "tableTo": "institute",
-          "columnsFrom": [
-            "inst_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "team_edition_id_edition_id_fk": {
-          "name": "team_edition_id_edition_id_fk",
-          "tableFrom": "team",
+        "round_edition_id_edition_id_fk": {
+          "name": "round_edition_id_edition_id_fk",
+          "tableFrom": "round",
           "tableTo": "edition",
           "columnsFrom": [
             "edition_id"
@@ -426,121 +319,101 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {
+        "round_id_edition_id_pk": {
+          "name": "round_id_edition_id_pk",
+          "columns": [
+            "id",
+            "edition_id"
+          ]
+        }
+      },
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
-    "round_score": {
-      "name": "round_score",
+    "public.task": {
+      "name": "task",
+      "schema": "",
       "columns": {
-        "round_id": {
-          "autoincrement": false,
-          "name": "round_id",
+        "name": {
+          "name": "name",
           "type": "text",
-          "primaryKey": false,
+          "primaryKey": true,
           "notNull": true
         },
         "edition_id": {
-          "autoincrement": false,
           "name": "edition_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "team_id": {
-          "autoincrement": false,
-          "name": "team_id",
+        "round_id": {
+          "name": "round_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "score": {
-          "autoincrement": false,
-          "name": "score",
-          "type": "integer",
+        "title": {
+          "name": "title",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "rank_tot": {
-          "autoincrement": false,
-          "name": "rank_tot",
-          "type": "integer",
+        "statement": {
+          "name": "statement",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "rank_reg": {
-          "autoincrement": false,
-          "name": "rank_reg",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "medal": {
-          "autoincrement": false,
-          "name": "medal",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "compositePrimaryKeys": {
-        "round_score_round_id_edition_id_team_id_pk": {
-          "columns": [
-            "round_id",
-            "edition_id",
-            "team_id"
-          ],
-          "name": "round_score_round_id_edition_id_team_id_pk"
         }
       },
       "indexes": {
-        "idx_round_score_medal_team_id_edition_id": {
-          "name": "idx_round_score_medal_team_id_edition_id",
+        "idx_task_edition_round_id_name": {
+          "name": "idx_task_edition_round_id_name",
           "columns": [
-            "medal",
-            "team_id",
-            "edition_id"
+            {
+              "expression": "edition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "round_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
-        },
-        "idx_round_score_edition_team_id": {
-          "name": "idx_round_score_edition_team_id",
-          "columns": [
-            "edition_id",
-            "team_id"
-          ],
-          "isUnique": false
-        },
-        "idx_round_score_edition_round_id_rank_tot_team_id_total_score": {
-          "name": "idx_round_score_edition_round_id_rank_tot_team_id_total_score",
-          "columns": [
-            "edition_id",
-            "round_id",
-            "rank_tot",
-            "team_id",
-            "score"
-          ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "round_score_team_id_edition_id_team_id_edition_id_fk": {
-          "name": "round_score_team_id_edition_id_team_id_edition_id_fk",
-          "tableFrom": "round_score",
-          "tableTo": "team",
+        "task_edition_id_edition_id_fk": {
+          "name": "task_edition_id_edition_id_fk",
+          "tableFrom": "task",
+          "tableTo": "edition",
           "columnsFrom": [
-            "team_id",
             "edition_id"
           ],
           "columnsTo": [
-            "id",
-            "edition_id"
+            "id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "round_score_round_id_edition_id_round_id_edition_id_fk": {
-          "name": "round_score_round_id_edition_id_round_id_edition_id_fk",
-          "tableFrom": "round_score",
+        "task_round_id_edition_id_round_id_edition_id_fk": {
+          "name": "task_round_id_edition_id_round_id_edition_id_fk",
+          "tableFrom": "task",
           "tableTo": "round",
           "columnsFrom": [
             "round_id",
@@ -552,110 +425,97 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "round_score_edition_id_edition_id_fk": {
-          "name": "round_score_edition_id_edition_id_fk",
-          "tableFrom": "round_score",
-          "tableTo": "edition",
-          "columnsFrom": [
-            "edition_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
-    "task_score": {
+    "public.task_score": {
       "name": "task_score",
+      "schema": "",
       "columns": {
         "task_name": {
-          "autoincrement": false,
           "name": "task_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "edition_id": {
-          "autoincrement": false,
           "name": "edition_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "team_id": {
-          "autoincrement": false,
           "name": "team_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "score": {
-          "autoincrement": false,
           "name": "score",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         }
       },
-      "compositePrimaryKeys": {
-        "task_score_task_name_team_id_pk": {
-          "columns": [
-            "task_name",
-            "team_id"
-          ],
-          "name": "task_score_task_name_team_id_pk"
-        }
-      },
       "indexes": {
         "idx_task_score_task_name_score": {
           "name": "idx_task_score_task_name_score",
           "columns": [
-            "task_name",
-            "score"
+            {
+              "expression": "task_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "score",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         },
         "idx_task_score_edition_team_id": {
           "name": "idx_task_score_edition_team_id",
           "columns": [
-            "edition_id",
-            "team_id"
+            {
+              "expression": "edition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "team_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "task_score_team_id_edition_id_team_id_edition_id_fk": {
-          "name": "task_score_team_id_edition_id_team_id_edition_id_fk",
-          "tableFrom": "task_score",
-          "tableTo": "team",
-          "columnsFrom": [
-            "team_id",
-            "edition_id"
-          ],
-          "columnsTo": [
-            "id",
-            "edition_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "task_score_task_name_edition_id_task_name_edition_id_fk": {
-          "name": "task_score_task_name_edition_id_task_name_edition_id_fk",
+        "task_score_task_name_task_name_fk": {
+          "name": "task_score_task_name_task_name_fk",
           "tableFrom": "task_score",
           "tableTo": "task",
           "columnsFrom": [
-            "task_name",
-            "edition_id"
+            "task_name"
           ],
           "columnsTo": [
-            "name",
-            "edition_id"
+            "name"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -673,83 +533,473 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "task_score_task_name_task_name_fk": {
-          "name": "task_score_task_name_task_name_fk",
+        "task_score_team_id_edition_id_team_id_edition_id_fk": {
+          "name": "task_score_team_id_edition_id_team_id_edition_id_fk",
           "tableFrom": "task_score",
-          "tableTo": "task",
+          "tableTo": "team",
           "columnsFrom": [
-            "task_name"
+            "team_id",
+            "edition_id"
           ],
           "columnsTo": [
-            "name"
+            "id",
+            "edition_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {
+        "task_score_task_name_team_id_pk": {
+          "name": "task_score_task_name_team_id_pk",
+          "columns": [
+            "task_name",
+            "team_id"
+          ]
+        }
+      },
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
-    "highlight": {
-      "name": "highlight",
+    "public.team": {
+      "name": "team",
+      "schema": "",
       "columns": {
         "id": {
-          "autoincrement": true,
           "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": false
-        },
-        "page": {
-          "autoincrement": false,
-          "name": "page",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "link": {
-          "autoincrement": false,
-          "name": "link",
+        "edition_id": {
+          "name": "edition_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "name": {
-          "autoincrement": false,
           "name": "name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "description": {
-          "autoincrement": false,
-          "name": "description",
+        "inst_id": {
+          "name": "inst_id",
           "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "coach": {
+          "name": "coach",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "finalist": {
+          "name": "finalist",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rank_reg": {
+          "name": "rank_reg",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rank_tot": {
+          "name": "rank_tot",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "points": {
+          "name": "points",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         }
       },
-      "compositePrimaryKeys": {},
       "indexes": {
-        "idx_highlight_page_id": {
-          "name": "idx_highlight_page_id",
+        "idx_team_inst_id_points_edition_id_id": {
+          "name": "idx_team_inst_id_points_edition_id_id",
           "columns": [
-            "page",
-            "id"
+            {
+              "expression": "inst_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "points",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "edition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_team_edition_rank_tot_id_name_points": {
+          "name": "idx_team_edition_rank_tot_id_name_points",
+          "columns": [
+            {
+              "expression": "edition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "rank_tot",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "points",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_team_edition_name": {
+          "name": "idx_team_edition_name",
+          "columns": [
+            {
+              "expression": "edition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_team_edition_id": {
+          "name": "idx_team_edition_id",
+          "columns": [
+            {
+              "expression": "edition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "team_edition_id_edition_id_fk": {
+          "name": "team_edition_id_edition_id_fk",
+          "tableFrom": "team",
+          "tableTo": "edition",
+          "columnsFrom": [
+            "edition_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "team_inst_id_institute_id_fk": {
+          "name": "team_inst_id_institute_id_fk",
+          "tableFrom": "team",
+          "tableTo": "institute",
+          "columnsFrom": [
+            "inst_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "team_id_edition_id_pk": {
+          "name": "team_id_edition_id_pk",
+          "columns": [
+            "id",
+            "edition_id"
+          ]
+        }
+      },
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.team_round": {
+      "name": "team_round",
+      "schema": "",
+      "columns": {
+        "round_id": {
+          "name": "round_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "edition_id": {
+          "name": "edition_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "score": {
+          "name": "score",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rank_tot": {
+          "name": "rank_tot",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rank_reg": {
+          "name": "rank_reg",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "medal": {
+          "name": "medal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "delay": {
+          "name": "delay",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "idx_team_round_medal_team_id_edition_id": {
+          "name": "idx_team_round_medal_team_id_edition_id",
+          "columns": [
+            {
+              "expression": "medal",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "team_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "edition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_team_round_edition_team_id": {
+          "name": "idx_team_round_edition_team_id",
+          "columns": [
+            {
+              "expression": "edition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "team_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_team_round_edition_round_id_rank_tot_team_id_total_score": {
+          "name": "idx_team_round_edition_round_id_rank_tot_team_id_total_score",
+          "columns": [
+            {
+              "expression": "edition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "round_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "rank_tot",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "team_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "score",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "team_round_edition_id_edition_id_fk": {
+          "name": "team_round_edition_id_edition_id_fk",
+          "tableFrom": "team_round",
+          "tableTo": "edition",
+          "columnsFrom": [
+            "edition_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "team_round_team_id_edition_id_team_id_edition_id_fk": {
+          "name": "team_round_team_id_edition_id_team_id_edition_id_fk",
+          "tableFrom": "team_round",
+          "tableTo": "team",
+          "columnsFrom": [
+            "team_id",
+            "edition_id"
+          ],
+          "columnsTo": [
+            "id",
+            "edition_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "team_round_round_id_edition_id_round_id_edition_id_fk": {
+          "name": "team_round_round_id_edition_id_round_id_edition_id_fk",
+          "tableFrom": "team_round",
+          "tableTo": "round",
+          "columnsFrom": [
+            "round_id",
+            "edition_id"
+          ],
+          "columnsTo": [
+            "id",
+            "edition_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "team_round_round_id_edition_id_team_id_pk": {
+          "name": "team_round_round_id_edition_id_team_id_pk",
+          "columns": [
+            "round_id",
+            "edition_id",
+            "team_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
-  "views": {},
   "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
   "_meta": {
+    "columns": {},
     "schemas": {},
-    "tables": {},
-    "columns": {}
+    "tables": {}
   }
 }
