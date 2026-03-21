@@ -3,11 +3,12 @@
 import { type RefObject, useRef, useState } from "react";
 
 import { Button, Modal } from "@olinfo/react-components";
+import { intlFormat } from "date-fns";
 
 import { Table } from "~/components/table";
 import type { RoundAdminItem } from "~/lib/round";
 
-import { toggleRoundVisibility } from "./actions";
+import { getRoundCredentials, toggleRoundVisibility } from "./actions";
 
 export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
   const makePublicModalRef = useRef<HTMLDialogElement>(null);
@@ -38,7 +39,7 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
             makePublicModalRef={makePublicModalRef}
           />
         )}
-        className="grid-cols-[repeat(3,auto)]"
+        className="grid-cols-[repeat(4,auto)]"
       />
       <Modal ref={makePublicModalRef} title="Rendi pubblico il round?">
         <p>{`Il round "${selectedRound?.title}" sarà visibile al pubblico.`}</p>
@@ -77,6 +78,7 @@ function TableHeaders() {
     <>
       <div>Titolo</div>
       <div>Data</div>
+      <div>Credenziali</div>
       <div>Visibilità</div>
     </>
   );
@@ -99,11 +101,16 @@ function TableRow({
     <>
       <div>{round.title}</div>
       <div>
-        {round.startsAt.toLocaleDateString("it-IT", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })}
+        {intlFormat(
+          round.startsAt,
+          { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Rome" },
+          { locale: "it-IT" },
+        )}
+      </div>
+      <div>
+        <Button onClick={downloadCredentials} className="btn-info btn-sm">
+          Scarica contest.yaml
+        </Button>
       </div>
       <div>
         {isPublic ? (
@@ -128,4 +135,25 @@ function TableRow({
       </div>
     </>
   );
+
+  async function downloadCredentials() {
+    if (!window.showSaveFilePicker) {
+      throw new Error("Browser non supportato, usa Chrome o Edge");
+    }
+
+    let fileHandle: FileSystemFileHandle;
+    try {
+      fileHandle = await window.showSaveFilePicker({
+        suggestedName: "regular.yaml",
+        types: [{ description: "File YAML", accept: { "text/yaml": [".yaml"] } }],
+      });
+    } catch {
+      return;
+    }
+
+    const yaml = await getRoundCredentials(round.editionId, round.id);
+    const writable = await fileHandle.createWritable();
+    await writable.write(yaml);
+    await writable.close();
+  }
 }
