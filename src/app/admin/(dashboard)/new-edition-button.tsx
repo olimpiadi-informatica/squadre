@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 
 import {
   Button,
@@ -10,6 +10,7 @@ import {
   Modal,
   SingleFileField,
   SubmitButton,
+  TextField,
 } from "@olinfo/react-components";
 import {
   getMonth,
@@ -20,21 +21,42 @@ import {
   nextTuesday,
   nextWednesday,
 } from "date-fns";
+import { maxBy } from "lodash";
 
-type EditionFormState = {
-  csvFile: File;
-  round1Date: Date;
-  round2Date: Date;
-  round3Date: Date;
-  round4Date: Date;
-  roundFinalDate: Date;
-};
+import type { EditionAdminItem } from "~/lib/edition";
 
-function getDefaultDates() {
+import { createEdition, type EditionData } from "./actions";
+
+function ordinalSuffix(n: number): string {
+  const pr = new Intl.PluralRules("en-US", { type: "ordinal" });
+  const suffixes = {
+    zero: "th",
+    one: "st",
+    two: "nd",
+    few: "rd",
+    many: "th",
+    other: "th",
+  };
+  const rule = pr.select(n);
+  return suffixes[rule];
+}
+
+function getDefaultData(editions: EditionAdminItem[]) {
   const today = new Date();
   const editionYear = getYear(today) + (getMonth(today) < 11 ? 0 : 1);
 
+  const newId =
+    maxBy(
+      editions.map((e) => {
+        const id = Number(e.id);
+        return Number.isNaN(id) ? 0 : id + 1;
+      }),
+    ) ?? 0;
+
   return {
+    id: String(newId),
+    year: `${editionYear}/${(editionYear + 1) % 100}`,
+    title: `${newId}${ordinalSuffix(newId)} Edition`,
     round1Date: nextMonday(new Date(editionYear, 10, 7, 14, 30)),
     round2Date: nextTuesday(new Date(editionYear, 11, 7, 14, 30)),
     round3Date: nextWednesday(new Date(editionYear, 0, 14, 14, 30)),
@@ -43,12 +65,16 @@ function getDefaultDates() {
   };
 }
 
-export function NewEditionButton() {
+export function NewEditionButton({ editions }: { editions: EditionAdminItem[] }) {
   const modalRef = useRef<HTMLDialogElement>(null);
 
-  function handleSubmit(value: EditionFormState) {
-    // TODO: implement actual submission logic
-    console.log("Form submitted:", value);
+  const defaultValue = useMemo(() => getDefaultData(editions), [editions]);
+
+  async function handleSubmit({ csvFile, ...data }: EditionData & { csvFile: File }) {
+    const files = new FormData();
+    files.append("teams", csvFile);
+
+    await createEdition(files, data);
     modalRef.current?.close();
   }
 
@@ -58,7 +84,10 @@ export function NewEditionButton() {
         Crea nuova edizione
       </Button>
       <Modal ref={modalRef} title="Crea nuova edizione">
-        <Form defaultValue={getDefaultDates()} onSubmit={handleSubmit}>
+        <Form defaultValue={defaultValue} onSubmit={handleSubmit}>
+          <TextField field="id" label="ID edizione" placeholder="" />
+          <TextField field="year" label="Anno edizione" placeholder="" />
+          <TextField field="title" label="Titolo edizione" placeholder="" />
           <SingleFileField field="csvFile" label="CSV partecipanti" accept=".csv" />
           <DateTimeField field="round1Date" label="Round 1" placeholder="" />
           <DateTimeField field="round2Date" label="Round 2" placeholder="" />
