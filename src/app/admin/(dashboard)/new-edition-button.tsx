@@ -60,9 +60,9 @@ function getDefaultData(editions: EditionAdminItem[]) {
     title: `${newId}${ordinalSuffix(newId)} Edition`,
     round1Date: nextMonday(new Date(editionYear, 10, 7, 14, 30)),
     round2Date: nextTuesday(new Date(editionYear, 11, 7, 14, 30)),
-    round3Date: nextWednesday(new Date(editionYear, 0, 14, 14, 30)),
-    round4Date: nextThursday(new Date(editionYear, 1, 14, 14, 30)),
-    roundFinalDate: nextFriday(new Date(editionYear, 2, 7, 12, 0)),
+    round3Date: nextWednesday(new Date(editionYear + 1, 0, 14, 14, 30)),
+    round4Date: nextThursday(new Date(editionYear + 1, 1, 14, 14, 30)),
+    roundFinalDate: nextFriday(new Date(editionYear + 1, 2, 7, 12, 0)),
   };
 }
 

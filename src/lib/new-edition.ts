@@ -33,7 +33,7 @@ export async function createNewEdition(
     {
       id: "final",
       editionId: id,
-      title: "Finale",
+      title: "Final",
       fullscore: 0,
       public: 0,
       startsAt: roundFinalDate,
