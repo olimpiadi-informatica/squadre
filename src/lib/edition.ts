@@ -17,7 +17,12 @@ export type ScheduleEdition = {
 };
 
 export const getLatestSchedule = cache(async (): Promise<ScheduleEdition> => {
-  const [latestEdition] = await db.select().from(edition).orderBy(desc(edition.id)).limit(1);
+  const [latestEdition] = await db
+    .select()
+    .from(edition)
+    .where(eq(edition.public, 1))
+    .orderBy(desc(edition.year))
+    .limit(1);
   if (!latestEdition) throw new Error("No edition found");
 
   const roundsData = await db.select().from(round).where(eq(round.editionId, latestEdition.id));
