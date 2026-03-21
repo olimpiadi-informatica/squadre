@@ -6,6 +6,39 @@ import { db } from "~/lib/db";
 import { edition, round, roundScore } from "~/lib/db/schema";
 import { coalesce, median } from "~/lib/utils";
 
+export type RoundAdminItem = {
+  id: string;
+  title: string;
+  editionId: string;
+  startsAt: Date;
+  public: number;
+};
+
+export async function updateRoundVisibility(
+  editionId: string,
+  roundId: string,
+  isPublic: number,
+): Promise<void> {
+  await db
+    .update(round)
+    .set({ public: isPublic })
+    .where(and(eq(round.editionId, editionId), eq(round.id, roundId)));
+}
+
+export const listRoundsAdmin = cache((editionId: string): Promise<RoundAdminItem[]> => {
+  return db
+    .select({
+      id: round.id,
+      title: round.title,
+      editionId: round.editionId,
+      startsAt: round.startsAt,
+      public: round.public,
+    })
+    .from(round)
+    .where(eq(round.editionId, editionId))
+    .orderBy(round.title);
+});
+
 export type Round = {
   id: string;
   name: string;
