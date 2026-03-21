@@ -37,8 +37,8 @@ const csvRowSchema = z.object({
   "Scelta del campionato": z.enum(["Regolare", "Esordienti", ""]),
 });
 
-export async function toggleEditionVisibility(id: string, currentPublic: number) {
-  await updateEditionVisibility(id, currentPublic === 1 ? 0 : 1);
+export async function toggleEditionVisibility(id: string, currentPublic: boolean) {
+  await updateEditionVisibility(id, !currentPublic);
   revalidatePath("/admin");
 }
 
@@ -80,7 +80,7 @@ export async function createEdition(files: FormData, data: EditionData) {
       name: row["Nome concorrente"],
       instId: row["Codice meccanografico"],
       coach: `${row["Nome referente"]} ${row["Cognome referente"]}`,
-      finalist: 0,
+      finalist: false,
       rankReg: 0,
       rankTot: 0,
       points: 0,

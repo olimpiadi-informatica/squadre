@@ -1,24 +1,24 @@
 import { cache } from "react";
 
-import { and, countDistinct, desc, eq, max, sum } from "drizzle-orm";
+import { and, countDistinct, desc, eq, max, sql, sum } from "drizzle-orm";
 
 import { db } from "~/lib/db";
 import { edition, round, task, taskScore, team, teamRound } from "~/lib/db/schema";
 import { coalesce, concat } from "~/lib/utils";
 
-export async function updateEditionVisibility(id: string, isPublic: number): Promise<void> {
+export async function updateEditionVisibility(id: string, isPublic: boolean): Promise<void> {
   await db.update(edition).set({ public: isPublic }).where(eq(edition.id, id));
 }
 
 export async function deleteEdition(id: string): Promise<void> {
-  // await db.transaction(async (tx) => {
-  await db.delete(taskScore).where(eq(taskScore.editionId, id));
-  await db.delete(teamRound).where(eq(teamRound.editionId, id));
-  await db.delete(task).where(eq(task.editionId, id));
-  await db.delete(team).where(eq(team.editionId, id));
-  await db.delete(round).where(eq(round.editionId, id));
-  await db.delete(edition).where(eq(edition.id, id));
-  // });
+  await db.transaction(async (tx) => {
+    await tx.delete(taskScore).where(eq(taskScore.editionId, id));
+    await tx.delete(teamRound).where(eq(teamRound.editionId, id));
+    await tx.delete(task).where(eq(task.editionId, id));
+    await tx.delete(team).where(eq(team.editionId, id));
+    await tx.delete(round).where(eq(round.editionId, id));
+    await tx.delete(edition).where(eq(edition.id, id));
+  });
 }
 
 export type ScheduleEdition = {
@@ -31,7 +31,7 @@ export const getLatestSchedule = cache(async (): Promise<ScheduleEdition> => {
   const [latestEdition] = await db
     .select()
     .from(edition)
-    .where(eq(edition.public, 1))
+    .where(eq(edition.public, true))
     .orderBy(desc(edition.year))
     .limit(1);
   if (!latestEdition) throw new Error("No edition found");
@@ -59,7 +59,7 @@ export const getEdition = cache(async (id: string): Promise<Edition | undefined>
       year: edition.year,
     })
     .from(edition)
-    .where(and(eq(edition.id, id), eq(edition.public, 1)));
+    .where(and(eq(edition.id, id), eq(edition.public, true)));
   return result;
 });
 
@@ -74,12 +74,12 @@ export const getEditionStats = cache(async (id?: string): Promise<EditionStats> 
   const [result] = await db
     .select({
       totalTasks: countDistinct(taskScore.taskName),
-      totalTeams: countDistinct(concat(team.editionId, "-", team.id)),
+      totalTeams: countDistinct(concat(team.editionId, sql`'-'`, team.id)),
       totalInstitutes: countDistinct(team.instId),
       totalPoints: coalesce(sum(taskScore.score), 0),
     })
     .from(team)
-    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
+    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
     .leftJoin(
       taskScore,
       and(eq(team.editionId, taskScore.editionId), eq(team.id, taskScore.teamId)),
@@ -106,14 +106,14 @@ export const listEditions = cache((): Promise<EditionItem[]> => {
       name: edition.title,
       year: edition.year,
       totalInstitutes: countDistinct(team.instId),
-      totalTeams: countDistinct(concat(team.editionId, "-", team.id)),
+      totalTeams: countDistinct(concat(team.editionId, sql`'-'`, team.id)),
       totalPoints: coalesce(sum(team.points), 0),
       highestPoints: coalesce(max(team.points), 0),
       totalTasks: db.$count(task, eq(task.editionId, edition.id)),
     })
     .from(edition)
     .innerJoin(team, eq(team.editionId, edition.id))
-    .where(eq(edition.public, 1))
+    .where(eq(edition.public, true))
     .groupBy(edition.id)
     .orderBy(desc(edition.year));
 });
@@ -122,7 +122,7 @@ export type EditionAdminItem = {
   id: string;
   name: string;
   year: string;
-  public: number;
+  public: boolean;
 };
 
 export const getEditionAdmin = cache(async (id: string): Promise<EditionAdminItem | undefined> => {

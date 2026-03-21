@@ -1,4 +1,3 @@
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzle } from "drizzle-orm/node-postgres";
 
-export const db = drizzle("data/squadre.db");
-db.$client.loadExtension("sqlite/stats");
+export const db = drizzle(process.env.DATABASE_URL!);

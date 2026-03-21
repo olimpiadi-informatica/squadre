@@ -6,7 +6,7 @@ export function coalesce(value: SQL, fallback: number): SQL<number> {
 }
 
 export function median(value: SQLWrapper): SQL<number | null> {
-  return sql`STATS_MEDIAN(${value})`;
+  return sql`PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ${value})`;
 }
 
 export function concat(...value: SQLChunk[]): SQL<string> {
@@ -14,5 +14,5 @@ export function concat(...value: SQLChunk[]): SQL<string> {
 }
 
 export function jsonAggregate(key: SQLWrapper, value: SQLWrapper): SQL<string> {
-  return sql`JSON_GROUP_OBJECT(${key}, ${value})`;
+  return sql`JSON_OBJECT_AGG(${key}, ${value})`;
 }

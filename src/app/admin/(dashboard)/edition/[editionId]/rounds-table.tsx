@@ -94,8 +94,6 @@ function TableRow({
   makePrivateModalRef: RefObject<HTMLDialogElement | null>;
   makePublicModalRef: RefObject<HTMLDialogElement | null>;
 }) {
-  const isPublic = round.public === 1;
-
   return (
     <>
       <div>{round.title}</div>
@@ -110,7 +108,7 @@ function TableRow({
         <Button onClick={downloadCredentials} className="btn-info btn-sm">
           Scarica contest.yaml
         </Button>
-        {isPublic ? (
+        {round.public ? (
           <Button
             onClick={() => {
               setSelectedRound(round);

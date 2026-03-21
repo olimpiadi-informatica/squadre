@@ -27,13 +27,13 @@ const medalCte = db.$with("medals").as(
     })
     .from(teamRound)
     .innerJoin(team, and(eq(teamRound.teamId, team.id), eq(teamRound.editionId, team.editionId)))
-    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
+    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
     .innerJoin(
       round,
       and(
         eq(teamRound.roundId, round.id),
         eq(teamRound.editionId, round.editionId),
-        eq(round.public, 1),
+        eq(round.public, true),
       ),
     )
     .where(and(isNotNull(teamRound.medal)))
@@ -51,18 +51,18 @@ export const listInstitutes = cache(
         regionId: institute.region,
         regionName: region.name,
         totalEditions: countDistinct(team.editionId),
-        totalTeams: countDistinct(concat(team.editionId, "-", team.id)),
+        totalTeams: countDistinct(concat(team.editionId, sql`'-'`, team.id)),
         totalPoints: coalesce(sum(team.points), 0),
-        totalMedals: sql`${db
+        totalMedals: sql<Record<number, number>>`${db
           .select({
             medals: jsonAggregate(medalCte.medal, medalCte.count),
           })
           .from(medalCte)
-          .where(eq(institute.id, medalCte.instituteId))}`.mapWith(JSON.parse),
+          .where(eq(institute.id, medalCte.instituteId))}`,
       })
       .from(institute)
       .innerJoin(team, eq(team.instId, institute.id))
-      .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
+      .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
       .innerJoin(region, eq(region.id, institute.region))
       .where(
         and(
@@ -92,7 +92,7 @@ export const getInstituteStats = cache(async (id: string): Promise<InstituteStat
       bestRoundRank: coalesce(min(teamRound.rankTot), 0),
     })
     .from(team)
-    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, 1)))
+    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
     .innerJoin(
       teamRound,
       and(eq(team.editionId, teamRound.editionId), eq(team.id, teamRound.teamId)),
@@ -102,7 +102,7 @@ export const getInstituteStats = cache(async (id: string): Promise<InstituteStat
       and(
         eq(teamRound.roundId, round.id),
         eq(teamRound.editionId, round.editionId),
-        eq(round.public, 1),
+        eq(round.public, true),
       ),
     )
     .where(eq(team.instId, id));
