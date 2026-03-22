@@ -85,6 +85,7 @@ export async function createEdition(files: FormData, data: EditionData) {
       name: row["Nome concorrente"],
       instId: row["Codice meccanografico"],
       coach: `${row["Nome referente"]} ${row["Cognome referente"]}`,
+      junior: row["Scelta del campionato"] === "Esordienti",
       finalist: false,
       rankReg: 0,
       rankTot: 0,

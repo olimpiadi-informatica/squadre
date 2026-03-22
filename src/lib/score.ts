@@ -43,11 +43,13 @@ export const listScores = cache(
           eq(round.public, true),
         ),
       )
+      .innerJoin(team, and(eq(taskScore.teamId, team.id), eq(taskScore.editionId, team.editionId)))
       .where(
         and(
           eq(task.editionId, editionId ?? "").if(editionId),
           eq(task.roundId, roundId ?? "").if(roundId),
           eq(taskScore.teamId, teamId ?? "").if(teamId),
+          eq(team.junior, false),
         ),
       )
       .orderBy(task.name);
@@ -91,7 +93,13 @@ export const listTaskScores = cache((taskName?: string): Promise<TaskScoreItem[]
     .innerJoin(team, and(eq(taskScore.editionId, team.editionId), eq(taskScore.teamId, team.id)))
     .innerJoin(institute, eq(team.instId, institute.id))
     .innerJoin(region, eq(institute.region, region.id))
-    .where(and(eq(taskScore.taskName, taskName ?? "").if(taskName), gt(taskScore.score, 0)))
+    .where(
+      and(
+        eq(taskScore.taskName, taskName ?? "").if(taskName),
+        gt(taskScore.score, 0),
+        eq(team.junior, false),
+      ),
+    )
     .orderBy(desc(taskScore.score));
 });
 
@@ -129,8 +137,13 @@ export const listRoundScores = cache(
           eq(round.public, true),
         ),
       )
+      .innerJoin(team, and(eq(teamRound.teamId, team.id), eq(teamRound.editionId, team.editionId)))
       .where(
-        and(eq(teamRound.editionId, editionId), eq(teamRound.teamId, teamId ?? "").if(teamId)),
+        and(
+          eq(teamRound.editionId, editionId),
+          eq(teamRound.teamId, teamId ?? "").if(teamId),
+          eq(team.junior, false),
+        ),
       );
   },
 );

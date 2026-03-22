@@ -36,7 +36,7 @@ const medalCte = db.$with("medals").as(
         eq(round.public, true),
       ),
     )
-    .where(and(isNotNull(teamRound.medal)))
+    .where(and(isNotNull(teamRound.medal), eq(team.junior, false)))
     .groupBy(team.instId, teamRound.medal),
 );
 
@@ -68,6 +68,7 @@ export const listInstitutes = cache(
         and(
           eq(institute.region, regionId ?? "").if(regionId),
           eq(institute.id, instituteId ?? "").if(instituteId),
+          eq(team.junior, false),
         ),
       )
       .groupBy(institute.id)
@@ -105,6 +106,6 @@ export const getInstituteStats = cache(async (id: string): Promise<InstituteStat
         eq(round.public, true),
       ),
     )
-    .where(eq(team.instId, id));
+    .where(and(eq(team.instId, id), eq(team.junior, false)));
   return result;
 });
