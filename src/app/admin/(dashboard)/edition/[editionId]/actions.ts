@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 
 import { TZDate } from "@date-fns/tz";
 import { addHours, format, getUnixTime, subMinutes } from "date-fns";
+import { truncate } from "lodash";
 import YAML from "yaml";
 
 import { getEditionAdmin } from "~/lib/edition";
+import { createCredentialsPdf } from "~/lib/foglietti";
 import { listRegions } from "~/lib/region";
 import { getRoundAdmin, updateRoundVisibility } from "~/lib/round";
 import { listRoundTeamsCredentials } from "~/lib/team";
@@ -61,4 +63,15 @@ export async function getRoundCredentials(editionId: string, roundId: string): P
       delay: t.delay,
     })),
   });
+}
+
+export async function getFogliettiPdf(editionId: string, roundId: string) {
+  const teamCredentials = await listRoundTeamsCredentials(editionId, roundId);
+  const credentials = teamCredentials.map((t) => ({
+    teamName: truncate(t.name, { length: 36 }),
+    school: truncate(`${t.instituteName}, ${t.instituteCity}`, { length: 64 }),
+    username: t.teamId,
+    password: t.password,
+  }));
+  return createCredentialsPdf(credentials);
 }
