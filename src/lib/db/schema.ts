@@ -71,6 +71,7 @@ export const institute = pgTable(
     region: text()
       .notNull()
       .references(() => region.id),
+    email: text(),
   },
   (table) => [
     index("idx_institute_region_city_name_id").on(table.region, table.city, table.name, table.id),

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { random } from "lodash";
 
 import { db } from "~/lib/db";
@@ -72,7 +73,18 @@ export async function createNewEdition(
     ]);
 
     if (institutes.length > 0) {
-      await tx.insert(institute).values(institutes).onConflictDoNothing();
+      await tx
+        .insert(institute)
+        .values(institutes)
+        .onConflictDoUpdate({
+          target: institute.id,
+          set: {
+            name: sql.raw(`EXCLUDED.${institute.name.name}`),
+            city: sql.raw(`EXCLUDED.${institute.city.name}`),
+            region: sql.raw(`EXCLUDED.${institute.region.name}`),
+            email: sql.raw(`EXCLUDED.${institute.email.name}`),
+          },
+        });
     }
 
     if (teams.length > 0) {

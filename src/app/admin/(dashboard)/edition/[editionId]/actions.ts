@@ -9,6 +9,7 @@ import YAML from "yaml";
 
 import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
+import { sendPasswordEmails } from "~/lib/email";
 import { createCredentialsPdf } from "~/lib/foglietti";
 import { listRegions } from "~/lib/region";
 import { getRoundAdmin, updateRoundVisibility } from "~/lib/round";
@@ -86,4 +87,17 @@ export async function getFogliettiPdf(editionId: string, roundId: string) {
     password: t.password,
   }));
   return createCredentialsPdf(credentials);
+}
+
+export async function sendRoundEmails(editionId: string, roundId: string) {
+  await verifyAdmin();
+
+  const [edition, round] = await Promise.all([
+    getEditionAdmin(editionId),
+    getRoundAdmin(editionId, roundId),
+  ]);
+  if (!edition) throw new Error(`Edition ${editionId} not found`);
+  if (!round) throw new Error(`Round ${roundId} not found`);
+
+  return sendPasswordEmails(edition, round);
 }
