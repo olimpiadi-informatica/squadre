@@ -1,6 +1,6 @@
 "use client";
 
-import { type RefObject, useRef, useState } from "react";
+import { type RefObject, useCallback, useRef, useState } from "react";
 
 import { Button, Modal } from "@olinfo/react-components";
 import { intlFormat } from "date-fns";
@@ -12,6 +12,11 @@ import type { RoundAdminItem } from "~/lib/round";
 import { getFogliettiPdf, getRoundCredentials, toggleRoundVisibility } from "./actions";
 
 export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
+  const itemMatch = useCallback(
+    (search: string, round: RoundAdminItem) => round.title.toLowerCase().includes(search),
+    [],
+  );
+
   const makePublicModalRef = useRef<HTMLDialogElement>(null);
   const makePrivateModalRef = useRef<HTMLDialogElement>(null);
 
@@ -31,6 +36,7 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
     <>
       <Table
         data={rounds}
+        itemMatch={itemMatch}
         header={TableHeaders}
         row={(props) => (
           <TableRow

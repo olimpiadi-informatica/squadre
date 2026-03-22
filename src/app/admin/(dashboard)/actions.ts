@@ -117,5 +117,5 @@ async function parseCsv(csv: File | string) {
   return z
     .array(csvRowSchema)
     .parse(rows)
-    .filter((row) => row["Approvato/a"] === "True" && row["Idoneo/a"] === "True");
+    .filter((row) => row["Approvato/a"] !== "False" && row["Idoneo/a"] !== "False");
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type RefObject, useRef, useState } from "react";
+import { type RefObject, useCallback, useRef, useState } from "react";
 
 import { Button, Modal } from "@olinfo/react-components";
 
@@ -11,6 +11,12 @@ import type { EditionAdminItem } from "~/lib/edition";
 import { deleteEditionAction, toggleEditionVisibility } from "./actions";
 
 export function AdminEditionsTable({ editions }: { editions: EditionAdminItem[] }) {
+  const itemMatch = useCallback(
+    (search: string, edition: EditionAdminItem) =>
+      edition.name.toLowerCase().includes(search) || edition.year.toLowerCase().includes(search),
+    [],
+  );
+
   const makePublicModalRef = useRef<HTMLDialogElement>(null);
   const makePrivateModalRef = useRef<HTMLDialogElement>(null);
   const deleteModalRef = useRef<HTMLDialogElement>(null);
@@ -36,6 +42,7 @@ export function AdminEditionsTable({ editions }: { editions: EditionAdminItem[] 
     <>
       <Table
         data={editions}
+        itemMatch={itemMatch}
         header={TableHeaders}
         row={(props) => (
           <TableRow
