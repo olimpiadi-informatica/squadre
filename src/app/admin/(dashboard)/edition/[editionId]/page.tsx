@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { verifyAdmin } from "~/lib/admin";
 import { listRoundsAdmin } from "~/lib/round";
 
 import { AdminRoundsTable } from "./rounds-table";
@@ -9,6 +10,8 @@ type Props = {
 };
 
 export default async function AdminEditionPage({ params }: Props) {
+  await verifyAdmin();
+
   const { editionId } = await params;
   const rounds = await listRoundsAdmin(editionId);
 

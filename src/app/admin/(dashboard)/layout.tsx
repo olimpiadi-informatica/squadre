@@ -1,18 +1,11 @@
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { auth } from "~/lib/auth";
+import { verifyAdmin } from "~/lib/admin";
 
 import { AdminNavbar } from "./navbar";
-export default async function DashboardLayout({ children }: { children: ReactNode }) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
 
-  if (!session) {
-    redirect("/admin/login");
-  }
+export default async function DashboardLayout({ children }: { children: ReactNode }) {
+  const session = await verifyAdmin();
 
   return (
     <>

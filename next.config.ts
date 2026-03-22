@@ -5,6 +5,9 @@ const config: NextConfig = {
   productionBrowserSourceMaps: true,
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
   typedRoutes: true,
+  experimental: {
+    authInterrupts: true,
+  },
 };
 
 export default createMDX({ extension: /\.mdx?$/ })(config);
