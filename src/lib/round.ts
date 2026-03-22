@@ -3,7 +3,7 @@ import { cache } from "react";
 import { and, avg, count, eq, gt, min, sum } from "drizzle-orm";
 
 import { db } from "~/lib/db";
-import { edition, round, teamRound } from "~/lib/db/schema";
+import { edition, round, team, teamRound } from "~/lib/db/schema";
 import { coalesce, median } from "~/lib/utils";
 
 export type RoundAdminItem = {
@@ -106,11 +106,13 @@ export const getRoundStats = cache(
           eq(round.public, true),
         ),
       )
+      .innerJoin(team, and(eq(teamRound.teamId, team.id), eq(teamRound.editionId, team.editionId)))
       .where(
         and(
           eq(teamRound.editionId, editionId),
           eq(teamRound.roundId, roundId),
           gt(teamRound.score, 0),
+          eq(team.junior, false),
         ),
       );
     return result;

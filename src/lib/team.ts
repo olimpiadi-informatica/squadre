@@ -41,7 +41,7 @@ export const getTeam = cache(async (editionId: string, id: string): Promise<Team
     .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
     .innerJoin(institute, eq(team.instId, institute.id))
     .innerJoin(region, eq(institute.region, region.id))
-    .where(and(eq(team.editionId, editionId), eq(team.id, id)));
+    .where(and(eq(team.editionId, editionId), eq(team.id, id), eq(team.junior, false)));
   return result;
 });
 
@@ -68,7 +68,10 @@ export const getTeamStats = cache(async (editionId: string, id: string): Promise
         eq(round.public, true),
       ),
     )
-    .where(and(eq(teamRound.editionId, editionId), eq(teamRound.teamId, id)));
+    .innerJoin(team, and(eq(teamRound.teamId, team.id), eq(teamRound.editionId, team.editionId)))
+    .where(
+      and(eq(teamRound.editionId, editionId), eq(teamRound.teamId, id), eq(team.junior, false)),
+    );
   return result;
 });
 
@@ -102,7 +105,8 @@ const medalCte = db.$with("medals").as(
         eq(round.public, true),
       ),
     )
-    .where(and(isNotNull(teamRound.medal)))
+    .innerJoin(team, and(eq(teamRound.teamId, team.id), eq(teamRound.editionId, team.editionId)))
+    .where(and(isNotNull(teamRound.medal), eq(team.junior, false)))
     .groupBy(teamRound.teamId, teamRound.editionId, teamRound.medal),
 );
 
@@ -127,7 +131,7 @@ export const listTeams = cache((instituteId?: string): Promise<TeamItem[]> => {
     })
     .from(team)
     .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
-    .where(eq(team.instId, instituteId ?? "").if(instituteId))
+    .where(and(eq(team.instId, instituteId ?? "").if(instituteId), eq(team.junior, false)))
     .orderBy(team.rankTot);
 });
 
@@ -181,6 +185,7 @@ export const listRoundTeams = cache(
           eq(teamRound.editionId, editionId),
           eq(teamRound.roundId, roundId),
           gt(teamRound.score, 0),
+          eq(team.junior, false),
         ),
       )
       .orderBy(teamRound.rankTot, institute.region, institute.name, institute.city, team.name);
@@ -209,7 +214,7 @@ export const listEditionTeams = cache((editionId: string): Promise<TeamResultIte
     .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
     .innerJoin(institute, eq(team.instId, institute.id))
     .innerJoin(region, eq(institute.region, region.id))
-    .where(and(eq(team.editionId, editionId)))
+    .where(and(eq(team.editionId, editionId), eq(team.junior, false)))
     .orderBy(team.rankTot, institute.region, institute.name, institute.city, team.name);
 });
 
@@ -226,6 +231,7 @@ export type TeamCredential = {
 export const listRoundTeamsCredentials = (
   editionId: string,
   roundId: string,
+  junior: boolean,
 ): Promise<TeamCredential[]> => {
   return db
     .select({
@@ -245,6 +251,7 @@ export const listRoundTeamsCredentials = (
       and(
         eq(teamRound.editionId, editionId),
         eq(teamRound.roundId, roundId),
+        eq(team.junior, junior),
         eq(team.finalist, true).if(roundId === "final"),
       ),
     )
