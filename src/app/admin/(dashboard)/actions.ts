@@ -10,6 +10,7 @@ import { isString, uniqBy } from "lodash";
 import Papa from "papaparse";
 import { z } from "zod";
 
+import { verifyAdmin } from "~/lib/admin";
 import { deleteEdition, updateEditionVisibility } from "~/lib/edition";
 import { createNewEdition, type EditionData } from "~/lib/new-edition";
 
@@ -38,16 +39,20 @@ const csvRowSchema = z.object({
 });
 
 export async function toggleEditionVisibility(id: string, currentPublic: boolean) {
+  await verifyAdmin();
   await updateEditionVisibility(id, !currentPublic);
   revalidatePath("/admin");
 }
 
 export async function deleteEditionAction(id: string) {
+  await verifyAdmin();
   await deleteEdition(id);
   revalidatePath("/admin");
 }
 
 export async function createEdition(files: FormData, data: EditionData) {
+  await verifyAdmin();
+
   const teamCsv = files.get("teams");
   if (teamCsv == null) {
     throw new Error("No teams CSV file provided");
