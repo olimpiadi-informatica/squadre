@@ -56,7 +56,7 @@ export const getRegionStats = cache(async (regionId?: string): Promise<RegionSta
       ),
     )
     .innerJoin(institute, eq(team.instId, institute.id))
-    .where(eq(institute.region, regionId ?? "").if(regionId));
+    .where(and(eq(institute.region, regionId ?? "").if(regionId), eq(team.junior, false)));
   return result;
 });
 
@@ -88,7 +88,7 @@ const medalCte = db.$with("medals").as(
       ),
     )
     .innerJoin(institute, eq(team.instId, institute.id))
-    .where(and(isNotNull(teamRound.medal)))
+    .where(and(isNotNull(teamRound.medal), eq(team.junior, false)))
     .groupBy(institute.region, teamRound.medal),
 );
 
@@ -112,5 +112,6 @@ export const listRegions = cache((): Promise<RegionItem[]> => {
     .innerJoin(institute, eq(region.id, institute.region))
     .innerJoin(team, eq(team.instId, institute.id))
     .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
+    .where(eq(team.junior, false))
     .groupBy(region.id);
 });

@@ -23,14 +23,18 @@ export async function toggleRoundVisibility(
   revalidatePath(`/admin/edition/${editionId}`);
 }
 
-export async function getRoundCredentials(editionId: string, roundId: string): Promise<string> {
+export async function getRoundCredentials(
+  editionId: string,
+  roundId: string,
+  junior: boolean,
+): Promise<string> {
   await verifyAdmin();
 
   const [edition, round, regions, teamCredentials] = await Promise.all([
     getEditionAdmin(editionId),
     getRoundAdmin(editionId, roundId),
     listRegions(),
-    listRoundTeamsCredentials(editionId, roundId),
+    listRoundTeamsCredentials(editionId, roundId, junior),
   ]);
 
   if (!edition) throw new Error(`Edition ${editionId} not found`);
@@ -42,8 +46,8 @@ export async function getRoundCredentials(editionId: string, roundId: string): P
   const stop = addHours(start, 3);
 
   return YAML.stringify({
-    name: `round${round.id}`,
-    description: `OIS${year} -- ${round.title} (regular)`,
+    name: `round${round.id}${junior ? "-debutant" : ""}`,
+    description: `OIS${year} -- ${round.title} (${junior ? "debutant" : "regular"})`,
     date: dateStr,
     start: getUnixTime(start),
     stop: getUnixTime(stop),
@@ -71,7 +75,7 @@ export async function getRoundCredentials(editionId: string, roundId: string): P
 export async function getFogliettiPdf(editionId: string, roundId: string) {
   await verifyAdmin();
 
-  const teamCredentials = await listRoundTeamsCredentials(editionId, roundId);
+  const teamCredentials = await listRoundTeamsCredentials(editionId, roundId, false);
   const credentials = teamCredentials.map((t) => ({
     teamName: truncate(t.name, { length: 36 }),
     school: truncate(`${t.instituteName}, ${t.instituteCity}`, { length: 64 }),
