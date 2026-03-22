@@ -212,3 +212,35 @@ export const listEditionTeams = cache((editionId: string): Promise<TeamResultIte
     .where(and(eq(team.editionId, editionId)))
     .orderBy(team.rankTot, institute.region, institute.name, institute.city, team.name);
 });
+
+export type TeamCredential = {
+  name: string;
+  instituteName: string;
+  instituteCity: string;
+  regionId: string;
+  teamId: string;
+  password: string;
+  delay: number;
+};
+
+export const listRoundTeamsCredentials = (
+  editionId: string,
+  roundId: string,
+): Promise<TeamCredential[]> => {
+  return db
+    .select({
+      name: team.name,
+      instituteName: institute.name,
+      instituteCity: institute.city,
+      regionId: region.id,
+      teamId: team.id,
+      password: teamRound.password,
+      delay: teamRound.delay,
+    })
+    .from(teamRound)
+    .innerJoin(team, and(eq(teamRound.teamId, team.id), eq(teamRound.editionId, team.editionId)))
+    .innerJoin(institute, eq(team.instId, institute.id))
+    .innerJoin(region, eq(institute.region, region.id))
+    .where(and(eq(teamRound.editionId, editionId), eq(teamRound.roundId, roundId)))
+    .orderBy(region.id, institute.name, institute.city, team.name);
+};
