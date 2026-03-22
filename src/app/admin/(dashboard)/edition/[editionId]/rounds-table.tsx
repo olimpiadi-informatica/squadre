@@ -106,9 +106,14 @@ function TableRow({
         )}
       </div>
       <div className="flex flex-wrap justify-center gap-2">
-        <Button onClick={downloadCredentials} className="btn-info btn-sm">
-          Scarica contest.yaml
+        <Button onClick={() => downloadCredentials(false)} className="btn-info btn-sm">
+          Scarica regular.yaml
         </Button>
+        {round.id !== "final" && (
+          <Button onClick={() => downloadCredentials(true)} className="btn-info btn-sm">
+            Scarica debutant.yaml
+          </Button>
+        )}
         {round.id === "final" && (
           <Button onClick={downloadFoglietti} className="btn-success btn-sm">
             Scarica foglietti PDF
@@ -145,8 +150,8 @@ function TableRow({
     );
   }
 
-  async function downloadCredentials() {
-    const yaml = await getRoundCredentials(round.editionId, round.id);
-    saveAs(new Blob([yaml], { type: "text/yaml" }), "regular.yaml");
+  async function downloadCredentials(junior: boolean) {
+    const yaml = await getRoundCredentials(round.editionId, round.id, junior);
+    saveAs(new Blob([yaml], { type: "text/yaml" }), junior ? "debutant.yaml" : "regular.yaml");
   }
 }

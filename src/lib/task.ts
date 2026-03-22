@@ -3,7 +3,7 @@ import { cache } from "react";
 import { and, avg, count, eq, gt, max, sum } from "drizzle-orm";
 
 import { db } from "~/lib/db";
-import { edition, round, task, taskScore } from "~/lib/db/schema";
+import { edition, round, task, taskScore, team } from "~/lib/db/schema";
 import { coalesce, median } from "~/lib/utils";
 
 export type Task = {
@@ -61,7 +61,8 @@ export const getTaskStats = cache(async (name: string): Promise<TaskStats> => {
       round,
       and(eq(task.roundId, round.id), eq(task.editionId, round.editionId), eq(round.public, true)),
     )
-    .where(and(eq(taskScore.taskName, name), gt(taskScore.score, 0)));
+    .innerJoin(team, and(eq(taskScore.teamId, team.id), eq(taskScore.editionId, team.editionId)))
+    .where(and(eq(taskScore.taskName, name), gt(taskScore.score, 0), eq(team.junior, false)));
   return result;
 });
 

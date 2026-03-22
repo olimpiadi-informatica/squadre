@@ -90,6 +90,7 @@ export const team = pgTable(
       .notNull()
       .references(() => institute.id),
     coach: text().notNull(),
+    junior: boolean().notNull().default(false),
     finalist: boolean(),
     rankReg: integer("rank_reg").notNull(),
     rankTot: integer("rank_tot").notNull(),
