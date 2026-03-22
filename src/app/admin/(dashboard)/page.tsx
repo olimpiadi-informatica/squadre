@@ -13,11 +13,6 @@ export default async function AdminPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="breadcrumbs text-sm mb-4">
-        <ul>
-          <li>Editions</li>
-        </ul>
-      </div>
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardBody title="Nuova edizione">

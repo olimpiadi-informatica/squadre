@@ -90,7 +90,7 @@ export async function createNewEdition(
           rankTot: 0,
           rankReg: 0,
           password: generateWord(),
-          delay: delays[t.instId]!,
+          delay: roundId.length === 1 ? delays[t.instId]! : 0,
         })),
       );
 

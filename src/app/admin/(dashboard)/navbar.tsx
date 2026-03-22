@@ -60,7 +60,7 @@ function LogoutButton() {
         type="button"
         onClick={async () => {
           await authClient.signOut();
-          router.push("/admin/login");
+          router.refresh();
         }}>
         Esci
       </button>

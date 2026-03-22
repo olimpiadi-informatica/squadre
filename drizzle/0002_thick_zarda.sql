@@ -32,12 +32,12 @@ UPDATE round SET starts_at = to_timestamp(1699882200) WHERE edition_id = '15' AN
 UPDATE round SET starts_at = to_timestamp(1702387800) WHERE edition_id = '15' AND id = '2';
 UPDATE round SET starts_at = to_timestamp(1705498200) WHERE edition_id = '15' AND id = '3';
 UPDATE round SET starts_at = to_timestamp(1707399000) WHERE edition_id = '15' AND id = '4';
-UPDATE round SET starts_at = to_timestamp(1710403200) WHERE edition_id = '16' AND id = 'final';
 UPDATE round SET starts_at = to_timestamp(1710489600) WHERE edition_id = '15' AND id = 'final';
 UPDATE round SET starts_at = to_timestamp(1731331800) WHERE edition_id = '16' AND id = '1';
 UPDATE round SET starts_at = to_timestamp(1733837400) WHERE edition_id = '16' AND id = '2';
 UPDATE round SET starts_at = to_timestamp(1736947800) WHERE edition_id = '16' AND id = '3';
 UPDATE round SET starts_at = to_timestamp(1738848600) WHERE edition_id = '16' AND id = '4';
+UPDATE round SET starts_at = to_timestamp(1741939200) WHERE edition_id = '16' AND id = 'final';
 UPDATE round SET starts_at = to_timestamp(1762781400) WHERE edition_id = '17' AND id = '1';
 UPDATE round SET starts_at = to_timestamp(1765287000) WHERE edition_id = '17' AND id = '2';
 UPDATE round SET starts_at = to_timestamp(1768397400) WHERE edition_id = '17' AND id = '3';
