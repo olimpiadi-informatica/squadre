@@ -1,0 +1,1 @@
+ALTER TABLE "institute" ADD COLUMN "email" text;
