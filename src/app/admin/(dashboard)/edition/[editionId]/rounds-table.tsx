@@ -4,11 +4,12 @@ import { type RefObject, useRef, useState } from "react";
 
 import { Button, Modal } from "@olinfo/react-components";
 import { intlFormat } from "date-fns";
+import { saveAs } from "file-saver";
 
 import { Table } from "~/components/table";
 import type { RoundAdminItem } from "~/lib/round";
 
-import { getRoundCredentials, toggleRoundVisibility } from "./actions";
+import { getFogliettiPdf, getRoundCredentials, toggleRoundVisibility } from "./actions";
 
 export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
   const makePublicModalRef = useRef<HTMLDialogElement>(null);
@@ -108,6 +109,11 @@ function TableRow({
         <Button onClick={downloadCredentials} className="btn-info btn-sm">
           Scarica contest.yaml
         </Button>
+        {round.id === "final" && (
+          <Button onClick={downloadFoglietti} className="btn-success btn-sm">
+            Scarica foglietti PDF
+          </Button>
+        )}
         {round.public ? (
           <Button
             onClick={() => {
@@ -131,24 +137,16 @@ function TableRow({
     </>
   );
 
+  async function downloadFoglietti() {
+    const pdfBytes = await getFogliettiPdf(round.editionId, round.id);
+    saveAs(
+      new Blob([pdfBytes as Uint8Array<ArrayBuffer>], { type: "application/pdf" }),
+      "foglietti.pdf",
+    );
+  }
+
   async function downloadCredentials() {
-    if (!window.showSaveFilePicker) {
-      throw new Error("Browser non supportato, usa Chrome o Edge");
-    }
-
-    let fileHandle: FileSystemFileHandle;
-    try {
-      fileHandle = await window.showSaveFilePicker({
-        suggestedName: "regular.yaml",
-        types: [{ description: "File YAML", accept: { "text/yaml": [".yaml"] } }],
-      });
-    } catch {
-      return;
-    }
-
     const yaml = await getRoundCredentials(round.editionId, round.id);
-    const writable = await fileHandle.createWritable();
-    await writable.write(yaml);
-    await writable.close();
+    saveAs(new Blob([yaml], { type: "text/yaml" }), "regular.yaml");
   }
 }

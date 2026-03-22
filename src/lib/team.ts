@@ -241,6 +241,12 @@ export const listRoundTeamsCredentials = (
     .innerJoin(team, and(eq(teamRound.teamId, team.id), eq(teamRound.editionId, team.editionId)))
     .innerJoin(institute, eq(team.instId, institute.id))
     .innerJoin(region, eq(institute.region, region.id))
-    .where(and(eq(teamRound.editionId, editionId), eq(teamRound.roundId, roundId)))
+    .where(
+      and(
+        eq(teamRound.editionId, editionId),
+        eq(teamRound.roundId, roundId),
+        eq(team.finalist, true).if(roundId === "final"),
+      ),
+    )
     .orderBy(region.id, institute.name, institute.city, team.name);
 };
