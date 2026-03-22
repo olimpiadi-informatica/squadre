@@ -42,34 +42,37 @@ export async function getRoundCredentials(
 
   const year = edition.year.replace(/\d{2}\//, "");
   const dateStr = format(new TZDate(round.startsAt, "Europe/Rome"), "MMMM do, yyyy");
-  const start = subMinutes(round.startsAt, 5);
+  const start = roundId.length === 1 ? subMinutes(round.startsAt, 5) : round.startsAt;
   const stop = addHours(start, 3);
 
-  return YAML.stringify({
-    name: `round${round.id}${junior ? "-debutant" : ""}`,
-    description: `OIS${year} -- ${round.title} (${junior ? "debutant" : "regular"})`,
-    date: dateStr,
-    start: getUnixTime(start),
-    stop: getUnixTime(stop),
-    token_mode: "disabled",
-    allow_registration: false,
-    allow_user_tests: false,
-    timezone: "Europe/Rome",
-    location: "Online",
-    logo: "logo_ois.pdf",
-    languages: [],
-    tasks: [],
-    teams: regions.map((r) => ({ code: r.id.toUpperCase(), name: r.name })),
-    users: teamCredentials.map((t) => ({
-      first_name: t.name,
-      last_name: `${t.instituteName}, ${t.instituteCity}`,
-      team: t.regionId.toUpperCase(),
-      username: t.teamId,
-      password: t.password,
-      hidden: false,
-      delay: t.delay,
-    })),
-  });
+  return YAML.stringify(
+    {
+      name: `round${round.id}${junior ? "-debutant" : ""}`,
+      description: `OIS${year} -- ${round.title} (${junior ? "debutant" : "regular"})`,
+      date: dateStr,
+      start: getUnixTime(start),
+      stop: getUnixTime(stop),
+      token_mode: "disabled",
+      allow_registration: false,
+      allow_user_tests: false,
+      timezone: "Europe/Rome",
+      location: "Online",
+      logo: "logo_ois.pdf",
+      languages: [],
+      tasks: [],
+      teams: regions.map((r) => ({ code: r.id.toUpperCase(), name: r.name })),
+      users: teamCredentials.map((t) => ({
+        first_name: t.name,
+        last_name: `${t.instituteName}, ${t.instituteCity}`,
+        team: t.regionId.toUpperCase(),
+        username: t.teamId,
+        password: t.password,
+        hidden: false,
+        delay: t.delay,
+      })),
+    },
+    { lineWidth: 0 },
+  );
 }
 
 export async function getFogliettiPdf(editionId: string, roundId: string) {

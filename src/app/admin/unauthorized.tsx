@@ -14,7 +14,7 @@ export default function LoginPage() {
     try {
       await authClient.signIn.social({
         provider: "github",
-        callbackURL: "/admin",
+        callbackURL: window.location.href,
       });
     } catch {
       setError("Errore durante il login. Riprova.");
