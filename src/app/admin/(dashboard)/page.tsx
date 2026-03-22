@@ -1,11 +1,14 @@
 import { Card, CardActions, CardBody } from "@olinfo/react-components";
 
+import { verifyAdmin } from "~/lib/admin";
 import { listEditionsAdmin } from "~/lib/edition";
 
 import { AdminEditionsTable } from "./editions-table";
 import { NewEditionButton } from "./new-edition-button";
 
 export default async function AdminPage() {
+  await verifyAdmin();
+
   const editions = await listEditionsAdmin();
 
   return (

@@ -7,6 +7,7 @@ import { addHours, format, getUnixTime, subMinutes } from "date-fns";
 import { truncate } from "lodash";
 import YAML from "yaml";
 
+import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
 import { createCredentialsPdf } from "~/lib/foglietti";
 import { listRegions } from "~/lib/region";
@@ -23,6 +24,8 @@ export async function toggleRoundVisibility(
 }
 
 export async function getRoundCredentials(editionId: string, roundId: string): Promise<string> {
+  await verifyAdmin();
+
   const [edition, round, regions, teamCredentials] = await Promise.all([
     getEditionAdmin(editionId),
     getRoundAdmin(editionId, roundId),
@@ -66,6 +69,8 @@ export async function getRoundCredentials(editionId: string, roundId: string): P
 }
 
 export async function getFogliettiPdf(editionId: string, roundId: string) {
+  await verifyAdmin();
+
   const teamCredentials = await listRoundTeamsCredentials(editionId, roundId);
   const credentials = teamCredentials.map((t) => ({
     teamName: truncate(t.name, { length: 36 }),
