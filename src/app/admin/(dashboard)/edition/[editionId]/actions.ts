@@ -9,6 +9,7 @@ import YAML from "yaml";
 import { getEditionAdmin } from "~/lib/edition";
 import { listRegions } from "~/lib/region";
 import { getRoundAdmin, updateRoundVisibility } from "~/lib/round";
+import { listRoundTeamsCredentials } from "~/lib/team";
 
 export async function toggleRoundVisibility(
   editionId: string,
@@ -20,10 +21,11 @@ export async function toggleRoundVisibility(
 }
 
 export async function getRoundCredentials(editionId: string, roundId: string): Promise<string> {
-  const [edition, round, regions] = await Promise.all([
+  const [edition, round, regions, teamCredentials] = await Promise.all([
     getEditionAdmin(editionId),
     getRoundAdmin(editionId, roundId),
     listRegions(),
+    listRoundTeamsCredentials(editionId, roundId),
   ]);
 
   if (!edition) throw new Error(`Edition ${editionId} not found`);
@@ -49,5 +51,14 @@ export async function getRoundCredentials(editionId: string, roundId: string): P
     languages: [],
     tasks: [],
     teams: regions.map((r) => ({ code: r.id.toUpperCase(), name: r.name })),
+    users: teamCredentials.map((t) => ({
+      first_name: t.name,
+      last_name: `${t.instituteName}, ${t.instituteCity}`,
+      team: t.regionId.toUpperCase(),
+      username: t.teamId,
+      password: t.password,
+      hidden: false,
+      delay: t.delay,
+    })),
   });
 }
