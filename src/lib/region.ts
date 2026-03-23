@@ -66,7 +66,7 @@ export type RegionItem = {
   totalInstitutes: number;
   totalTeams: number;
   totalPoints: number;
-  totalMedals: Record<number, number>;
+  totalMedals: Record<number, number> | null;
 };
 
 const medalCte = db.$with("medals").as(
@@ -101,7 +101,7 @@ export const listRegions = cache((): Promise<RegionItem[]> => {
       totalInstitutes: countDistinct(team.instId),
       totalTeams: countDistinct(concat(team.editionId, sql`'-'`, team.id)),
       totalPoints: coalesce(sum(team.points), 0),
-      totalMedals: sql<Record<number, number>>`${db
+      totalMedals: sql<Record<number, number> | null>`${db
         .select({
           medals: jsonAggregate(medalCte.medal, medalCte.count),
         })

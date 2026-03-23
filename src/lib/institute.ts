@@ -15,7 +15,7 @@ export type Institute = {
   totalEditions: number;
   totalTeams: number;
   totalPoints: number;
-  totalMedals: Record<number, number>;
+  totalMedals: Record<number, number> | null;
 };
 
 const medalCte = db.$with("medals").as(
@@ -53,7 +53,7 @@ export const listInstitutes = cache(
         totalEditions: countDistinct(team.editionId),
         totalTeams: countDistinct(concat(team.editionId, sql`'-'`, team.id)),
         totalPoints: coalesce(sum(team.points), 0),
-        totalMedals: sql<Record<number, number>>`${db
+        totalMedals: sql<Record<number, number> | null>`${db
           .select({
             medals: jsonAggregate(medalCte.medal, medalCte.count),
           })
@@ -71,7 +71,7 @@ export const listInstitutes = cache(
           eq(team.junior, false),
         ),
       )
-      .groupBy(institute.id)
+      .groupBy(institute.id, region.name)
       .orderBy(institute.city, institute.name);
   },
 );
