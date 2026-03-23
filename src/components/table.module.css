@@ -44,6 +44,10 @@ components.Scroller (div)
   @apply text-nowrap rounded-btn p-2 hover:bg-base-content/10;
 }
 
+.itemHighlight {
+  @apply !bg-warning/20;
+}
+
 .scroller > div > div:last-child /* footer */ {
   @apply col-span-full h-4;
 }

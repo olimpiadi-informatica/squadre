@@ -7,12 +7,13 @@ import style from "./table.module.css";
 
 export type TableProps<T> = {
   data: T[];
+  itemMatch: (search: string, item: T) => boolean;
   header: ComponentType<{ context: any }>;
   row: ComponentType<{ item: T }>;
   className?: string;
 };
 
-const LargeTable = dynamic(() => import("~/components/table-large"), { ssr: false });
+const LargeTable = dynamic(() => import("./table-large"), { ssr: false });
 
 function SmallTable<T>({ data, header: Header, row: Row, className }: TableProps<T>) {
   return (

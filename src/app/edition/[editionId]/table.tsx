@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, use } from "react";
+import { createContext, use, useCallback } from "react";
 
 import { Check } from "lucide-react";
 
@@ -26,10 +26,19 @@ export function EditionTable({
   rounds: RoundItem[];
   scores: RoundScoreItem[];
 }) {
+  const itemMatch = useCallback((search: string, team: TeamResultItem) => {
+    return (
+      team.name.toLowerCase().includes(search) ||
+      team.instituteName.toLowerCase().includes(search) ||
+      team.instituteCity.toLowerCase().includes(search)
+    );
+  }, []);
+
   return (
     <EditionContext.Provider value={{ rounds, scores }}>
       <Table
         data={teams}
+        itemMatch={itemMatch}
         header={TableHeaders}
         row={TableRow}
         className="grid-cols-[auto_auto_1fr_1fr_3rem_3rem_4rem_4rem_4rem_4rem_4.5rem]"

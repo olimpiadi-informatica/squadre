@@ -2,15 +2,25 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useCallback } from "react";
 
 import { RegionImage } from "~/components/region";
 import { Table } from "~/components/table";
 import type { TaskScoreItem } from "~/lib/score";
 
 export function TaskTable({ scores }: { scores: TaskScoreItem[] }) {
+  const itemMatch = useCallback((search: string, score: TaskScoreItem) => {
+    return (
+      score.teamName.toLowerCase().includes(search) ||
+      score.instituteName.toLowerCase().includes(search) ||
+      score.instituteCity.toLowerCase().includes(search)
+    );
+  }, []);
+
   return (
     <Table
       data={scores}
+      itemMatch={itemMatch}
       header={TableHeaders}
       row={TableRow}
       className="grid-cols-[3rem_1fr_1fr_3rem_3rem]"

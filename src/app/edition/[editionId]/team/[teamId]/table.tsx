@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, use } from "react";
+import { createContext, use, useCallback } from "react";
 
 import { Medal } from "~/components/medal";
 import { Score } from "~/components/score";
@@ -13,10 +13,15 @@ const TeamContext = createContext<{ scores: ScoreItem[] }>({
 });
 
 export function TeamTable({ rounds, scores }: { rounds: RoundScoreItem[]; scores: ScoreItem[] }) {
+  const itemMatch = useCallback((search: string, round: RoundScoreItem) => {
+    return round.roundName.toLowerCase().includes(search);
+  }, []);
+
   return (
     <TeamContext.Provider value={{ scores }}>
       <Table
         data={rounds}
+        itemMatch={itemMatch}
         header={TableHeaders}
         row={TableRow}
         className="grid-cols-[repeat(3,auto)_repeat(var(--cols),4rem)_4.5rem]"

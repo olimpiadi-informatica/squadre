@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback } from "react";
 
 import { Check } from "lucide-react";
 
@@ -16,6 +17,10 @@ export function InstituteTable({
   editions: EditionItem[];
   teams: TeamItem[];
 }) {
+  const itemMatch = useCallback((search: string, team: TeamItem) => {
+    return team.name.toLowerCase().includes(search) || team.coach.toLowerCase().includes(search);
+  }, []);
+
   return editions
     .map((edition) => {
       const editionTeams = teams.filter((team) => team.editionId === edition.id);
@@ -29,6 +34,7 @@ export function InstituteTable({
         </Link>
         <Table
           data={teams ?? []}
+          itemMatch={itemMatch}
           header={TableHeaders}
           row={TableRow}
           className="grid-cols-[auto_auto_1fr_1fr_auto_9rem_auto]"

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, use } from "react";
+import { createContext, use, useCallback } from "react";
 
 import { RegionImage } from "~/components/region";
 import { Score } from "~/components/score";
@@ -24,10 +24,19 @@ export function RoundTable({
   teams: TeamResultItem[];
   scores: ScoreItem[];
 }) {
+  const itemMatch = useCallback((search: string, team: TeamResultItem) => {
+    return (
+      team.name.toLowerCase().includes(search) ||
+      team.instituteName.toLowerCase().includes(search) ||
+      team.instituteCity.toLowerCase().includes(search)
+    );
+  }, []);
+
   return (
     <RoundContext.Provider value={{ tasks, scores }}>
       <Table
         data={teams}
+        itemMatch={itemMatch}
         header={TableHeaders}
         row={TableRow}
         className="grid-cols-[repeat(5,auto)_repeat(var(--cols),4rem)_4.5rem]"

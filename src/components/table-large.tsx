@@ -7,15 +7,18 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 
 import clsx from "clsx";
-import { type Components, Virtuoso } from "react-virtuoso";
+import { type Components, Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 
 import type { TableProps } from "./table";
 import style from "./table.module.css";
+import { TableSearch } from "./table-search";
 
 export default function LargeTable<T>({
   data,
+  itemMatch,
   header: Header,
   row: Row,
   className,
@@ -65,10 +68,21 @@ export default function LargeTable<T>({
     return () => abortController.abort();
   }, [updateColumnWidths]);
 
+  const virtuoso = useRef<VirtuosoHandle>(null);
+  const [highlightedRow, setHighlightedRow] = useState(-1);
+
+  const highlightRow = useCallback((index: number) => {
+    setHighlightedRow(index);
+    if (index !== -1) {
+      virtuoso.current?.scrollToIndex({ index, align: "center", behavior: "smooth" });
+    }
+  }, []);
+
   return (
     <div className={style.outerContainer}>
       <div className={style.innerContainer} ref={ref} style={{ width }}>
         <Virtuoso<T>
+          ref={virtuoso}
           data={data}
           itemContent={(_index, item) => <Row item={item} />}
           components={{ Header, Footer, List, Item }}
@@ -76,9 +90,14 @@ export default function LargeTable<T>({
           initialItemCount={10}
           className={clsx(style.scroller, className)}
           style={{ gridTemplateColumns }}
+          context={{ highlightedRow }}
           useWindowScroll
         />
       </div>
+      {createPortal(
+        <TableSearch data={data} itemMatch={itemMatch} highlightRow={highlightRow} />,
+        document.body,
+      )}
     </div>
   );
 }
@@ -87,8 +106,19 @@ const List: Components["List"] = forwardRef(({ context: _context, ...props }, re
   return <div ref={ref} {...props} className={style.list} />;
 });
 
-const Item: Components<any>["Item"] = ({ context: _context, item: _item, ...props }) => {
-  return <div {...props} className={style.item} />;
+const Item: Components<any, { highlightedRow: number }>["Item"] = ({
+  context,
+  "data-index": index,
+  item: _item,
+  ...props
+}) => {
+  return (
+    <div
+      data-index={index}
+      {...props}
+      className={clsx(style.item, context.highlightedRow === index && style.itemHighlight)}
+    />
+  );
 };
 
 const Footer: Components["Footer"] = () => <Fragment />;

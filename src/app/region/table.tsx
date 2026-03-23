@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback } from "react";
 
 import { Medals } from "~/components/medal";
 import { RegionImage } from "~/components/region";
@@ -8,9 +9,14 @@ import { Table } from "~/components/table";
 import type { RegionItem } from "~/lib/region";
 
 export function RegionsTable({ regions }: { regions: RegionItem[] }) {
+  const itemMatch = useCallback((search: string, region: RegionItem) => {
+    return region.name.toLowerCase().includes(search);
+  }, []);
+
   return (
     <Table
       data={regions}
+      itemMatch={itemMatch}
       header={TableHeaders}
       row={TableRow}
       className="grid-cols-[repeat(6,auto)]"
