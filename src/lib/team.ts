@@ -84,7 +84,7 @@ export type TeamItem = {
   points: number;
   editionId: string;
   finalist: boolean;
-  totalMedals: Record<number, number>;
+  totalMedals: Record<number, number> | null;
 };
 
 const medalCte = db.$with("medals").as(
@@ -122,7 +122,7 @@ export const listTeams = cache((instituteId?: string): Promise<TeamItem[]> => {
       points: team.points,
       editionId: team.editionId,
       finalist: sql`${team.finalist}`.mapWith(Boolean),
-      totalMedals: sql<Record<number, number>>`${db
+      totalMedals: sql<Record<number, number> | null>`${db
         .select({
           medals: jsonAggregate(medalCte.medal, medalCte.count),
         })
