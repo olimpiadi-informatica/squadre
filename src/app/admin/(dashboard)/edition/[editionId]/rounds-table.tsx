@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { type RefObject, useCallback, useRef, useState } from "react";
 
 import { Button, Modal } from "@olinfo/react-components";
@@ -9,12 +10,7 @@ import { saveAs } from "file-saver";
 import { Table } from "~/components/table";
 import type { RoundAdminItem } from "~/lib/round";
 
-import {
-  getFogliettiPdf,
-  getRoundCredentials,
-  sendRoundEmails,
-  toggleRoundVisibility,
-} from "./actions";
+import { getFogliettiPdf, getRoundCredentials, toggleRoundVisibility } from "./actions";
 
 export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
   const itemMatch = useCallback(
@@ -24,10 +20,8 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
 
   const makePublicModalRef = useRef<HTMLDialogElement>(null);
   const makePrivateModalRef = useRef<HTMLDialogElement>(null);
-  const sendEmailModalRef = useRef<HTMLDialogElement>(null);
 
   const [selectedRound, setSelectedRound] = useState<RoundAdminItem | null>(null);
-  const [isSendingEmails, setIsSendingEmails] = useState(false);
 
   async function confirmMakePublic() {
     await toggleRoundVisibility(selectedRound!.editionId, selectedRound!.id, selectedRound!.public);
@@ -37,20 +31,6 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
   async function confirmMakePrivate() {
     await toggleRoundVisibility(selectedRound!.editionId, selectedRound!.id, selectedRound!.public);
     makePrivateModalRef.current?.close();
-  }
-
-  async function confirmSendEmails() {
-    setIsSendingEmails(true);
-    try {
-      await sendRoundEmails(selectedRound!.editionId, selectedRound!.id);
-      sendEmailModalRef.current?.close();
-      alert("Email inviate con successo!");
-    } catch (e) {
-      console.error(e);
-      alert("Errore durante l'invio delle email.");
-    } finally {
-      setIsSendingEmails(false);
-    }
   }
 
   return (
@@ -65,10 +45,9 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
             setSelectedRound={setSelectedRound}
             makePrivateModalRef={makePrivateModalRef}
             makePublicModalRef={makePublicModalRef}
-            sendEmailModalRef={sendEmailModalRef}
           />
         )}
-        className="grid-cols-[repeat(3,auto)]"
+        className="grid-cols-[repeat(4,auto)]"
       />
       <Modal ref={makePublicModalRef} title="Rendi pubblico il round?">
         <p>{`Il round "${selectedRound?.title}" sarà visibile al pubblico.`}</p>
@@ -98,21 +77,6 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
           </Button>
         </div>
       </Modal>
-      <Modal ref={sendEmailModalRef} title="Vuoi davvero inviare le email con le password?">
-        <p>{`Verranno inviate le email ai referenti per il round "${selectedRound?.title}". Assicurati di aver configurato le variabili d'ambiente SMTP.`}</p>
-        <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <button
-            className="btn btn-info"
-            onClick={() => sendEmailModalRef.current?.close()}
-            disabled={isSendingEmails}
-            type="button">
-            Annulla
-          </button>
-          <Button onClick={confirmSendEmails} disabled={isSendingEmails} className="btn-warning">
-            {isSendingEmails ? "Invio in corso..." : "Conferma Invio"}
-          </Button>
-        </div>
-      </Modal>
     </>
   );
 }
@@ -122,6 +86,7 @@ function TableHeaders() {
     <>
       <div>Titolo</div>
       <div>Data</div>
+      <div>Email</div>
       <div>Azioni</div>
     </>
   );
@@ -132,13 +97,11 @@ function TableRow({
   setSelectedRound,
   makePrivateModalRef,
   makePublicModalRef,
-  sendEmailModalRef,
 }: {
   item: RoundAdminItem;
   setSelectedRound: (round: RoundAdminItem) => void;
   makePrivateModalRef: RefObject<HTMLDialogElement | null>;
   makePublicModalRef: RefObject<HTMLDialogElement | null>;
-  sendEmailModalRef: RefObject<HTMLDialogElement | null>;
 }) {
   return (
     <>
@@ -150,6 +113,15 @@ function TableRow({
           { locale: "it-IT" },
         )}
       </div>
+      <div>
+        {round.id !== "final" && (
+          <Link
+            href={`/admin/edition/${round.editionId}/email/${round.id}`}
+            className="link link-info">
+            Gestisci email password
+          </Link>
+        )}
+      </div>
       <div className="flex flex-wrap justify-center gap-2">
         <Button onClick={() => downloadCredentials(false)} className="btn-info btn-sm">
           Scarica regular.yaml
@@ -157,16 +129,6 @@ function TableRow({
         {round.id !== "final" && (
           <Button onClick={() => downloadCredentials(true)} className="btn-info btn-sm">
             Scarica debutant.yaml
-          </Button>
-        )}
-        {round.id !== "final" && (
-          <Button
-            onClick={() => {
-              setSelectedRound(round);
-              sendEmailModalRef.current?.showModal();
-            }}
-            className="btn-primary btn-sm">
-            Manda email password
           </Button>
         )}
         {round.id === "final" && (
