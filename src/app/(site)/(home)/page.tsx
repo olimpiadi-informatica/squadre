@@ -10,7 +10,6 @@ export default async function Page() {
 
   const years = schedule.year;
   const rounds = schedule.rounds;
-  const final = schedule.final;
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -66,7 +65,7 @@ export default async function Page() {
       </Card>
       <Card className="col-span-full">
         <CardBody title="Schedule">
-          <Schedule rounds={rounds} final={final} />
+          <Schedule rounds={rounds} />
         </CardBody>
       </Card>
     </div>

@@ -23,8 +23,7 @@ export async function deleteEdition(id: string): Promise<void> {
 
 export type ScheduleEdition = {
   year: string;
-  rounds: Date[];
-  final: Date;
+  rounds: { id: string; name: string; startsAt: Date }[];
 };
 
 export const getLatestSchedule = cache(async (): Promise<ScheduleEdition> => {
@@ -36,14 +35,19 @@ export const getLatestSchedule = cache(async (): Promise<ScheduleEdition> => {
     .limit(1);
   if (!latestEdition) throw new Error("No edition found");
 
-  const roundsData = await db.select().from(round).where(eq(round.editionId, latestEdition.id));
-  const order = ["1", "2", "3", "4", "final"];
-  roundsData.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  const rounds = await db
+    .select({
+      id: round.id,
+      name: round.title,
+      startsAt: round.startsAt,
+    })
+    .from(round)
+    .where(eq(round.editionId, latestEdition.id))
+    .orderBy(round.startsAt, round.id);
 
   return {
     year: latestEdition.year,
-    rounds: roundsData.filter((r) => r.id !== "final").map((r) => r.startsAt),
-    final: roundsData.find((r) => r.id === "final")?.startsAt || new Date(0),
+    rounds,
   };
 });
 
@@ -79,10 +83,18 @@ export const getEditionStats = cache(async (id?: string): Promise<EditionStats> 
       totalPoints: coalesce(sum(taskScore.score), 0),
     })
     .from(team)
-    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
     .leftJoin(
       taskScore,
       and(eq(team.editionId, taskScore.editionId), eq(team.id, taskScore.teamId)),
+    )
+    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
+    .innerJoin(
+      task,
+      and(eq(taskScore.taskName, task.name), eq(taskScore.editionId, task.editionId)),
+    )
+    .innerJoin(
+      round,
+      and(eq(task.roundId, round.id), eq(task.editionId, round.editionId), eq(round.public, true)),
     )
     .where(and(eq(team.editionId, id ?? "").if(id), eq(team.junior, false)));
   return result;
