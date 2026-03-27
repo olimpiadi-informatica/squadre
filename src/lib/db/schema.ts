@@ -9,6 +9,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const region = pgTable("region", {
@@ -196,6 +197,34 @@ export const highlight = pgTable(
     description: text().notNull(),
   },
   (table) => [index("idx_highlight_page_id").on(table.page, table.id)],
+);
+
+export const roundEmail = pgTable(
+  "round_email",
+  {
+    id: bigserial({ mode: "number" }).primaryKey(),
+    instituteId: text("institute_id")
+      .notNull()
+      .references(() => institute.id),
+    editionId: text("edition_id")
+      .notNull()
+      .references(() => edition.id),
+    roundId: text("round_id").notNull(),
+    address: text(),
+    status: text().notNull().default("not-sent").$type<"sending" | "sent" | "sending-failed">(),
+  },
+  (table) => [
+    uniqueIndex("round_email_institute_id_edition_id_round_id_unique").on(
+      table.instituteId,
+      table.editionId,
+      table.roundId,
+    ),
+    foreignKey({
+      columns: [table.roundId, table.editionId],
+      foreignColumns: [round.id, round.editionId],
+      name: "round_email_round_id_edition_id_round_id_edition_id_fk",
+    }),
+  ],
 );
 
 // ─── Better Auth tables ───────────────────────────────────────────────────────

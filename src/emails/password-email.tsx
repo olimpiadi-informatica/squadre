@@ -12,24 +12,19 @@ import {
   Text,
 } from "@react-email/components";
 
-export interface TeamData {
-  teamName: string;
-  isDebutant: boolean;
-  username: string;
-  password: string;
-}
+import type { TeamCredential } from "~/lib/team";
 
 export interface PasswordEmailProps {
-  referentName: string;
-  tourName: string;
+  coach: string;
+  roundName: string;
   editionName: string;
-  teams: TeamData[];
-  startTime?: string;
+  teams: TeamCredential[];
+  startTime: string;
 }
 
 export default function PasswordEmail({
-  referentName,
-  tourName,
+  coach,
+  roundName,
   editionName,
   teams,
   startTime,
@@ -39,12 +34,12 @@ export default function PasswordEmail({
       <Head />
       <Body style={main}>
         <Container style={container}>
-          <Text style={paragraph}>Gentile {referentName},</Text>
+          <Text style={paragraph}>Gentile {coach},</Text>
           <Text style={paragraph}>
             le comunichiamo le password delle squadre per le quali lei è referente.
           </Text>
           <Text style={paragraph}>
-            Tali password sono valide esclusivamente per la {tourName} delle Olimpiadi di
+            Tali password sono valide esclusivamente per la {roundName} delle Olimpiadi di
             Informatica a Squadre, edizione {editionName}.
           </Text>
           <Text style={paragraph}>
@@ -63,11 +58,11 @@ export default function PasswordEmail({
             {teams.map((team, idx) => (
               <Row key={idx}>
                 <Column style={tableCell}>
-                  <code>{team.teamName}</code>
-                  {team.isDebutant && " (Esordienti)"}
+                  <code>{team.name}</code>
+                  {team.junior && " (Esordienti)"}
                 </Column>
                 <Column style={tableCell}>
-                  <code>{team.username}</code>
+                  <code>{team.teamId}</code>
                 </Column>
                 <Column style={tableCell}>
                   <code>{team.password}</code>
