@@ -219,11 +219,15 @@ export const listEditionTeams = cache((editionId: string): Promise<TeamResultIte
 });
 
 export type TeamCredential = {
+  teamId: string;
   name: string;
+  junior: boolean;
+  coach: string;
+  instituteId: string;
   instituteName: string;
   instituteCity: string;
+  instituteEmail: string | null;
   regionId: string;
-  teamId: string;
   password: string;
   delay: number;
 };
@@ -231,15 +235,20 @@ export type TeamCredential = {
 export const listRoundTeamsCredentials = (
   editionId: string,
   roundId: string,
-  junior: boolean,
+  junior?: boolean,
+  instituteId?: string,
 ): Promise<TeamCredential[]> => {
   return db
     .select({
+      teamId: team.id,
       name: team.name,
+      junior: team.junior,
+      coach: team.coach,
+      instituteId: institute.id,
       instituteName: institute.name,
       instituteCity: institute.city,
+      instituteEmail: institute.email,
       regionId: region.id,
-      teamId: team.id,
       password: teamRound.password,
       delay: teamRound.delay,
     })
@@ -251,7 +260,8 @@ export const listRoundTeamsCredentials = (
       and(
         eq(teamRound.editionId, editionId),
         eq(teamRound.roundId, roundId),
-        eq(team.junior, junior),
+        eq(team.junior, junior ?? false).if(junior != null),
+        eq(team.instId, instituteId ?? "").if(instituteId),
         eq(team.finalist, true).if(roundId === "final"),
       ),
     )

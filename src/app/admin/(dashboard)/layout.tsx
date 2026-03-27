@@ -10,7 +10,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   return (
     <>
       <AdminNavbar name={session.user.name} />
-      <div className="mx-auto flex w-full max-w-screen-xl grow flex-col p-4 pb-8 isolate">{children}</div>
+      <div className="mx-auto flex w-full max-w-screen-xl grow flex-col p-4 pb-8 isolate">
+        {children}
+      </div>
     </>
   );
 }

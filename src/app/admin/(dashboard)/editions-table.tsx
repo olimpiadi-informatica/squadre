@@ -127,7 +127,7 @@ function TableRow({
   return (
     <>
       <div>
-        <Link href={`/admin/edition/${edition.id}` as any} className="link link-primary">
+        <Link href={`/admin/edition/${edition.id}`} className="link link-primary">
           {edition.name}
         </Link>
       </div>
