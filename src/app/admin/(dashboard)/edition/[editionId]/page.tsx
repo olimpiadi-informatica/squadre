@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { verifyAdmin } from "~/lib/admin";
+import { getEditionAdmin } from "~/lib/edition";
 import { listRoundsAdmin } from "~/lib/round";
 
 import { AdminRoundsTable } from "./rounds-table";
@@ -13,6 +15,9 @@ export default async function AdminEditionPage({ params }: Props) {
   await verifyAdmin();
 
   const { editionId } = await params;
+  const edition = await getEditionAdmin(editionId);
+  if (!edition) notFound();
+
   const rounds = await listRoundsAdmin(editionId);
 
   return (
@@ -25,7 +30,7 @@ export default async function AdminEditionPage({ params }: Props) {
           <li>{editionId}</li>
         </ul>
       </div>
-      <h1 className="text-3xl font-bold mb-2">Edizione: {editionId}</h1>
+      <h1 className="text-3xl font-bold mb-2">{edition.name}</h1>
       <div className="w-full">
         <AdminRoundsTable rounds={rounds} />
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, use, useCallback } from "react";
+import { type CSSProperties, createContext, use, useCallback, useMemo } from "react";
 
 import { Check } from "lucide-react";
 
@@ -12,9 +12,14 @@ import type { RoundItem } from "~/lib/round";
 import type { RoundScoreItem } from "~/lib/score";
 import type { TeamResultItem } from "~/lib/team";
 
-const EditionContext = createContext<{ rounds: RoundItem[]; scores: RoundScoreItem[] }>({
-  rounds: [],
-  scores: [],
+const EditionContext = createContext<{
+  finalRound: RoundItem | undefined;
+  nonFinalRounds: RoundItem[];
+  scores: Record<string, RoundScoreItem[]>;
+}>({
+  finalRound: undefined,
+  nonFinalRounds: [],
+  scores: {},
 });
 
 export function EditionTable({
@@ -24,8 +29,11 @@ export function EditionTable({
 }: {
   teams: TeamResultItem[];
   rounds: RoundItem[];
-  scores: RoundScoreItem[];
+  scores: Record<string, RoundScoreItem[]>;
 }) {
+  const finalRound = useMemo(() => rounds.find((r) => r.id === "final"), [rounds]);
+  const nonFinalRounds = useMemo(() => rounds.filter((r) => r.id !== "final"), [rounds]);
+
   const itemMatch = useCallback((search: string, team: TeamResultItem) => {
     return (
       team.name.toLowerCase().includes(search) ||
@@ -35,22 +43,22 @@ export function EditionTable({
   }, []);
 
   return (
-    <EditionContext.Provider value={{ rounds, scores }}>
-      <Table
-        data={teams}
-        itemMatch={itemMatch}
-        header={TableHeaders}
-        row={TableRow}
-        className="grid-cols-[auto_auto_1fr_1fr_3rem_3rem_4rem_4rem_4rem_4rem_4.5rem]"
-      />
+    <EditionContext.Provider value={{ finalRound, nonFinalRounds, scores }}>
+      <div className="w-full" style={{ "--cols": rounds.length - 1 } as CSSProperties}>
+        <Table
+          data={teams}
+          itemMatch={itemMatch}
+          header={TableHeaders}
+          row={TableRow}
+          className="grid-cols-[auto_auto_1fr_1fr_3rem_3rem_repeat(var(--cols),4rem)_4.5rem]"
+        />
+      </div>
     </EditionContext.Provider>
   );
 }
 
 function TableHeaders() {
-  const { rounds } = use(EditionContext)!;
-
-  const allRoundNames = ["Final", "Round 1", "Round 2", "Round 3", "Round 4"];
+  const { finalRound, nonFinalRounds } = use(EditionContext)!;
 
   return (
     <>
@@ -60,26 +68,27 @@ function TableHeaders() {
       <div>Institute</div>
       <div>Region</div>
       <div>Total</div>
-      {allRoundNames.map((roundName) => {
-        const round = rounds.find((round) => round.name === roundName);
-        return (
-          <div key={roundName}>
-            {round ? (
-              <Link href={`/edition/${round.editionId}/round/${round.id}`} className="link">
-                {roundName}
-              </Link>
-            ) : (
-              <span>{roundName}</span>
-            )}
-          </div>
-        );
-      })}
+      {[finalRound, ...nonFinalRounds]
+        .filter((r) => r != null)
+        .map((round) => {
+          return (
+            <div key={round.id}>
+              {round.public ? (
+                <Link href={`/edition/${round.editionId}/round/${round.id}`} className="link">
+                  {round.name}
+                </Link>
+              ) : (
+                <span>{round.name}</span>
+              )}
+            </div>
+          );
+        })}
     </>
   );
 }
 
 function TableRow({ item: team }: { item: TeamResultItem }) {
-  const { rounds, scores } = use(EditionContext)!;
+  const { finalRound, nonFinalRounds } = use(EditionContext)!;
 
   return (
     <>
@@ -101,23 +110,28 @@ function TableRow({ item: team }: { item: TeamResultItem }) {
         </Link>
       </div>
       <div>{team.points}</div>
-      <div>{team.finalist && <Check className="inline-block stroke-success" />}</div>
-      {rounds
-        .filter((round) => round.id !== "final")
-        .map((round) => {
-          const score = scores.find(
-            (score) => score.teamId === team.id && score.roundId === round.id,
-          );
-          return (
-            <div key={round.id}>
-              <Score
-                score={score?.totalPoints ?? 0}
-                maxScore={round.maxScore}
-                className="px-2 text-center"
-              />
-            </div>
-          );
-        })}
+      {finalRound && (
+        <div>{team.finalist && <Check className="inline-block stroke-success" />}</div>
+      )}
+      {nonFinalRounds.map((round) => (
+        <RoundScore key={round.id} round={round} teamId={team.id} />
+      ))}
     </>
+  );
+}
+
+function RoundScore({ round, teamId }: { round: RoundItem; teamId: string }) {
+  const { scores } = use(EditionContext)!;
+  const score = scores[teamId]?.find((score) => score.roundId === round.id);
+  return (
+    <div>
+      {round.public && (
+        <Score
+          score={score?.totalPoints ?? 0}
+          maxScore={round.maxScore}
+          className="px-2 text-center"
+        />
+      )}
+    </div>
   );
 }

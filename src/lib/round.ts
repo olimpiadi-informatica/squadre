@@ -52,7 +52,7 @@ export const listRoundsAdmin = cache((editionId: string): Promise<RoundAdminItem
     })
     .from(round)
     .where(eq(round.editionId, editionId))
-    .orderBy(round.startsAt);
+    .orderBy(round.startsAt, round.id);
 });
 
 export type Round = {
@@ -124,18 +124,20 @@ export type RoundItem = {
   name: string;
   editionId: string;
   maxScore: number;
+  public: boolean;
 };
 
-export const listRounds = cache((editionId?: string): Promise<RoundItem[]> => {
+export const listAllRounds = cache((editionId?: string): Promise<RoundItem[]> => {
   return db
     .select({
       id: round.id,
       name: round.title,
       editionId: round.editionId,
       maxScore: round.fullscore,
+      public: round.public,
     })
     .from(round)
     .innerJoin(edition, and(eq(round.editionId, edition.id), eq(edition.public, true)))
-    .where(and(eq(round.editionId, editionId ?? "").if(editionId), eq(round.public, true)))
+    .where(eq(round.editionId, editionId ?? ""))
     .orderBy(round.title);
 });

@@ -3,10 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Card, CardBody } from "@olinfo/react-components";
+import { groupBy } from "lodash";
 
 import { Highlights } from "~/components/highlights";
 import { getEdition, getEditionStats } from "~/lib/edition";
-import { listRounds } from "~/lib/round";
+import { listAllRounds } from "~/lib/round";
 import { listRoundScores } from "~/lib/score";
 import { listEditionTeams, listRoundTeams } from "~/lib/team";
 
@@ -34,8 +35,8 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]">
   const topFinalist = await listRoundTeams(editionId, "final", 3);
 
   const teams = await listEditionTeams(editionId);
-  const rounds = await listRounds(editionId);
-  const scores = await listRoundScores(editionId);
+  const rounds = await listAllRounds(editionId);
+  const scores = groupBy(await listRoundScores(editionId), "teamId");
 
   return (
     <div className="flex flex-col gap-4">
