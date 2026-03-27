@@ -1,13 +1,12 @@
 import clsx from "clsx";
 import { intlFormat, isPast } from "date-fns";
 
-export function Schedule({ rounds, final }: { rounds: Date[]; final: Date }) {
+export function Schedule({ rounds }: { rounds: { id: string; name: string; startsAt: Date }[] }) {
   return (
     <ul className="steps steps-vertical">
-      {rounds.map((date, index) => (
-        <ScheduleItem key={index} round={`Round ${index + 1}`} date={date} />
+      {rounds.map(({ id, name, startsAt }) => (
+        <ScheduleItem key={id} round={name} date={startsAt} hideTime={id === "final"} />
       ))}
-      <ScheduleItem round="Final round" date={final} hideTime />
     </ul>
   );
 }
