@@ -9,7 +9,6 @@ import YAML from "yaml";
 
 import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
-import { sendPasswordEmails } from "~/lib/email";
 import { createCredentialsPdf } from "~/lib/foglietti";
 import { listRegions } from "~/lib/region";
 import { getRoundAdmin, updateRoundVisibility } from "~/lib/round";
@@ -79,7 +78,7 @@ export async function getRoundCredentials(
 export async function getFogliettiPdf(editionId: string, roundId: string) {
   await verifyAdmin();
 
-  const teamCredentials = await listRoundTeamsCredentials(editionId, roundId, false);
+  const teamCredentials = await listRoundTeamsCredentials(editionId, roundId);
   const credentials = teamCredentials.map((t) => ({
     teamName: truncate(t.name, { length: 36 }),
     school: truncate(`${t.instituteName}, ${t.instituteCity}`, { length: 64 }),
@@ -87,17 +86,4 @@ export async function getFogliettiPdf(editionId: string, roundId: string) {
     password: t.password,
   }));
   return createCredentialsPdf(credentials);
-}
-
-export async function sendRoundEmails(editionId: string, roundId: string) {
-  await verifyAdmin();
-
-  const [edition, round] = await Promise.all([
-    getEditionAdmin(editionId),
-    getRoundAdmin(editionId, roundId),
-  ]);
-  if (!edition) throw new Error(`Edition ${editionId} not found`);
-  if (!round) throw new Error(`Round ${roundId} not found`);
-
-  return sendPasswordEmails(edition, round);
 }
