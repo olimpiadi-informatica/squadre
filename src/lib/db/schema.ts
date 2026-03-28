@@ -32,7 +32,7 @@ export const round = pgTable("round", {
   slug: text().notNull(),
   editionId: text("edition_id")
     .notNull()
-    .references(() => edition.id),
+    .references(() => edition.id, { onDelete: "cascade" }),
   title: text().notNull(),
   fullscore: integer().notNull(),
   public: boolean().notNull().default(true),
@@ -44,7 +44,7 @@ export const task = pgTable("task", {
   slug: text().notNull(),
   roundId: integer("round_id")
     .notNull()
-    .references(() => round.id),
+    .references(() => round.id, { onDelete: "cascade" }),
   title: text().notNull(),
   statement: text().notNull(),
 });
@@ -64,7 +64,7 @@ export const team = pgTable("team", {
   slug: text().notNull(),
   editionId: text("edition_id")
     .notNull()
-    .references(() => edition.id),
+    .references(() => edition.id, { onDelete: "cascade" }),
   name: text().notNull(),
   instituteId: text("inst_id")
     .notNull()
@@ -80,10 +80,10 @@ export const teamRound = pgTable(
     id: serial().primaryKey(),
     roundId: integer("round_id")
       .notNull()
-      .references(() => round.id),
+      .references(() => round.id, { onDelete: "cascade" }),
     teamId: integer("team_id")
       .notNull()
-      .references(() => team.id),
+      .references(() => team.id, { onDelete: "cascade" }),
     password: text().notNull().default(""),
     delay: integer().notNull().default(0),
   },
@@ -96,10 +96,10 @@ export const teamTaskScore = pgTable(
     id: serial().primaryKey(),
     taskId: integer("task_id")
       .notNull()
-      .references(() => task.id),
+      .references(() => task.id, { onDelete: "cascade" }),
     teamId: integer("team_id")
       .notNull()
-      .references(() => team.id),
+      .references(() => team.id, { onDelete: "cascade" }),
     score: integer().notNull(),
   },
   (table) => [uniqueIndex("task_score_task_id_team_id_unique").on(table.taskId, table.teamId)],
@@ -126,7 +126,7 @@ export const instituteEmail = pgTable(
       .references(() => institute.id),
     roundId: integer("round_id")
       .notNull()
-      .references(() => round.id),
+      .references(() => round.id, { onDelete: "cascade" }),
     address: text(),
     status: text().notNull().$type<"sending" | "sent" | "sending-failed">(),
   },

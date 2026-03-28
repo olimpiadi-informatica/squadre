@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { type RefObject, useCallback, useRef, useState } from "react";
 
-import { Button, Modal } from "@olinfo/react-components";
+import { Button, Form, FormButton, Modal, SubmitButton, TextField } from "@olinfo/react-components";
 
 import { Table } from "~/components/table";
 import type { EditionAdminItem } from "~/lib/edition";
@@ -33,9 +33,11 @@ export function AdminEditionsTable({ editions }: { editions: EditionAdminItem[] 
     makePrivateModalRef.current?.close();
   }
 
-  async function confirmDelete() {
-    await deleteEditionAction(selectedEdition!.id);
-    deleteModalRef.current?.close();
+  async function confirmDelete({ deleteConfirmation }: { deleteConfirmation: string }) {
+    if (deleteConfirmation === "Elimina") {
+      await deleteEditionAction(selectedEdition!.id);
+      deleteModalRef.current?.close();
+    }
   }
 
   return (
@@ -84,18 +86,27 @@ export function AdminEditionsTable({ editions }: { editions: EditionAdminItem[] 
         </div>
       </Modal>
       <Modal ref={deleteModalRef} title="Elimina edizione">
-        <p>{`Sei sicuro di voler eliminare l'edizione "${selectedEdition?.name}"? L'operazione è irreversibile.`}</p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <button
-            className="btn btn-info"
-            onClick={() => deleteModalRef.current?.close()}
-            type="button">
-            Annulla
-          </button>
-          <Button onClick={confirmDelete} className="btn-error">
-            Elimina
-          </Button>
-        </div>
+        <Form key={selectedEdition?.id} onSubmit={confirmDelete}>
+          <p>
+            Sei sicuro di voler eliminare l'edizione "{selectedEdition?.name}"? L'operazione è
+            irreversibile.
+          </p>
+          <TextField
+            field="deleteConfirmation"
+            label="Digita Elimina per confermare:"
+            placeholder="Digita 'Elimina'"
+          />
+          {({ deleteConfirmation }) => (
+            <div className="flex flex-wrap justify-center gap-2">
+              <FormButton className="btn btn-info" onClick={() => deleteModalRef.current?.close()}>
+                Annulla
+              </FormButton>
+              <SubmitButton className="btn-error" disabled={deleteConfirmation !== "Elimina"}>
+                Elimina
+              </SubmitButton>
+            </div>
+          )}
+        </Form>
       </Modal>
     </>
   );
