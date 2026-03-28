@@ -6,7 +6,7 @@ import type { CSSProperties } from "react";
 import { Card, CardBody } from "@olinfo/react-components";
 
 import { Highlights } from "~/components/highlights";
-import { getRound, getRoundStats } from "~/lib/round";
+import { getRound } from "~/lib/round";
 import { listScores } from "~/lib/score";
 import { listTasks } from "~/lib/task";
 import { listRoundTeams } from "~/lib/team";
@@ -31,7 +31,6 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]/r
 
   const round = await getRound(editionId, roundId);
   if (!round) notFound();
-  const stats = await getRoundStats(editionId, roundId);
 
   const tasks = await listTasks(editionId, roundId);
   const teams = await listRoundTeams(editionId, roundId);
@@ -57,9 +56,9 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]/r
         <Card>
           <CardBody title={round.name}>
             <p>
-              {stats.teamScored} teams scored {stats.totalScores} points on {tasks.length} tasks,
-              for an average score of {Math.round(stats.avgScore)} and a median score of{" "}
-              {Math.round(stats.medianScore)}.
+              {round.teamScored} teams scored {round.totalScores} points on {tasks.length} tasks,
+              for an average score of {Math.round(round.avgScore)} and a median score of{" "}
+              {Math.round(round.medianScore)}.
             </p>
           </CardBody>
         </Card>

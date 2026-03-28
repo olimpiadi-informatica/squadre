@@ -6,7 +6,7 @@ import nodemailer from "nodemailer";
 import { listRoundTeamsCredentials } from "~/lib/team";
 
 import { db } from "./db";
-import { institute, roundEmail, team, teamRound } from "./db/schema";
+import { institute, instituteEmail, round, team } from "./db/schema";
 import type { EditionAdminItem } from "./edition";
 import { renderPasswordEmail } from "./email-template";
 import type { RoundAdminItem } from "./round";
@@ -20,29 +20,33 @@ export type RoundEmail = {
   status: RoundEmailStatus;
 };
 
-export function listRoundEmailStatuses(editionId: string, roundId: string): Promise<RoundEmail[]> {
+export function listRoundEmailStatuses(
+  editionId: string,
+  roundSlug: string,
+): Promise<RoundEmail[]> {
   return db
-    .selectDistinct({
+    .select({
       instituteId: institute.id,
       instituteName: institute.name,
-      address: sql<string | null>`COALESCE(${roundEmail.address}, ${institute.email})`,
-      status: sql<RoundEmailStatus>`COALESCE(${roundEmail.status}, 'not-sent')`,
+      address: sql<string | null>`COALESCE(${instituteEmail.address}, ${institute.email})`,
+      status: sql<RoundEmailStatus>`COALESCE(${instituteEmail.status}, 'not-sent')`,
     })
     .from(institute)
+    .crossJoin(round)
     .leftJoin(
-      roundEmail,
-      and(
-        eq(roundEmail.instituteId, institute.id),
-        eq(roundEmail.editionId, editionId),
-        eq(roundEmail.roundId, roundId),
-      ),
+      instituteEmail,
+      and(eq(instituteEmail.instituteId, institute.id), eq(instituteEmail.roundId, round.id)),
     )
     .where(
       and(
-        eq(institute.id, team.instId),
-        eq(team.editionId, editionId),
-        eq(teamRound.roundId, roundId),
-        exists(db.select().from(team).where(eq(team.instId, institute.id))),
+        exists(
+          db
+            .select({ id: team.id })
+            .from(team)
+            .where(and(eq(team.instituteId, institute.id), eq(team.editionId, round.editionId))),
+        ),
+        eq(round.editionId, editionId),
+        eq(round.slug, roundSlug),
       ),
     );
 }
@@ -66,22 +70,21 @@ export async function sendInstituteEmail(
   round: RoundAdminItem,
   instituteId: string,
 ) {
-  const teamsData = await listRoundTeamsCredentials(edition.id, round.id, undefined, instituteId);
+  const teamsData = await listRoundTeamsCredentials(edition.id, round.slug, undefined, instituteId);
   if (teamsData.length === 0) throw new Error(`No teams found for institute ${instituteId}`);
 
   const address = teamsData[0].instituteEmail;
   if (!address) throw new Error(`Institute ${instituteId} has no email address`);
 
   const [email] = await db
-    .insert(roundEmail)
+    .insert(instituteEmail)
     .values({
       instituteId,
-      editionId: edition.id,
       roundId: round.id,
       address,
       status: "sending",
     })
-    .returning();
+    .returning({ id: instituteEmail.id });
 
   try {
     const coach = teamsData[0].coach;
@@ -99,12 +102,12 @@ export async function sendInstituteEmail(
       html,
     });
 
-    await db.update(roundEmail).set({ status: "sent" }).where(eq(roundEmail.id, email.id));
+    await db.update(instituteEmail).set({ status: "sent" }).where(eq(instituteEmail.id, email.id));
   } catch (err) {
     console.error(err);
     await db
-      .update(roundEmail)
+      .update(instituteEmail)
       .set({ status: "sending-failed" })
-      .where(eq(roundEmail.id, email.id));
+      .where(eq(instituteEmail.id, email.id));
   }
 }

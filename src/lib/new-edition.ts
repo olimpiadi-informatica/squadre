@@ -1,9 +1,10 @@
 import { sql } from "drizzle-orm";
 import { random } from "lodash";
 
-import { db } from "~/lib/db";
-import { edition, institute, round, team, teamRound } from "~/lib/db/schema";
 import { generateWord } from "~/lib/password";
+
+import { db } from "./db";
+import { edition, institute, round, team, teamRound } from "./db/schema";
 
 export type EditionData = {
   id: string;
@@ -29,48 +30,51 @@ export async function createNewEdition(
   await db.transaction(async (tx) => {
     await tx.insert(edition).values({ id, year, title, public: false });
 
-    await tx.insert(round).values([
-      {
-        id: "1",
-        editionId: id,
-        title: "Round 1",
-        fullscore: 0,
-        public: false,
-        startsAt: round1Date,
-      },
-      {
-        id: "2",
-        editionId: id,
-        title: "Round 2",
-        fullscore: 0,
-        public: false,
-        startsAt: round2Date,
-      },
-      {
-        id: "3",
-        editionId: id,
-        title: "Round 3",
-        fullscore: 0,
-        public: false,
-        startsAt: round3Date,
-      },
-      {
-        id: "4",
-        editionId: id,
-        title: "Round 4",
-        fullscore: 0,
-        public: false,
-        startsAt: round4Date,
-      },
-      {
-        id: "final",
-        editionId: id,
-        title: "Final",
-        fullscore: 0,
-        public: false,
-        startsAt: roundFinalDate,
-      },
-    ]);
+    const roundRows = await tx
+      .insert(round)
+      .values([
+        {
+          slug: "1",
+          editionId: id,
+          title: "Round 1",
+          fullscore: 0,
+          public: false,
+          startsAt: round1Date,
+        },
+        {
+          slug: "2",
+          editionId: id,
+          title: "Round 2",
+          fullscore: 0,
+          public: false,
+          startsAt: round2Date,
+        },
+        {
+          slug: "3",
+          editionId: id,
+          title: "Round 3",
+          fullscore: 0,
+          public: false,
+          startsAt: round3Date,
+        },
+        {
+          slug: "4",
+          editionId: id,
+          title: "Round 4",
+          fullscore: 0,
+          public: false,
+          startsAt: round4Date,
+        },
+        {
+          slug: "final",
+          editionId: id,
+          title: "Final",
+          fullscore: 0,
+          public: false,
+          startsAt: roundFinalDate,
+        },
+      ])
+      .returning({ id: round.id, slug: round.slug });
 
     if (institutes.length > 0) {
       await tx
@@ -88,25 +92,26 @@ export async function createNewEdition(
     }
 
     if (teams.length > 0) {
-      await tx.insert(team).values(teams);
+      const teamRows = await tx
+        .insert(team)
+        .values(teams)
+        .returning({ id: team.id, instituteId: team.instituteId });
 
-      const delays = Object.fromEntries(teams.map((t) => [t.instId, random(0, 600)]));
+      const delays = Object.fromEntries(teams.map((t) => [t.instituteId, random(0, 600)]));
 
-      const roundIds = ["1", "2", "3", "4", "final"];
-      const teamRoundRows = teams.flatMap((t) =>
-        roundIds.map((roundId) => ({
-          roundId,
-          editionId: id,
-          teamId: t.id,
-          score: 0,
-          rankTot: 0,
-          rankReg: 0,
-          password: generateWord(),
-          delay: roundId.length === 1 ? delays[t.instId]! : 0,
-        })),
+      await tx.insert(teamRound).values(
+        teamRows.flatMap((t) =>
+          roundRows.map(
+            (round) =>
+              ({
+                roundId: round.id,
+                teamId: t.id,
+                password: generateWord(),
+                delay: round.slug.length === 1 ? delays[t.instituteId]! : 0,
+              }) satisfies typeof teamRound.$inferInsert,
+          ),
+        ),
       );
-
-      await tx.insert(teamRound).values(teamRoundRows);
     }
   });
 }

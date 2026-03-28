@@ -1,16 +1,19 @@
-import { sql } from "drizzle-orm";
+import { and, avg, countDistinct, eq, gt, max, min, ne, or, sql, sum } from "drizzle-orm";
 import {
-  bigserial,
   boolean,
-  foreignKey,
   index,
   integer,
+  pgMaterializedView,
   pgTable,
-  primaryKey,
+  serial,
   text,
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+
+import { coalesce, median } from "./utils";
+
+// ─── Tables ───────────────────────────────────────────────────────────────────
 
 export const region = pgTable("region", {
   id: text().primaryKey().notNull(),
@@ -24,173 +27,88 @@ export const edition = pgTable("edition", {
   public: boolean().notNull().default(true),
 });
 
-export const round = pgTable(
-  "round",
-  {
-    id: text().notNull(),
-    editionId: text("edition_id")
-      .notNull()
-      .references(() => edition.id),
-    title: text().notNull(),
-    fullscore: integer().notNull(),
-    public: boolean().notNull().default(true),
-    startsAt: timestamp("starts_at").notNull().default(sql`'1970-01-01 00:00:00'`),
-  },
-  (table) => [
-    index("idx_round_edition_title_id").on(table.editionId, table.title, table.id),
-    primaryKey({ columns: [table.id, table.editionId], name: "round_id_edition_id_pk" }),
-  ],
-);
+export const round = pgTable("round", {
+  id: serial().primaryKey(),
+  slug: text().notNull(),
+  editionId: text("edition_id")
+    .notNull()
+    .references(() => edition.id),
+  title: text().notNull(),
+  fullscore: integer().notNull(),
+  public: boolean().notNull().default(true),
+  startsAt: timestamp("starts_at").notNull().default(sql`'1970-01-01 00:00:00'`),
+});
 
-export const task = pgTable(
-  "task",
-  {
-    name: text().primaryKey().notNull(),
-    editionId: text("edition_id")
-      .notNull()
-      .references(() => edition.id),
-    roundId: text("round_id").notNull(),
-    title: text().notNull(),
-    statement: text().notNull(),
-  },
-  (table) => [
-    index("idx_task_edition_round_id_name").on(table.editionId, table.roundId, table.name),
-    foreignKey({
-      columns: [table.roundId, table.editionId],
-      foreignColumns: [round.id, round.editionId],
-      name: "task_round_id_edition_id_round_id_edition_id_fk",
-    }),
-  ],
-);
+export const task = pgTable("task", {
+  id: serial().primaryKey(),
+  slug: text().notNull(),
+  roundId: integer("round_id")
+    .notNull()
+    .references(() => round.id),
+  title: text().notNull(),
+  statement: text().notNull(),
+});
 
-export const institute = pgTable(
-  "institute",
-  {
-    id: text().primaryKey().notNull(),
-    name: text().notNull(),
-    city: text().notNull(),
-    region: text()
-      .notNull()
-      .references(() => region.id),
-    email: text(),
-  },
-  (table) => [
-    index("idx_institute_region_city_name_id").on(table.region, table.city, table.name, table.id),
-    index("idx_institute_name").on(table.name),
-  ],
-);
+export const institute = pgTable("institute", {
+  id: text().primaryKey().notNull(),
+  name: text().notNull(),
+  city: text().notNull(),
+  region: text()
+    .notNull()
+    .references(() => region.id),
+  email: text(),
+});
 
-export const team = pgTable(
-  "team",
-  {
-    id: text().notNull(),
-    editionId: text("edition_id")
-      .notNull()
-      .references(() => edition.id),
-    name: text().notNull(),
-    instId: text("inst_id")
-      .notNull()
-      .references(() => institute.id),
-    coach: text().notNull(),
-    junior: boolean().notNull().default(false),
-    finalist: boolean(),
-    rankReg: integer("rank_reg").notNull(),
-    rankTot: integer("rank_tot").notNull(),
-    points: integer().notNull(),
-  },
-  (table) => [
-    index("idx_team_inst_id_points_edition_id_id").on(
-      table.instId,
-      table.points,
-      table.editionId,
-      table.id,
-    ),
-    index("idx_team_edition_rank_tot_id_name_points").on(
-      table.editionId,
-      table.rankTot,
-      table.id,
-      table.name,
-      table.points,
-    ),
-    index("idx_team_edition_name").on(table.editionId, table.name),
-    index("idx_team_edition_id").on(table.editionId, table.id),
-    primaryKey({ columns: [table.id, table.editionId], name: "team_id_edition_id_pk" }),
-  ],
-);
+export const team = pgTable("team", {
+  id: serial().primaryKey(),
+  slug: text().notNull(),
+  editionId: text("edition_id")
+    .notNull()
+    .references(() => edition.id),
+  name: text().notNull(),
+  instituteId: text("inst_id")
+    .notNull()
+    .references(() => institute.id),
+  coach: text().notNull(),
+  junior: boolean().notNull().default(false),
+  finalist: boolean(),
+});
 
 export const teamRound = pgTable(
   "team_round",
   {
-    roundId: text("round_id").notNull(),
-    editionId: text("edition_id")
+    id: serial().primaryKey(),
+    roundId: integer("round_id")
       .notNull()
-      .references(() => edition.id),
-    teamId: text("team_id").notNull(),
-    score: integer().notNull(),
-    rankTot: integer("rank_tot").notNull(),
-    rankReg: integer("rank_reg").notNull(),
-    medal: integer(),
+      .references(() => round.id),
+    teamId: integer("team_id")
+      .notNull()
+      .references(() => team.id),
     password: text().notNull().default(""),
     delay: integer().notNull().default(0),
   },
-  (table) => [
-    index("idx_team_round_medal_team_id_edition_id").on(table.medal, table.teamId, table.editionId),
-    index("idx_team_round_edition_team_id").on(table.editionId, table.teamId),
-    index("idx_team_round_edition_round_id_rank_tot_team_id_total_score").on(
-      table.editionId,
-      table.roundId,
-      table.rankTot,
-      table.teamId,
-      table.score,
-    ),
-    foreignKey({
-      columns: [table.teamId, table.editionId],
-      foreignColumns: [team.id, team.editionId],
-      name: "team_round_team_id_edition_id_team_id_edition_id_fk",
-    }),
-    foreignKey({
-      columns: [table.roundId, table.editionId],
-      foreignColumns: [round.id, round.editionId],
-      name: "team_round_round_id_edition_id_round_id_edition_id_fk",
-    }),
-    primaryKey({
-      columns: [table.roundId, table.editionId, table.teamId],
-      name: "team_round_round_id_edition_id_team_id_pk",
-    }),
-  ],
+  (table) => [uniqueIndex("team_round_round_id_team_id_unique").on(table.roundId, table.teamId)],
 );
 
-export const taskScore = pgTable(
-  "task_score",
+export const teamTaskScore = pgTable(
+  "team_task_score",
   {
-    taskName: text("task_name")
+    id: serial().primaryKey(),
+    taskId: integer("task_id")
       .notNull()
-      .references(() => task.name),
-    editionId: text("edition_id")
+      .references(() => task.id),
+    teamId: integer("team_id")
       .notNull()
-      .references(() => edition.id),
-    teamId: text("team_id").notNull(),
+      .references(() => team.id),
     score: integer().notNull(),
   },
-  (table) => [
-    index("idx_task_score_task_name_score").on(table.taskName, table.score),
-    index("idx_task_score_edition_team_id").on(table.editionId, table.teamId),
-    foreignKey({
-      columns: [table.teamId, table.editionId],
-      foreignColumns: [team.id, team.editionId],
-      name: "task_score_team_id_edition_id_team_id_edition_id_fk",
-    }),
-    primaryKey({
-      columns: [table.taskName, table.teamId],
-      name: "task_score_task_name_team_id_pk",
-    }),
-  ],
+  (table) => [uniqueIndex("task_score_task_id_team_id_unique").on(table.taskId, table.teamId)],
 );
 
 export const highlight = pgTable(
   "highlight",
   {
-    id: bigserial({ mode: "number" }).primaryKey(),
+    id: serial().primaryKey(),
     page: text().notNull(),
     link: text().notNull(),
     name: text().notNull(),
@@ -199,31 +117,21 @@ export const highlight = pgTable(
   (table) => [index("idx_highlight_page_id").on(table.page, table.id)],
 );
 
-export const roundEmail = pgTable(
-  "round_email",
+export const instituteEmail = pgTable(
+  "institute_email",
   {
-    id: bigserial({ mode: "number" }).primaryKey(),
+    id: serial().primaryKey(),
     instituteId: text("institute_id")
       .notNull()
       .references(() => institute.id),
-    editionId: text("edition_id")
+    roundId: integer("round_id")
       .notNull()
-      .references(() => edition.id),
-    roundId: text("round_id").notNull(),
+      .references(() => round.id),
     address: text(),
-    status: text().notNull().default("not-sent").$type<"sending" | "sent" | "sending-failed">(),
+    status: text().notNull().$type<"sending" | "sent" | "sending-failed">(),
   },
   (table) => [
-    uniqueIndex("round_email_institute_id_edition_id_round_id_unique").on(
-      table.instituteId,
-      table.editionId,
-      table.roundId,
-    ),
-    foreignKey({
-      columns: [table.roundId, table.editionId],
-      foreignColumns: [round.id, round.editionId],
-      name: "round_email_round_id_edition_id_round_id_edition_id_fk",
-    }),
+    uniqueIndex("round_email_institute_id_round_id_unique").on(table.instituteId, table.roundId),
   ],
 );
 
@@ -278,3 +186,224 @@ export const verification = pgTable("verification", {
   createdAt: timestamp("created_at"),
   updatedAt: timestamp("updated_at"),
 });
+
+// ─── Materialized Views ───────────────────────────────────────────────────────
+
+export const v00a_taskStats = pgMaterializedView("v00a_task_stats").as((qb) =>
+  qb
+    .select({
+      taskId: teamTaskScore.taskId,
+      teamScored: countDistinct(teamTaskScore.teamId).as("team_scored"),
+      totalScores: coalesce(sum(teamTaskScore.score), 0).as("total_scores"),
+      maxScore: coalesce(max(teamTaskScore.score), 0).as("max_score"),
+      avgScore: coalesce(avg(teamTaskScore.score), 0).as("avg_score"),
+      medianScore: coalesce(median(teamTaskScore.score), 0).as("median_score"),
+    })
+    .from(teamTaskScore)
+    .innerJoin(team, and(eq(team.id, teamTaskScore.teamId), eq(team.junior, false)))
+    .innerJoin(task, eq(task.id, teamTaskScore.taskId))
+    .innerJoin(round, and(eq(round.id, task.roundId), eq(round.public, true)))
+    .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
+    .where(gt(teamTaskScore.score, 0))
+    .groupBy(teamTaskScore.taskId),
+);
+
+export const v01a_teamTaskScoreStats = pgMaterializedView("v01a_team_task_score_stats").as((qb) =>
+  qb
+    .select({
+      teamTaskScoreId: teamTaskScore.id,
+      rankTot:
+        sql<number>`RANK() OVER (PARTITION BY ${teamTaskScore.taskId} ORDER BY ${teamTaskScore.score} DESC)`.as(
+          "rank_tot",
+        ),
+    })
+    .from(teamTaskScore)
+    .innerJoin(team, and(eq(team.id, teamTaskScore.teamId), eq(team.junior, false)))
+    .innerJoin(task, eq(task.id, teamTaskScore.taskId))
+    .innerJoin(round, and(eq(round.id, task.roundId), eq(round.public, true)))
+    .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true))),
+);
+
+export const v02b_teamRoundStats = pgMaterializedView("v02b_team_round_stats").as((qb) =>
+  qb
+    .select({
+      teamRoundId: teamRound.id,
+      totalScores: coalesce(sum(teamTaskScore.score), 0).as("total_scores"),
+      rankTot:
+        sql<number>`RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC)`.as(
+          "rank_tot",
+        ),
+      rankReg:
+        sql<number>`RANK() OVER (PARTITION BY ${teamRound.roundId}, ${institute.region} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC)`.as(
+          "rank_reg",
+        ),
+      medal: sql<number | null>`CASE
+                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) = 0    THEN 0
+                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) < 0.05 THEN 1
+                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) < 0.15 THEN 2
+                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) < 0.30 THEN 3
+                                  ELSE null
+                                END`.as("medal"),
+    })
+    .from(team)
+    .innerJoin(edition, and(eq(edition.id, team.editionId), eq(edition.public, true)))
+    .innerJoin(
+      round,
+      and(
+        eq(round.editionId, edition.id),
+        eq(round.public, true),
+        or(team.finalist, ne(round.slug, "final")),
+      ),
+    )
+    .leftJoin(teamRound, and(eq(teamRound.teamId, team.id), eq(teamRound.roundId, round.id)))
+    .leftJoin(task, eq(task.roundId, round.id))
+    .leftJoin(
+      teamTaskScore,
+      and(eq(teamTaskScore.teamId, team.id), eq(teamTaskScore.taskId, task.id)),
+    )
+    .innerJoin(institute, eq(institute.id, team.instituteId))
+    .where(eq(team.junior, false))
+    .groupBy(teamRound.id, institute.region),
+);
+
+export const v03b_roundStats = pgMaterializedView("v03b_round_stats").as((qb) =>
+  qb
+    .select({
+      roundId: round.id,
+      teamScored: countDistinct(teamRound.teamId).as("team_scored"),
+      totalScores: coalesce(sum(v02b_teamRoundStats.totalScores), 0).as("total_scores"),
+      maxScore: coalesce(max(v02b_teamRoundStats.totalScores), 0).as("max_score"),
+      avgScore: coalesce(avg(v02b_teamRoundStats.totalScores), 0).as("avg_score"),
+      medianScore: coalesce(median(v02b_teamRoundStats.totalScores), 0).as("median_score"),
+    })
+    .from(round)
+    .innerJoin(teamRound, eq(teamRound.roundId, round.id))
+    .innerJoin(v02b_teamRoundStats, eq(v02b_teamRoundStats.teamRoundId, teamRound.id))
+    .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
+    .where(gt(v02b_teamRoundStats.totalScores, 0))
+    .groupBy(round.id),
+);
+
+export const v04a_teamStats = pgMaterializedView("v04a_team_stats").as((qb) =>
+  qb
+    .select({
+      teamId: team.id,
+      totalScores: coalesce(sum(v02b_teamRoundStats.totalScores), 0).as("total_scores"),
+      rankTot:
+        sql<number>`RANK() OVER (PARTITION BY ${team.editionId} ORDER BY ${coalesce(sum(v02b_teamRoundStats.totalScores), 0)} DESC)`.as(
+          "rank_tot",
+        ),
+      rankReg:
+        sql<number>`RANK() OVER (PARTITION BY ${team.editionId}, ${institute.region} ORDER BY ${coalesce(sum(v02b_teamRoundStats.totalScores), 0)} DESC)`.as(
+          "rank_reg",
+        ),
+      avgRoundRank: coalesce(avg(v02b_teamRoundStats.rankTot), 0).as("avg_round_rank"),
+      bestRoundRank: coalesce(min(v02b_teamRoundStats.rankTot), 0).as("best_round_rank"),
+      totalMedals: sql<Record<number, number>>`JSON_BUILD_OBJECT(
+        0, COUNT(*) FILTER (WHERE ${v02b_teamRoundStats.medal} = 0),
+        1, COUNT(*) FILTER (WHERE ${v02b_teamRoundStats.medal} = 1),
+        2, COUNT(*) FILTER (WHERE ${v02b_teamRoundStats.medal} = 2),
+        3, COUNT(*) FILTER (WHERE ${v02b_teamRoundStats.medal} = 3)
+      )`.as("total_medals"),
+    })
+    .from(team)
+    .innerJoin(edition, and(eq(edition.id, team.editionId), eq(edition.public, true)))
+    .innerJoin(
+      round,
+      and(
+        eq(round.editionId, edition.id),
+        eq(round.public, true),
+        or(eq(team.finalist, true), ne(round.slug, "final")),
+      ),
+    )
+    .leftJoin(teamRound, and(eq(teamRound.teamId, team.id), eq(teamRound.roundId, round.id)))
+    .leftJoin(v02b_teamRoundStats, eq(v02b_teamRoundStats.teamRoundId, teamRound.id))
+    .innerJoin(institute, eq(institute.id, team.instituteId))
+    .where(eq(team.junior, false))
+    .groupBy(team.id, team.editionId, institute.region),
+);
+
+export const v05a_editionStats = pgMaterializedView("v05a_edition_stats").as((qb) =>
+  qb
+    .select({
+      editionId: team.editionId,
+      totalTeams: countDistinct(team.id).as("total_teams"),
+      totalScores: coalesce(sum(v04a_teamStats.totalScores), 0).as("total_scores"),
+      highestScore: coalesce(max(v04a_teamStats.totalScores), 0).as("highest_score"),
+    })
+    .from(v04a_teamStats)
+    .innerJoin(team, eq(team.id, v04a_teamStats.teamId))
+    .innerJoin(edition, and(eq(edition.id, team.editionId), eq(edition.public, true)))
+    .groupBy(team.editionId),
+);
+
+export const v06a_editionStats2 = pgMaterializedView("v06a_edition_stats2").as((qb) =>
+  qb
+    .select({
+      editionId: round.editionId,
+      totalInstitutes: countDistinct(team.instituteId).as("total_institutes"),
+      totalTasks: countDistinct(task.id).as("total_tasks"),
+    })
+    .from(v02b_teamRoundStats)
+    .innerJoin(teamRound, eq(teamRound.id, v02b_teamRoundStats.teamRoundId))
+    .innerJoin(team, eq(team.id, teamRound.teamId))
+    .innerJoin(task, eq(task.roundId, teamRound.roundId))
+    .innerJoin(round, and(eq(round.id, teamRound.roundId), eq(round.public, true)))
+    .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
+    .groupBy(round.editionId),
+);
+
+/**
+ * TODO: there is a drizzle bug that causes the column references  to be ambiguous. So we have to use raw SQL for now.
+ */
+export const v07a_instituteStats = pgMaterializedView("v07a_institute_stats").as((qb) =>
+  qb
+    .select({
+      instituteId: team.instituteId,
+      totalEditions: countDistinct(team.editionId).as("total_editions"),
+      totalTeams: countDistinct(team.id).as("total_teams"),
+      totalScores: coalesce(sum(sql`v02b_team_round_stats.total_scores`), 0).as("total_scores"),
+      totalMedals: sql<Record<number, number>>`JSON_BUILD_OBJECT(
+        0, COUNT(*) FILTER (WHERE v02b_team_round_stats.medal = 0),
+        1, COUNT(*) FILTER (WHERE v02b_team_round_stats.medal = 1),
+        2, COUNT(*) FILTER (WHERE v02b_team_round_stats.medal = 2),
+        3, COUNT(*) FILTER (WHERE v02b_team_round_stats.medal = 3)
+      )`.as("total_medals"),
+      bestEditionRank: coalesce(min(sql`v04a_team_stats.rank_tot`), 0).as("best_edition_rank"),
+      bestRoundRank: coalesce(min(sql`v02b_team_round_stats.rank_tot`), 0).as("best_round_rank"),
+    })
+    .from(v02b_teamRoundStats)
+    .innerJoin(teamRound, eq(teamRound.id, v02b_teamRoundStats.teamRoundId))
+    .innerJoin(team, eq(team.id, teamRound.teamId))
+    .innerJoin(v04a_teamStats, eq(v04a_teamStats.teamId, team.id))
+    .innerJoin(round, and(eq(round.id, teamRound.roundId), eq(round.public, true)))
+    .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
+    .groupBy(team.instituteId),
+);
+
+export const v08a_regionStats = pgMaterializedView("v08a_region_stats").as((qb) =>
+  qb
+    .select({
+      regionId: institute.region,
+      totalEditions: countDistinct(edition.id).as("total_editions"),
+      totalInstitutes: countDistinct(institute.id).as("total_institutes"),
+      totalTeams: countDistinct(team.id).as("total_teams"),
+      totalScores: coalesce(sum(sql`v02b_team_round_stats.total_scores`), 0).as("total_scores"),
+      totalMedals: sql<Record<number, number>>`JSON_BUILD_OBJECT(
+        0, COUNT(*) FILTER (WHERE ${v02b_teamRoundStats.medal} = 0),
+        1, COUNT(*) FILTER (WHERE ${v02b_teamRoundStats.medal} = 1),
+        2, COUNT(*) FILTER (WHERE ${v02b_teamRoundStats.medal} = 2),
+        3, COUNT(*) FILTER (WHERE ${v02b_teamRoundStats.medal} = 3)
+      )`.as("total_medals"),
+      bestEditionRank: coalesce(min(sql`v04a_team_stats.rank_tot`), 0).as("best_edition_rank"),
+      bestRoundRank: coalesce(min(sql`v02b_team_round_stats.rank_tot`), 0).as("best_round_rank"),
+    })
+    .from(v02b_teamRoundStats)
+    .innerJoin(teamRound, eq(teamRound.id, v02b_teamRoundStats.teamRoundId))
+    .innerJoin(team, eq(team.id, teamRound.teamId))
+    .innerJoin(v04a_teamStats, eq(v04a_teamStats.teamId, team.id))
+    .innerJoin(round, and(eq(round.id, teamRound.roundId), eq(round.public, true)))
+    .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
+    .innerJoin(institute, eq(institute.id, team.instituteId))
+    .groupBy(institute.region),
+);

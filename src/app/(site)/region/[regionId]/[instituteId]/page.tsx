@@ -7,7 +7,7 @@ import { Card, CardBody } from "@olinfo/react-components";
 import { Highlights } from "~/components/highlights";
 import { Rank } from "~/components/rank";
 import { listEditions } from "~/lib/edition";
-import { getInstitute, getInstituteStats } from "~/lib/institute";
+import { getInstitute } from "~/lib/institute";
 import { listTeams } from "~/lib/team";
 
 import { InstituteTable } from "./table";
@@ -30,7 +30,6 @@ export default async function Page({ params }: PageProps<"/region/[regionId]/[in
 
   const institute = await getInstitute(instituteId);
   if (!institute) notFound();
-  const stats = await getInstituteStats(instituteId);
   const teams = await listTeams(instituteId);
   const editions = await listEditions();
 
@@ -55,13 +54,13 @@ export default async function Page({ params }: PageProps<"/region/[regionId]/[in
           <CardBody title={`${institute.name}, ${institute.city}, ${institute.regionName}`}>
             <p>
               {institute.totalTeams} teams from this institute participated in{" "}
-              {institute.totalEditions} OIS editions, scoring a total of {institute.totalPoints}{" "}
+              {institute.totalEditions} OIS editions, scoring a total of {institute.totalScores}{" "}
               points.
             </p>
             <p>
               The best rank ever achieved by a team of {institute.name} is{" "}
-              <Rank position={stats.bestEditionRank} /> in an edition (
-              <Rank position={stats.bestRoundRank} /> in a contest).
+              <Rank position={institute.bestEditionRank} /> in an edition (
+              <Rank position={institute.bestRoundRank} /> in a contest).
             </p>
           </CardBody>
         </Card>

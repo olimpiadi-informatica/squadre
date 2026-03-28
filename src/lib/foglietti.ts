@@ -71,7 +71,7 @@ export async function createCredentialsPdf(credentials: Credential[]) {
       font: helvetica,
     });
 
-    page.drawText("username", {
+    page.drawText("slug", {
       x: pageWidth - 200,
       y: yCenter + 10,
       size: 12,
