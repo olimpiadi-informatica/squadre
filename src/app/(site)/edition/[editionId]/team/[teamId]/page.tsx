@@ -4,12 +4,13 @@ import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 
 import { Card, CardBody } from "@olinfo/react-components";
+import { groupBy } from "lodash";
 
 import { Highlights } from "~/components/highlights";
 import { Rank } from "~/components/rank";
 import { listRoundScores, listScores } from "~/lib/score";
 import { listTasks } from "~/lib/task";
-import { getTeam, getTeamStats } from "~/lib/team";
+import { getTeam } from "~/lib/team";
 
 import { TeamTable } from "./table";
 
@@ -31,21 +32,12 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]/t
 
   const team = await getTeam(editionId, teamId);
   if (!team) notFound();
-  const stats = await getTeamStats(editionId, teamId);
 
   const rounds = await listRoundScores(editionId, teamId);
   const scores = await listScores(editionId, undefined, teamId);
-
   const tasks = await listTasks(editionId);
 
-  const roundTasks = tasks.reduce(
-    (acc, task) => {
-      acc[task.roundId] = (acc[task.roundId] ?? 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
-  const maxTasks = Math.max(...Object.values(roundTasks));
+  const maxTasks = Math.max(...Object.values(groupBy(tasks, "roundSlug")).map((t) => t.length));
 
   return (
     <div className="flex flex-col gap-4">
@@ -82,10 +74,10 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]/t
             </p>
             <p className="font-bold text-base-content/60">Coach: {team.coach}</p>
             <p className="break-words">
-              {team.name} scored {stats.totalPoints} points, ranking <Rank position={team.rank} />{" "}
-              in Italy and <Rank position={team.regionalRank} /> in {team.regionName}; for an
-              average rank of {Math.round(stats.avgRoundRank * 10) / 10}, and an highest rank
-              achieved in a contest of <Rank position={stats.bestRoundRank} />.
+              {team.name} scored {team.totalScores} points, ranking <Rank position={team.rank} /> in
+              Italy and <Rank position={team.regionalRank} /> in {team.regionName}; for an average
+              rank of {Math.round(team.avgRoundRank)}, and an highest rank achieved in a contest of{" "}
+              <Rank position={team.bestRoundRank} />.
             </p>
           </CardBody>
         </Card>

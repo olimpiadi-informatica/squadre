@@ -95,7 +95,7 @@ function TableRow({ item: team }: { item: TeamResultItem }) {
       <div>{team.rank}</div>
       <div>{team.regionalRank}</div>
       <div className="min-w-48 text-wrap text-sm">
-        <Link href={`/edition/${team.editionId}/team/${team.id}`} className="link">
+        <Link href={`/edition/${team.editionId}/team/${team.slug}`} className="link">
           {team.name}
         </Link>
       </div>
@@ -109,12 +109,12 @@ function TableRow({ item: team }: { item: TeamResultItem }) {
           <RegionImage id={team.regionId} name={team.regionName} className="inline-block" />
         </Link>
       </div>
-      <div>{team.points}</div>
+      <div>{team.totalScores}</div>
       {finalRound && (
         <div>{team.finalist && <Check className="inline-block stroke-success" />}</div>
       )}
       {nonFinalRounds.map((round) => (
-        <RoundScore key={round.id} round={round} teamId={team.id} />
+        <RoundScore key={round.id} round={round} teamId={team.slug} />
       ))}
     </>
   );
@@ -122,12 +122,12 @@ function TableRow({ item: team }: { item: TeamResultItem }) {
 
 function RoundScore({ round, teamId }: { round: RoundItem; teamId: string }) {
   const { scores } = use(EditionContext)!;
-  const score = scores[teamId]?.find((score) => score.roundId === round.id);
+  const score = scores[teamId]?.find((score) => score.roundSlug === round.id);
   return (
     <div>
       {round.public && (
         <Score
-          score={score?.totalPoints ?? 0}
+          score={score?.totalScores ?? 0}
           maxScore={round.maxScore}
           className="px-2 text-center"
         />

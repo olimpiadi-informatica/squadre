@@ -79,18 +79,16 @@ export async function createEdition(files: FormData, data: EditionData) {
     const key = `${prefix}-${region}`;
     const counter = (regionCounters.get(key) ?? 0) + 1;
     regionCounters.set(key, counter);
-    const id = `${key}-${String(counter).padStart(3, "0")}`;
+    const slug = `${key}-${String(counter).padStart(3, "0")}`;
 
     return {
-      id,
+      slug,
       editionId: data.id,
       name: row["Nome concorrente"],
-      instId: row["Codice meccanografico"],
+      instituteId: row["Codice meccanografico"],
       coach: `${row["Nome referente"]} ${row["Cognome referente"]}`,
       junior: row["Scelta del campionato"] === "Esordienti",
       finalist: false,
-      rankReg: 0,
-      rankTot: 0,
       points: 0,
     };
   });

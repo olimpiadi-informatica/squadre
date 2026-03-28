@@ -45,22 +45,22 @@ function TableHeaders() {
 function TableRow({ item: round }: { item: RoundScoreItem }) {
   const { scores } = use(TeamContext);
 
-  const roundScores = scores.filter((score) => score.roundId === round.roundId);
+  const roundScores = scores.filter((score) => score.roundSlug === round.roundSlug);
   return (
     <>
-      <Link href={`/edition/${round.editionId}/round/${round.roundId}`} className="link">
+      <Link href={`/edition/${round.editionId}/round/${round.roundSlug}`} className="link">
         {round.roundName}
       </Link>
       <div>
         <Medal rank={round.rank} medal={round.medal} />
       </div>
       <div>{round.regionalRank}</div>
-      <div>{round.totalPoints}</div>
+      <div>{round.totalScores}</div>
       {roundScores.map((score) => (
         <Link
-          key={score.taskName}
-          href={`/edition/${round.editionId}/round/${score.roundId}/${score.taskName}`}>
-          <abbr title={`${score.taskTitle} (${score.taskName})`} className="text-black">
+          key={score.taskSlug}
+          href={`/edition/${round.editionId}/round/${score.roundSlug}/${score.taskSlug}`}>
+          <abbr title={`${score.taskTitle} (${score.taskSlug})`} className="text-black">
             <Score score={score.score} maxScore={100} />
           </abbr>
         </Link>

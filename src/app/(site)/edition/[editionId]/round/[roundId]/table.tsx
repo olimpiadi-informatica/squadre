@@ -56,11 +56,11 @@ function TableHeaders() {
       <div>Region</div>
       <div>Total</div>
       {tasks.map((task) => (
-        <div key={task.name}>
+        <div key={task.slug}>
           <Link
-            href={`/edition/${task.editionId}/round/${task.roundId}/${task.name}`}
+            href={`/edition/${task.editionId}/round/${task.roundSlug}/${task.slug}`}
             className="link block w-full truncate">
-            {task.name}
+            {task.slug}
           </Link>
         </div>
       ))}
@@ -76,7 +76,7 @@ function TableRow({ item: team }: { item: TeamResultItem }) {
       <div>{team.rank}</div>
       <div>{team.regionalRank}</div>
       <div className="min-w-32 text-wrap break-words text-sm">
-        <Link href={`/edition/${team.editionId}/team/${team.id}`} className="link">
+        <Link href={`/edition/${team.editionId}/team/${team.slug}`} className="link">
           {team.name}
         </Link>
       </div>
@@ -90,13 +90,13 @@ function TableRow({ item: team }: { item: TeamResultItem }) {
           <RegionImage id={team.regionId} name={team.regionName} className="inline-block" />
         </Link>
       </div>
-      <div>{team.points}</div>
+      <div>{team.totalScores}</div>
       {tasks.map((task) => {
         const score = scores.find(
-          (score) => score.teamId === team.id && score.taskName === task.name,
+          (score) => score.teamSlug === team.slug && score.taskSlug === task.slug,
         );
         return (
-          <Score key={task.name} score={score?.score ?? 0} maxScore={100} className="min-w-16" />
+          <Score key={task.slug} score={score?.score ?? 0} maxScore={100} className="min-w-16" />
         );
       })}
     </>

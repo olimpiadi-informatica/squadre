@@ -24,12 +24,20 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
   const [selectedRound, setSelectedRound] = useState<RoundAdminItem | null>(null);
 
   async function confirmMakePublic() {
-    await toggleRoundVisibility(selectedRound!.editionId, selectedRound!.id, selectedRound!.public);
+    await toggleRoundVisibility(
+      selectedRound!.editionId,
+      selectedRound!.slug,
+      selectedRound!.public,
+    );
     makePublicModalRef.current?.close();
   }
 
   async function confirmMakePrivate() {
-    await toggleRoundVisibility(selectedRound!.editionId, selectedRound!.id, selectedRound!.public);
+    await toggleRoundVisibility(
+      selectedRound!.editionId,
+      selectedRound!.slug,
+      selectedRound!.public,
+    );
     makePrivateModalRef.current?.close();
   }
 
@@ -114,9 +122,9 @@ function TableRow({
         )}
       </div>
       <div>
-        {round.id !== "final" && (
+        {round.slug !== "final" && (
           <Link
-            href={`/admin/edition/${round.editionId}/email/${round.id}`}
+            href={`/admin/edition/${round.editionId}/email/${round.slug}`}
             className="link link-info">
             Gestisci email password
           </Link>
@@ -126,12 +134,12 @@ function TableRow({
         <Button onClick={() => downloadCredentials(false)} className="btn-info btn-sm">
           Scarica regular.yaml
         </Button>
-        {round.id !== "final" && (
+        {round.slug !== "final" && (
           <Button onClick={() => downloadCredentials(true)} className="btn-info btn-sm">
             Scarica debutant.yaml
           </Button>
         )}
-        {round.id === "final" && (
+        {round.slug === "final" && (
           <Button onClick={downloadFoglietti} className="btn-success btn-sm">
             Scarica foglietti PDF
           </Button>
@@ -160,7 +168,7 @@ function TableRow({
   );
 
   async function downloadFoglietti() {
-    const pdfBytes = await getFogliettiPdf(round.editionId, round.id);
+    const pdfBytes = await getFogliettiPdf(round.editionId, round.slug);
     saveAs(
       new Blob([pdfBytes as Uint8Array<ArrayBuffer>], { type: "application/pdf" }),
       "foglietti.pdf",
@@ -168,7 +176,7 @@ function TableRow({
   }
 
   async function downloadCredentials(junior: boolean) {
-    const yaml = await getRoundCredentials(round.editionId, round.id, junior);
+    const yaml = await getRoundCredentials(round.editionId, round.slug, junior);
     saveAs(new Blob([yaml], { type: "text/yaml" }), junior ? "debutant.yaml" : "regular.yaml");
   }
 }

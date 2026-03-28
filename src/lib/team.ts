@@ -1,10 +1,18 @@
 import { cache } from "react";
 
-import { and, avg, count, eq, gt, isNotNull, min, sql, sum } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 
-import { db } from "~/lib/db";
-import { edition, institute, region, round, team, teamRound } from "~/lib/db/schema";
-import { coalesce, jsonAggregate } from "~/lib/utils";
+import { db } from "./db";
+import {
+  edition,
+  institute,
+  region,
+  round,
+  team,
+  teamRound,
+  v02b_teamRoundStats,
+  v04a_teamStats,
+} from "./db/schema";
 
 export type Team = {
   name: string;
@@ -19,6 +27,9 @@ export type Team = {
   instituteCity: string;
   regionId: string;
   regionName: string;
+  totalScores: number;
+  avgRoundRank: number;
+  bestRoundRank: number;
 };
 
 export const getTeam = cache(async (editionId: string, id: string): Promise<Team | undefined> => {
@@ -26,122 +37,68 @@ export const getTeam = cache(async (editionId: string, id: string): Promise<Team
     .select({
       name: team.name,
       coach: team.coach,
-      rank: team.rankTot,
-      regionalRank: team.rankReg,
+      rank: v04a_teamStats.rankTot,
+      regionalRank: v04a_teamStats.rankReg,
       editionId: team.editionId,
       editionName: edition.title,
       editionYear: edition.year,
-      instituteId: team.instId,
+      instituteId: team.instituteId,
       instituteName: institute.name,
       instituteCity: institute.city,
       regionId: institute.region,
       regionName: region.name,
+
+      totalScores: v04a_teamStats.totalScores,
+      avgRoundRank: v04a_teamStats.avgRoundRank,
+      bestRoundRank: v04a_teamStats.bestRoundRank,
     })
     .from(team)
-    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
-    .innerJoin(institute, eq(team.instId, institute.id))
-    .innerJoin(region, eq(institute.region, region.id))
-    .where(and(eq(team.editionId, editionId), eq(team.id, id), eq(team.junior, false)));
-  return result;
-});
-
-export type TeamStats = {
-  totalPoints: number;
-  avgRoundRank: number;
-  bestRoundRank: number;
-};
-
-export const getTeamStats = cache(async (editionId: string, id: string): Promise<TeamStats> => {
-  const [result] = await db
-    .select({
-      totalPoints: coalesce(sum(teamRound.score), 0),
-      avgRoundRank: coalesce(avg(teamRound.rankTot), 0),
-      bestRoundRank: coalesce(min(teamRound.rankTot), 0),
-    })
-    .from(teamRound)
-    .innerJoin(edition, and(eq(teamRound.editionId, edition.id), eq(edition.public, true)))
-    .innerJoin(
-      round,
-      and(
-        eq(teamRound.roundId, round.id),
-        eq(teamRound.editionId, round.editionId),
-        eq(round.public, true),
-      ),
-    )
-    .innerJoin(team, and(eq(teamRound.teamId, team.id), eq(teamRound.editionId, team.editionId)))
-    .where(
-      and(eq(teamRound.editionId, editionId), eq(teamRound.teamId, id), eq(team.junior, false)),
-    );
+    .innerJoin(v04a_teamStats, eq(v04a_teamStats.teamId, team.id))
+    .innerJoin(edition, eq(edition.id, team.editionId))
+    .innerJoin(institute, eq(institute.id, team.instituteId))
+    .innerJoin(region, eq(region.id, institute.region))
+    .where(and(eq(team.editionId, editionId), eq(team.slug, id)));
   return result;
 });
 
 export type TeamItem = {
-  id: string;
+  slug: string;
   name: string;
   coach: string;
   rank: number;
   regionalRank: number;
-  points: number;
+  totalScores: number;
   editionId: string;
-  finalist: boolean;
+  finalist: boolean | null;
   totalMedals: Record<number, number> | null;
 };
 
-const medalCte = db.$with("medals").as(
-  db
-    .select({
-      teamId: teamRound.teamId,
-      editionId: teamRound.editionId,
-      medal: teamRound.medal,
-      count: count().as("count"),
-    })
-    .from(teamRound)
-    .innerJoin(edition, and(eq(teamRound.editionId, edition.id), eq(edition.public, true)))
-    .innerJoin(
-      round,
-      and(
-        eq(teamRound.roundId, round.id),
-        eq(teamRound.editionId, round.editionId),
-        eq(round.public, true),
-      ),
-    )
-    .innerJoin(team, and(eq(teamRound.teamId, team.id), eq(teamRound.editionId, team.editionId)))
-    .where(and(isNotNull(teamRound.medal), eq(team.junior, false)))
-    .groupBy(teamRound.teamId, teamRound.editionId, teamRound.medal),
-);
-
 export const listTeams = cache((instituteId?: string): Promise<TeamItem[]> => {
   return db
-    .with(medalCte)
     .select({
-      id: team.id,
+      slug: team.slug,
       name: team.name,
       coach: team.coach,
-      rank: team.rankTot,
-      regionalRank: team.rankReg,
-      points: team.points,
+      rank: v04a_teamStats.rankTot,
+      regionalRank: v04a_teamStats.rankReg,
+      totalScores: v04a_teamStats.totalScores,
       editionId: team.editionId,
-      finalist: sql`${team.finalist}`.mapWith(Boolean),
-      totalMedals: sql<Record<number, number> | null>`${db
-        .select({
-          medals: jsonAggregate(medalCte.medal, medalCte.count),
-        })
-        .from(medalCte)
-        .where(and(eq(medalCte.teamId, team.id), eq(medalCte.editionId, team.editionId)))}`,
+      finalist: team.finalist,
+      totalMedals: v04a_teamStats.totalMedals,
     })
     .from(team)
-    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
-    .where(and(eq(team.instId, instituteId ?? "").if(instituteId), eq(team.junior, false)))
-    .orderBy(team.rankTot);
+    .innerJoin(v04a_teamStats, eq(v04a_teamStats.teamId, team.id))
+    .where(eq(team.instituteId, instituteId ?? "").if(instituteId))
+    .orderBy(v04a_teamStats.rankTot, team.name);
 });
 
 export type TeamResultItem = {
-  id: string;
+  slug: string;
   name: string;
   rank: number;
   regionalRank: number;
-  finalist: boolean;
-  points: number;
+  finalist: boolean | null;
+  totalScores: number;
   editionId: string;
   instituteId: string;
   instituteName: string;
@@ -151,15 +108,15 @@ export type TeamResultItem = {
 };
 
 export const listRoundTeams = cache(
-  (editionId: string, roundId: string, limit?: number): Promise<TeamResultItem[]> => {
+  (editionId: string, roundSlug: string, limit?: number): Promise<TeamResultItem[]> => {
     const query = db
       .select({
-        id: team.id,
+        slug: team.slug,
         name: team.name,
-        rank: teamRound.rankTot,
-        regionalRank: teamRound.rankReg,
-        finalist: sql`${team.finalist}`.mapWith(Boolean),
-        points: teamRound.score,
+        rank: v02b_teamRoundStats.rankTot,
+        regionalRank: v02b_teamRoundStats.rankReg,
+        finalist: team.finalist,
+        totalScores: v02b_teamRoundStats.totalScores,
         editionId: team.editionId,
         instituteId: institute.id,
         instituteName: institute.name,
@@ -168,27 +125,25 @@ export const listRoundTeams = cache(
         regionName: region.name,
       })
       .from(teamRound)
-      .innerJoin(edition, and(eq(teamRound.editionId, edition.id), eq(edition.public, true)))
-      .innerJoin(
-        round,
-        and(
-          eq(teamRound.roundId, round.id),
-          eq(teamRound.editionId, round.editionId),
-          eq(round.public, true),
-        ),
-      )
-      .innerJoin(team, and(eq(teamRound.editionId, team.editionId), eq(teamRound.teamId, team.id)))
-      .innerJoin(institute, eq(team.instId, institute.id))
-      .innerJoin(region, eq(institute.region, region.id))
+      .innerJoin(v02b_teamRoundStats, eq(v02b_teamRoundStats.teamRoundId, teamRound.id))
+      .innerJoin(team, eq(team.id, teamRound.teamId))
+      .innerJoin(round, eq(round.id, teamRound.roundId))
+      .innerJoin(institute, eq(institute.id, team.instituteId))
+      .innerJoin(region, eq(region.id, institute.region))
       .where(
         and(
-          eq(teamRound.editionId, editionId),
-          eq(teamRound.roundId, roundId),
-          gt(teamRound.score, 0),
-          eq(team.junior, false),
+          gt(v02b_teamRoundStats.totalScores, 0),
+          eq(round.editionId, editionId),
+          eq(round.slug, roundSlug),
         ),
       )
-      .orderBy(teamRound.rankTot, institute.region, institute.name, institute.city, team.name);
+      .orderBy(
+        v02b_teamRoundStats.rankTot,
+        institute.region,
+        institute.name,
+        institute.city,
+        team.name,
+      );
 
     return limit ? query.limit(limit) : query;
   },
@@ -197,12 +152,12 @@ export const listRoundTeams = cache(
 export const listEditionTeams = cache((editionId: string): Promise<TeamResultItem[]> => {
   return db
     .select({
-      id: team.id,
+      slug: team.slug,
       name: team.name,
-      rank: team.rankTot,
-      regionalRank: team.rankReg,
-      finalist: sql`${team.finalist}`.mapWith(Boolean),
-      points: team.points,
+      rank: v04a_teamStats.rankTot,
+      regionalRank: v04a_teamStats.rankReg,
+      finalist: team.finalist,
+      totalScores: v04a_teamStats.totalScores,
       editionId: team.editionId,
       instituteId: institute.id,
       instituteName: institute.name,
@@ -211,15 +166,15 @@ export const listEditionTeams = cache((editionId: string): Promise<TeamResultIte
       regionName: region.name,
     })
     .from(team)
-    .innerJoin(edition, and(eq(team.editionId, edition.id), eq(edition.public, true)))
-    .innerJoin(institute, eq(team.instId, institute.id))
-    .innerJoin(region, eq(institute.region, region.id))
-    .where(and(eq(team.editionId, editionId), eq(team.junior, false)))
-    .orderBy(team.rankTot, institute.region, institute.name, institute.city, team.name);
+    .innerJoin(v04a_teamStats, eq(v04a_teamStats.teamId, team.id))
+    .innerJoin(institute, eq(institute.id, team.instituteId))
+    .innerJoin(region, eq(region.id, institute.region))
+    .where(eq(team.editionId, editionId))
+    .orderBy(v04a_teamStats.rankTot, institute.region, institute.name, institute.city, team.name);
 });
 
 export type TeamCredential = {
-  teamId: string;
+  slug: string;
   name: string;
   junior: boolean;
   coach: string;
@@ -234,13 +189,13 @@ export type TeamCredential = {
 
 export const listRoundTeamsCredentials = (
   editionId: string,
-  roundId: string,
+  roundSlug: string,
   junior?: boolean,
   instituteId?: string,
 ): Promise<TeamCredential[]> => {
   return db
     .select({
-      teamId: team.id,
+      slug: team.slug,
       name: team.name,
       junior: team.junior,
       coach: team.coach,
@@ -253,16 +208,18 @@ export const listRoundTeamsCredentials = (
       delay: teamRound.delay,
     })
     .from(teamRound)
-    .innerJoin(team, and(eq(teamRound.teamId, team.id), eq(teamRound.editionId, team.editionId)))
-    .innerJoin(institute, eq(team.instId, institute.id))
-    .innerJoin(region, eq(institute.region, region.id))
+    .innerJoin(team, eq(team.id, teamRound.teamId))
+    .innerJoin(round, eq(round.id, teamRound.roundId))
+    .innerJoin(edition, eq(edition.id, round.editionId))
+    .innerJoin(institute, eq(institute.id, team.instituteId))
+    .innerJoin(region, eq(region.id, institute.region))
     .where(
       and(
-        eq(teamRound.editionId, editionId),
-        eq(teamRound.roundId, roundId),
+        eq(edition.id, editionId),
+        eq(round.slug, roundSlug),
         eq(team.junior, junior ?? false).if(junior != null),
-        eq(team.instId, instituteId ?? "").if(instituteId),
-        eq(team.finalist, true).if(roundId === "final"),
+        eq(team.instituteId, instituteId ?? "").if(instituteId),
+        eq(team.finalist, true).if(roundSlug === "final"),
       ),
     )
     .orderBy(region.id, institute.name, institute.city, team.name);
