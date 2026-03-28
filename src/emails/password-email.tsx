@@ -62,7 +62,7 @@ export default function PasswordEmail({
                   {team.junior && " (Esordienti)"}
                 </Column>
                 <Column style={tableCell}>
-                  <code>{team.teamId}</code>
+                  <code>{team.slug}</code>
                 </Column>
                 <Column style={tableCell}>
                   <code>{team.password}</code>

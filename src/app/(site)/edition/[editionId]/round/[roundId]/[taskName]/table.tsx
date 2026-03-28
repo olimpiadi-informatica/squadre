@@ -47,7 +47,7 @@ function TableRow({ item: score }: { item: TaskScoreItem }) {
     <>
       <div>{score.rank}</div>
       <div className="min-w-48 text-wrap text-sm">
-        <Link href={`/edition/${params.editionId}/team/${score.teamId}`} className="link">
+        <Link href={`/edition/${params.editionId}/team/${score.teamSlug}`} className="link">
           {score.teamName}
         </Link>
       </div>

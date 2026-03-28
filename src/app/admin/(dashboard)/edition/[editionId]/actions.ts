@@ -42,12 +42,12 @@ export async function getRoundCredentials(
 
   const year = edition.year.replace(/\d{2}\//, "");
   const dateStr = format(new TZDate(round.startsAt, "Europe/Rome"), "MMMM do, yyyy");
-  const start = roundId.length === 1 ? subMinutes(round.startsAt, 5) : round.startsAt;
+  const start = round.slug.length === 1 ? subMinutes(round.startsAt, 5) : round.startsAt;
   const stop = addHours(start, 3);
 
   return YAML.stringify(
     {
-      name: `round${round.id}${junior ? "-debutant" : ""}`,
+      name: `round${round.slug}${junior ? "-debutant" : ""}`,
       description: `OIS${year} -- ${round.title} (${junior ? "debutant" : "regular"})`,
       date: dateStr,
       start: getUnixTime(start),
@@ -65,7 +65,7 @@ export async function getRoundCredentials(
         first_name: t.name,
         last_name: `${t.instituteName}, ${t.instituteCity}`,
         team: t.regionId.toUpperCase(),
-        username: t.teamId,
+        username: t.slug,
         password: t.password,
         hidden: false,
         delay: t.delay,
@@ -82,7 +82,7 @@ export async function getFogliettiPdf(editionId: string, roundId: string) {
   const credentials = teamCredentials.map((t) => ({
     teamName: truncate(t.name, { length: 36 }),
     school: truncate(`${t.instituteName}, ${t.instituteCity}`, { length: 64 }),
-    username: t.teamId,
+    username: t.slug,
     password: t.password,
   }));
   return createCredentialsPdf(credentials);
