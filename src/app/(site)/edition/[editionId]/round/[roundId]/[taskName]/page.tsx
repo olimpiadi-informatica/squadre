@@ -3,10 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Card, CardActions, CardBody } from "@olinfo/react-components";
+import { round } from "lodash";
 
 import { Highlights } from "~/components/highlights";
 import { listTaskScores } from "~/lib/score";
-import { getTask, getTaskStats } from "~/lib/task";
+import { getTask } from "~/lib/task";
 
 import { TaskTable } from "./table";
 
@@ -19,7 +20,7 @@ export async function generateMetadata({
   if (!task) notFound();
 
   return {
-    title: `OIS - ${task.title} (${task.name})`,
+    title: `OIS - ${task.title} (${task.slug})`,
   };
 }
 
@@ -30,7 +31,7 @@ export default async function Page({
 
   const task = await getTask(taskName);
   if (!task) notFound();
-  const stats = await getTaskStats(taskName);
+
   const scores = await listTaskScores(taskName);
 
   return (
@@ -47,18 +48,20 @@ export default async function Page({
             <Link href={`/edition/${task.editionId}`}>{task.editionName}</Link>
           </li>
           <li>
-            <Link href={`/edition/${task.editionId}/round/${task.roundId}`}>{task.roundName}</Link>
+            <Link href={`/edition/${task.editionId}/round/${task.roundSlug}`}>
+              {task.roundName}
+            </Link>
           </li>
           <li>{task.title}</li>
         </ul>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardBody title={`${task.title} (${task.name})`}>
+          <CardBody title={`${task.title} (${task.slug})`}>
             <p>
-              {stats.teamScored} teams scored {stats.totalScores} points on this task, for a maximum
-              score of {stats.maxScore}, an average score of {Math.round(stats.avgScore * 10) / 10}{" "}
-              and a median score of {stats.medianScore}.
+              {task.teamScored} teams scored {task.totalScores} points on this task, for a maximum
+              score of {task.maxScore}, an average score of {round(task.avgScore, 2)} and a median
+              score of {task.medianScore}.
             </p>
           </CardBody>
         </Card>
@@ -69,7 +72,7 @@ export default async function Page({
           <p>{task.statement}</p>
           <CardActions>
             <a
-              href={`https://training.olinfo.it/task/ois_${task.name}`}
+              href={`https://training.olinfo.it/task/ois_${task.slug}`}
               target="_blank"
               className="btn btn-primary"
               rel="noreferrer">

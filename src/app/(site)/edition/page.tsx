@@ -3,13 +3,13 @@ import Link from "next/link";
 import { Card, CardBody } from "@olinfo/react-components";
 
 import { Highlights } from "~/components/highlights";
-import { getEditionStats, listEditions } from "~/lib/edition";
+import { getStats, listEditions } from "~/lib/edition";
 
 import { EditionsTable } from "./table";
 
 export default async function Page() {
   const editions = await listEditions();
-  const stats = await getEditionStats();
+  const stats = await getStats();
 
   return (
     <div className="flex flex-col gap-4">
@@ -26,7 +26,7 @@ export default async function Page() {
           <CardBody title="OIS Editions">
             <p>
               {stats.totalTeams} teams from {stats.totalInstitutes} schools participated in{" "}
-              {editions.length} OIS editions. Overall, {stats.totalPoints} points were scored on{" "}
+              {editions.length} OIS editions. Overall, {stats.totalScores} points were scored on{" "}
               {stats.totalTasks} tasks.
             </p>
           </CardBody>

@@ -7,16 +7,10 @@ import { Check } from "lucide-react";
 
 import { Medals } from "~/components/medal";
 import { Table } from "~/components/table";
-import type { EditionItem } from "~/lib/edition";
+import type { Edition } from "~/lib/edition";
 import type { TeamItem } from "~/lib/team";
 
-export function InstituteTable({
-  editions,
-  teams,
-}: {
-  editions: EditionItem[];
-  teams: TeamItem[];
-}) {
+export function InstituteTable({ editions, teams }: { editions: Edition[]; teams: TeamItem[] }) {
   const itemMatch = useCallback((search: string, team: TeamItem) => {
     return team.name.toLowerCase().includes(search) || team.coach.toLowerCase().includes(search);
   }, []);
@@ -63,14 +57,14 @@ function TableRow({ item: team }: { item: TeamItem }) {
       <div>{team.rank}</div>
       <div>{team.regionalRank}</div>
       <div>
-        <Link href={`/edition/${team.editionId}/team/${team.id}`} className="link">
+        <Link href={`/edition/${team.editionId}/team/${team.slug}`} className="link">
           {team.name}
         </Link>
       </div>
       <div>{team.coach}</div>
       <div>{team.finalist && <Check className="inline-block stroke-success" />}</div>
       <Medals medals={team.totalMedals} />
-      <div>{team.points}</div>
+      <div>{team.totalScores}</div>
     </>
   );
 }

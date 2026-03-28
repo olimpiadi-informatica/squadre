@@ -1,43 +1,18 @@
 import { cache } from "react";
 
-import { and, avg, count, eq, gt, max, sum } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
-import { db } from "~/lib/db";
-import { edition, round, task, taskScore, team } from "~/lib/db/schema";
-import { coalesce, median } from "~/lib/utils";
+import { db } from "./db";
+import { edition, round, task, v00a_taskStats } from "./db/schema";
 
 export type Task = {
-  name: string;
+  slug: string;
   title: string;
   editionId: string;
   editionName: string;
-  roundId: string;
+  roundSlug: string;
   roundName: string;
   statement: string;
-};
-
-export const getTask = cache(async (name: string): Promise<Task | undefined> => {
-  const [result] = await db
-    .select({
-      name: task.name,
-      title: task.title,
-      editionId: task.editionId,
-      editionName: edition.title,
-      roundId: task.roundId,
-      roundName: round.title,
-      statement: task.statement,
-    })
-    .from(task)
-    .innerJoin(edition, and(eq(task.editionId, edition.id), eq(edition.public, true)))
-    .innerJoin(
-      round,
-      and(eq(round.id, task.roundId), eq(round.editionId, edition.id), eq(round.public, true)),
-    )
-    .where(eq(task.name, name));
-  return result;
-});
-
-export type TaskStats = {
   teamScored: number;
   totalScores: number;
   maxScore: number;
@@ -45,50 +20,51 @@ export type TaskStats = {
   medianScore: number;
 };
 
-export const getTaskStats = cache(async (name: string): Promise<TaskStats> => {
+export const getTask = cache(async (taskSlug: string): Promise<Task | undefined> => {
   const [result] = await db
     .select({
-      teamScored: count(),
-      totalScores: coalesce(sum(taskScore.score), 0),
-      maxScore: coalesce(max(taskScore.score), 0),
-      avgScore: coalesce(avg(taskScore.score), 0),
-      medianScore: coalesce(median(taskScore.score), 0),
+      slug: task.slug,
+      title: task.title,
+      editionId: edition.id,
+      editionName: edition.title,
+      roundSlug: round.slug,
+      roundName: round.title,
+      statement: task.statement,
+      teamScored: v00a_taskStats.teamScored,
+      totalScores: v00a_taskStats.totalScores,
+      maxScore: v00a_taskStats.maxScore,
+      avgScore: v00a_taskStats.avgScore,
+      medianScore: v00a_taskStats.medianScore,
     })
-    .from(taskScore)
-    .innerJoin(task, eq(taskScore.taskName, task.name))
-    .innerJoin(edition, and(eq(task.editionId, edition.id), eq(edition.public, true)))
-    .innerJoin(
-      round,
-      and(eq(task.roundId, round.id), eq(task.editionId, round.editionId), eq(round.public, true)),
-    )
-    .innerJoin(team, and(eq(taskScore.teamId, team.id), eq(taskScore.editionId, team.editionId)))
-    .where(and(eq(taskScore.taskName, name), gt(taskScore.score, 0), eq(team.junior, false)));
+    .from(task)
+    .innerJoin(v00a_taskStats, eq(v00a_taskStats.taskId, task.id))
+    .innerJoin(round, eq(round.id, task.roundId))
+    .innerJoin(edition, eq(edition.id, round.editionId))
+    .where(eq(task.slug, taskSlug));
   return result;
 });
 
 export type TaskItem = {
-  name: string;
+  slug: string;
   editionId: string;
-  roundId: string;
+  roundSlug: string;
 };
 
-export const listTasks = cache((editionId?: string, roundId?: string): Promise<TaskItem[]> => {
+export const listTasks = cache((editionId?: string, roundSlug?: string): Promise<TaskItem[]> => {
   return db
     .select({
-      name: task.name,
-      editionId: task.editionId,
-      roundId: task.roundId,
+      slug: task.slug,
+      editionId: edition.id,
+      roundSlug: round.slug,
     })
     .from(task)
-    .innerJoin(edition, and(eq(task.editionId, edition.id), eq(edition.public, true)))
-    .innerJoin(
-      round,
-      and(eq(task.roundId, round.id), eq(task.editionId, round.editionId), eq(round.public, true)),
-    )
+    .innerJoin(round, and(eq(round.id, task.roundId), eq(round.public, true)))
+    .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
     .where(
       and(
-        eq(task.editionId, editionId ?? "").if(editionId),
-        eq(task.roundId, roundId ?? "").if(roundId),
+        eq(edition.id, editionId ?? "").if(editionId),
+        eq(round.slug, roundSlug ?? "").if(roundSlug),
       ),
-    );
+    )
+    .orderBy(task.slug);
 });

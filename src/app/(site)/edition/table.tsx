@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useCallback } from "react";
 
 import { Table } from "~/components/table";
-import type { EditionItem } from "~/lib/edition";
+import type { Edition } from "~/lib/edition";
 
-export function EditionsTable({ editions }: { editions: EditionItem[] }) {
-  const itemMatch = useCallback((search: string, edition: EditionItem) => {
+export function EditionsTable({ editions }: { editions: Edition[] }) {
+  const itemMatch = useCallback((search: string, edition: Edition) => {
     return (
       edition.name.toLowerCase().includes(search) || edition.year.toLowerCase().includes(search)
     );
@@ -38,7 +38,7 @@ function TableHeaders() {
   );
 }
 
-function TableRow({ item: edition }: { item: EditionItem }) {
+function TableRow({ item: edition }: { item: Edition }) {
   return (
     <>
       <div>
@@ -51,7 +51,7 @@ function TableRow({ item: edition }: { item: EditionItem }) {
       <div>{edition.totalTeams}</div>
       <div>{edition.totalTasks}</div>
       <div>{edition.highestPoints}</div>
-      <div>{edition.totalPoints}</div>
+      <div>{edition.totalScores}</div>
     </>
   );
 }

@@ -8,7 +8,7 @@ import { Highlights } from "~/components/highlights";
 import { Rank } from "~/components/rank";
 import { RegionImage } from "~/components/region";
 import { listInstitutes } from "~/lib/institute";
-import { getRegion, getRegionStats } from "~/lib/region";
+import { getRegion } from "~/lib/region";
 
 import { RegionTable } from "./table";
 
@@ -30,7 +30,6 @@ export default async function Page({ params }: PageProps<"/region/[regionId]">) 
 
   const region = await getRegion(regionId);
   if (!region) notFound();
-  const stats = await getRegionStats(regionId);
   const institutes = await listInstitutes(regionId);
 
   return (
@@ -56,14 +55,14 @@ export default async function Page({ params }: PageProps<"/region/[regionId]">) 
               </>
             }>
             <p>
-              {stats.totalTeams} teams from {stats.totalInstitutes} schools participated in{" "}
-              {stats.totalEditions} OIS editions from {region.name}, scoring a total of{" "}
-              {stats.totalPoints} points.
+              {region.totalTeams} teams from {region.totalInstitutes} schools participated in{" "}
+              {region.totalEditions} OIS editions from {region.name}, scoring a total of{" "}
+              {region.totalScores} points.
             </p>
             <p>
               The best rank ever achieved by a team in {region.name} is{" "}
-              <Rank position={stats.bestEditionRank} /> in an edition (
-              <Rank position={stats.bestEditionRank} /> in a contest).
+              <Rank position={region.bestEditionRank} /> in an edition (
+              <Rank position={region.bestRoundRank} /> in a contest).
             </p>
           </CardBody>
         </Card>

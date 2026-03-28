@@ -1,13 +1,13 @@
 import { cache } from "react";
 
-import { and, avg, count, eq, gt, min, sum } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
-import { db } from "~/lib/db";
-import { edition, round, team, teamRound } from "~/lib/db/schema";
-import { coalesce, median } from "~/lib/utils";
+import { db } from "./db";
+import { edition, round, v03b_roundStats } from "./db/schema";
 
 export type RoundAdminItem = {
-  id: string;
+  id: number;
+  slug: string;
   title: string;
   editionId: string;
   startsAt: Date;
@@ -16,69 +16,45 @@ export type RoundAdminItem = {
 
 export async function updateRoundVisibility(
   editionId: string,
-  roundId: string,
+  roundSlug: string,
   isPublic: boolean,
 ): Promise<void> {
   await db
     .update(round)
     .set({ public: isPublic })
-    .where(and(eq(round.editionId, editionId), eq(round.id, roundId)));
+    .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug)));
 }
 
-export const getRoundAdmin = cache(
-  async (editionId: string, roundId: string): Promise<RoundAdminItem | undefined> => {
-    const [result] = await db
+export const listRoundsAdmin = cache(
+  (editionId: string, roundSlug?: string): Promise<RoundAdminItem[]> => {
+    return db
       .select({
         id: round.id,
+        slug: round.slug,
         title: round.title,
         editionId: round.editionId,
         startsAt: round.startsAt,
         public: round.public,
       })
       .from(round)
-      .where(and(eq(round.editionId, editionId), eq(round.id, roundId)));
+      .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug ?? "").if(roundSlug)))
+      .orderBy(round.startsAt, round.slug);
+  },
+);
+
+export const getRoundAdmin = cache(
+  async (editionId: string, roundSlug: string): Promise<RoundAdminItem | undefined> => {
+    const [result] = await listRoundsAdmin(editionId, roundSlug);
     return result;
   },
 );
 
-export const listRoundsAdmin = cache((editionId: string): Promise<RoundAdminItem[]> => {
-  return db
-    .select({
-      id: round.id,
-      title: round.title,
-      editionId: round.editionId,
-      startsAt: round.startsAt,
-      public: round.public,
-    })
-    .from(round)
-    .where(eq(round.editionId, editionId))
-    .orderBy(round.startsAt, round.id);
-});
-
 export type Round = {
-  id: string;
+  slug: string;
   name: string;
   editionId: string;
   editionName: string;
-};
 
-export const getRound = cache(
-  async (editionId: string, roundId: string): Promise<Round | undefined> => {
-    const [result] = await db
-      .select({
-        id: round.id,
-        name: round.title,
-        editionId: round.editionId,
-        editionName: edition.title,
-      })
-      .from(round)
-      .innerJoin(edition, and(eq(round.editionId, edition.id), eq(edition.public, true)))
-      .where(and(eq(round.editionId, editionId), eq(round.id, roundId), eq(round.public, true)));
-    return result;
-  },
-);
-
-export type RoundStats = {
   teamScored: number;
   totalScores: number;
   maxScore: number;
@@ -86,35 +62,25 @@ export type RoundStats = {
   medianScore: number;
 };
 
-export const getRoundStats = cache(
-  async (editionId: string, roundId: string): Promise<RoundStats> => {
+export const getRound = cache(
+  async (editionId: string, roundSlug: string): Promise<Round | undefined> => {
     const [result] = await db
       .select({
-        teamScored: count(),
-        totalScores: coalesce(sum(teamRound.score), 0),
-        maxScore: coalesce(min(teamRound.score), 0),
-        avgScore: coalesce(avg(teamRound.score), 0),
-        medianScore: coalesce(median(teamRound.score), 0),
+        slug: round.slug,
+        name: round.title,
+        editionId: edition.id,
+        editionName: edition.title,
+
+        teamScored: v03b_roundStats.teamScored,
+        totalScores: v03b_roundStats.totalScores,
+        maxScore: v03b_roundStats.maxScore,
+        avgScore: v03b_roundStats.avgScore,
+        medianScore: v03b_roundStats.medianScore,
       })
-      .from(teamRound)
-      .innerJoin(edition, and(eq(teamRound.editionId, edition.id), eq(edition.public, true)))
-      .innerJoin(
-        round,
-        and(
-          eq(teamRound.roundId, round.id),
-          eq(teamRound.editionId, round.editionId),
-          eq(round.public, true),
-        ),
-      )
-      .innerJoin(team, and(eq(teamRound.teamId, team.id), eq(teamRound.editionId, team.editionId)))
-      .where(
-        and(
-          eq(teamRound.editionId, editionId),
-          eq(teamRound.roundId, roundId),
-          gt(teamRound.score, 0),
-          eq(team.junior, false),
-        ),
-      );
+      .from(round)
+      .innerJoin(v03b_roundStats, eq(v03b_roundStats.roundId, round.id))
+      .innerJoin(edition, eq(edition.id, round.editionId))
+      .where(and(eq(edition.id, editionId), eq(round.slug, roundSlug)));
     return result;
   },
 );
@@ -130,7 +96,7 @@ export type RoundItem = {
 export const listAllRounds = cache((editionId?: string): Promise<RoundItem[]> => {
   return db
     .select({
-      id: round.id,
+      id: round.slug,
       name: round.title,
       editionId: round.editionId,
       maxScore: round.fullscore,
@@ -138,6 +104,6 @@ export const listAllRounds = cache((editionId?: string): Promise<RoundItem[]> =>
     })
     .from(round)
     .innerJoin(edition, and(eq(round.editionId, edition.id), eq(edition.public, true)))
-    .where(eq(round.editionId, editionId ?? ""))
+    .where(eq(round.editionId, editionId ?? "").if(editionId))
     .orderBy(round.title);
 });

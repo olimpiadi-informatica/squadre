@@ -15,12 +15,14 @@ export function Medal({ rank, medal }: { rank: number; medal: number | null }) {
 export function Medals({ medals }: { medals: Record<number, number> | null }) {
   return (
     <div className="flex justify-center gap-2">
-      {Object.entries(medals ?? {}).map(([medal, count]) => (
-        <div key={medal}>
-          <Award className={clsx("inline-block", color[medal as keyof typeof color])} />
-          {count}
-        </div>
-      ))}
+      {Object.entries(medals ?? {})
+        .filter(([, count]) => count > 0)
+        .map(([medal, count]) => (
+          <div key={medal}>
+            <Award className={clsx("inline-block", color[medal as keyof typeof color])} />
+            {count}
+          </div>
+        ))}
     </div>
   );
 }

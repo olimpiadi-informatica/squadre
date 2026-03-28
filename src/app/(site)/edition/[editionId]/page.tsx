@@ -6,7 +6,7 @@ import { Card, CardBody } from "@olinfo/react-components";
 import { groupBy } from "lodash";
 
 import { Highlights } from "~/components/highlights";
-import { getEdition, getEditionStats } from "~/lib/edition";
+import { getEdition } from "~/lib/edition";
 import { listAllRounds } from "~/lib/round";
 import { listRoundScores } from "~/lib/score";
 import { listEditionTeams, listRoundTeams } from "~/lib/team";
@@ -31,12 +31,11 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]">
 
   const edition = await getEdition(editionId);
   if (!edition) notFound();
-  const stats = await getEditionStats(editionId);
   const topFinalist = await listRoundTeams(editionId, "final", 3);
 
   const teams = await listEditionTeams(editionId);
   const rounds = await listAllRounds(editionId);
-  const scores = groupBy(await listRoundScores(editionId), "teamId");
+  const scores = groupBy(await listRoundScores(editionId), "teamSlug");
 
   return (
     <div className="flex flex-col gap-4">
@@ -55,9 +54,9 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]">
         <Card>
           <CardBody title={`OIS ${edition.year}`}>
             <p>
-              {stats.totalTeams} teams from {stats.totalInstitutes} schools participated in this
-              edition of the OIS, scoring a total of {stats.totalPoints} points on{" "}
-              {stats.totalTasks} tasks.
+              {edition.totalTeams} teams from {edition.totalInstitutes} schools participated in this
+              edition of the OIS, scoring a total of {edition.totalScores} points on{" "}
+              {edition.totalTasks} tasks.
               {topFinalist.length > 0 && (
                 <> The top {topFinalist.length} teams at the finals were:</>
               )}
@@ -65,8 +64,8 @@ export default async function Page({ params }: PageProps<"/edition/[editionId]">
             {topFinalist.length > 0 && (
               <ol className="list-decimal pl-6">
                 {topFinalist.map((team) => (
-                  <li key={team.id} value={team.rank}>
-                    <Link href={`/edition/${editionId}/team/${team.id}`} className="link">
+                  <li key={team.slug} value={team.rank}>
+                    <Link href={`/edition/${editionId}/team/${team.slug}`} className="link">
                       {team.name}
                     </Link>{" "}
                     from{" "}
