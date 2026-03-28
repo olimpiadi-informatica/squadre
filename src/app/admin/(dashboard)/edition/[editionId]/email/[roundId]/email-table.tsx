@@ -56,7 +56,9 @@ function EmailRow({
 
   return (
     <>
-      <div className="font-medium">{item.instituteName}</div>
+      <div>
+        {item.instituteName}, {item.instituteCity}
+      </div>
       <div className="text-sm opacity-70">
         {item.address ?? <span className="italic opacity-50">-</span>}
       </div>

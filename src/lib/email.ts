@@ -16,6 +16,7 @@ export type RoundEmailStatus = "not-sent" | "sending" | "sent" | "sending-failed
 export type RoundEmail = {
   instituteId: string;
   instituteName: string;
+  instituteCity: string;
   address: string | null;
   status: RoundEmailStatus;
 };
@@ -28,6 +29,7 @@ export function listRoundEmailStatuses(
     .select({
       instituteId: institute.id,
       instituteName: institute.name,
+      instituteCity: institute.city,
       address: sql<string | null>`COALESCE(${instituteEmail.address}, ${institute.email})`,
       status: sql<RoundEmailStatus>`COALESCE(${instituteEmail.status}, 'not-sent')`,
     })
