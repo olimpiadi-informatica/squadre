@@ -1,7 +1,11 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+
 import { TZDate } from "@date-fns/tz";
 import { addSeconds, format, subMinutes } from "date-fns";
 import { and, eq, exists, sql } from "drizzle-orm";
 import nodemailer from "nodemailer";
+import type StreamTransport from "nodemailer/lib/stream-transport";
 
 import { listRoundTeamsCredentials } from "~/lib/team";
 
@@ -19,6 +23,7 @@ export type RoundEmail = {
   instituteCity: string;
   address: string | null;
   status: RoundEmailStatus;
+  emailId: number | null;
 };
 
 export function listRoundEmailStatuses(
@@ -32,6 +37,7 @@ export function listRoundEmailStatuses(
       instituteCity: institute.city,
       address: sql<string | null>`COALESCE(${instituteEmail.address}, ${institute.email})`,
       status: sql<RoundEmailStatus>`COALESCE(${instituteEmail.status}, 'not-sent')`,
+      emailId: instituteEmail.id,
     })
     .from(institute)
     .crossJoin(round)
@@ -55,6 +61,9 @@ export function listRoundEmailStatuses(
 
 function createTransporter() {
   return nodemailer.createTransport({
+    streamTransport: true,
+  });
+  /* return nodemailer.createTransport({
     host: process.env.SMTP_HOST || "localhost",
     port: Number(process.env.SMTP_PORT || 1025),
     secure: Number(process.env.SMTP_PORT) === 465,
@@ -64,7 +73,7 @@ function createTransporter() {
           pass: process.env.SMTP_PASS,
         }
       : undefined,
-  });
+  }); */
 }
 
 export async function sendInstituteEmail(
@@ -94,15 +103,21 @@ export async function sendInstituteEmail(
     const start = addSeconds(subMinutes(round.startsAt, 5), delay);
     const startTime = format(new TZDate(start, "Europe/Rome"), "HH:mm");
 
-    const html = await renderPasswordEmail(coach, round.title, edition.name, teamsData, startTime);
+    const html = await renderPasswordEmail(coach, round.title, edition.year, teamsData, startTime);
+    await db.update(instituteEmail).set({ html }).where(eq(instituteEmail.id, email.id));
 
     const transporter = createTransporter();
-    await transporter.sendMail({
+    const messageInfo = await transporter.sendMail({
       from: "Olimpiadi di Informatica a Squadre <ois@olimpiadi-scientifiche.it>",
       to: address,
       subject: `Password OIS ${round.title} - Edizione ${edition.name}`,
       html,
     });
+    const message = (messageInfo as StreamTransport.SentMessageInfo).message;
+
+    const dir = path.join("emails", address);
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, `${Date.now()}.eml`), message);
 
     await db.update(instituteEmail).set({ status: "sent" }).where(eq(instituteEmail.id, email.id));
   } catch (err) {
@@ -112,4 +127,12 @@ export async function sendInstituteEmail(
       .set({ status: "sending-failed" })
       .where(eq(instituteEmail.id, email.id));
   }
+}
+
+export async function getInstituteEmailHtml(emailId: number): Promise<string | null> {
+  const [row] = await db
+    .select({ html: instituteEmail.html })
+    .from(instituteEmail)
+    .where(eq(instituteEmail.id, emailId));
+  return row?.html ?? null;
 }
