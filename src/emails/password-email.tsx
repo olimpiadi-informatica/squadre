@@ -1,23 +1,13 @@
 import type { CSSProperties } from "react";
 
-import {
-  Body,
-  Column,
-  Container,
-  Head,
-  Html,
-  Link,
-  Row,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Body, Container, Head, Html, Link, Text } from "@react-email/components";
 
 import type { TeamCredential } from "~/lib/team";
 
 export interface PasswordEmailProps {
   coach: string;
   roundName: string;
-  editionName: string;
+  editionYear: string;
   teams: TeamCredential[];
   startTime: string;
 }
@@ -25,7 +15,7 @@ export interface PasswordEmailProps {
 export default function PasswordEmail({
   coach,
   roundName,
-  editionName,
+  editionYear,
   teams,
   startTime,
 }: PasswordEmailProps) {
@@ -39,8 +29,8 @@ export default function PasswordEmail({
             le comunichiamo le password delle squadre per le quali lei è referente.
           </Text>
           <Text style={paragraph}>
-            Tali password sono valide esclusivamente per la {roundName} delle Olimpiadi di
-            Informatica a Squadre, edizione {editionName}.
+            Tali password sono valide esclusivamente per {roundName} delle Olimpiadi di Informatica
+            a Squadre, edizione {editionYear}.
           </Text>
           <Text style={paragraph}>
             Ricordiamo che le seguenti password vanno{" "}
@@ -49,27 +39,31 @@ export default function PasswordEmail({
             <strong>solo la propria password</strong>.
           </Text>
 
-          <Section style={tableContainer}>
-            <Row>
-              <Column style={tableHeader}>Nome squadra</Column>
-              <Column style={tableHeader}>Username</Column>
-              <Column style={tableHeader}>Password</Column>
-            </Row>
-            {teams.map((team, idx) => (
-              <Row key={idx}>
-                <Column style={tableCell}>
-                  <code>{team.name}</code>
-                  {team.junior && " (Esordienti)"}
-                </Column>
-                <Column style={tableCell}>
-                  <code>{team.slug}</code>
-                </Column>
-                <Column style={tableCell}>
-                  <code>{team.password}</code>
-                </Column>
-              </Row>
-            ))}
-          </Section>
+          <table style={tableContainer}>
+            <thead>
+              <tr>
+                <th style={tableHeader}>Nome squadra</th>
+                <th style={tableHeader}>Username</th>
+                <th style={tableHeader}>Password</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teams.map((team, idx) => (
+                <tr key={idx}>
+                  <td style={tableCell}>
+                    <code>{team.name}</code>
+                    {team.junior && " (Esordienti)"}
+                  </td>
+                  <td style={tableCell}>
+                    <code>{team.slug}</code>
+                  </td>
+                  <td style={tableCell}>
+                    <code>{team.password}</code>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
           <Text style={paragraph}>
             <strong>Attenzione</strong>: al fine di distribuire il carico sui server durante

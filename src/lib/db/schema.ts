@@ -129,6 +129,7 @@ export const instituteEmail = pgTable(
       .references(() => round.id, { onDelete: "cascade" }),
     address: text(),
     status: text().notNull().$type<"sending" | "sent" | "sending-failed">(),
+    html: text(),
   },
   (table) => [
     uniqueIndex("round_email_institute_id_round_id_unique").on(table.instituteId, table.roundId),
