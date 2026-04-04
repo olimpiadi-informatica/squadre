@@ -60,12 +60,9 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
       <Modal ref={makePublicModalRef} title="Rendi pubblico il round?">
         <p>{`Il round "${selectedRound?.title}" sarà visibile al pubblico.`}</p>
         <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <button
-            className="btn btn-info"
-            onClick={() => makePublicModalRef.current?.close()}
-            type="button">
+          <Button className="btn-info" onClick={() => makePublicModalRef.current?.close()}>
             Annulla
-          </button>
+          </Button>
           <Button onClick={confirmMakePublic} className="btn-warning">
             Conferma
           </Button>
@@ -74,12 +71,9 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
       <Modal ref={makePrivateModalRef} title="Rendi privato il round?">
         <p>{`Il round "${selectedRound?.title}" sarà nascosto al pubblico.`}</p>
         <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <button
-            className="btn btn-info"
-            onClick={() => makePrivateModalRef.current?.close()}
-            type="button">
+          <Button className="btn-info" onClick={() => makePrivateModalRef.current?.close()}>
             Annulla
-          </button>
+          </Button>
           <Button onClick={confirmMakePrivate} className="btn-warning">
             Conferma
           </Button>
@@ -124,7 +118,7 @@ function TableRow({
       <div>
         {round.slug !== "final" && (
           <Link
-            href={`/admin/edition/${round.editionId}/email/${round.slug}`}
+            href={`/admin/edition/${round.editionId}/${round.slug}/email`}
             className="link link-info">
             Gestisci email password
           </Link>

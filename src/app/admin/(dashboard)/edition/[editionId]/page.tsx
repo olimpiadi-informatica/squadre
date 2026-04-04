@@ -25,9 +25,9 @@ export default async function AdminEditionPage({ params }: Props) {
       <div className="breadcrumbs text-sm mb-4">
         <ul>
           <li>
-            <Link href="/admin">Editions</Link>
+            <Link href="/admin">Tutte le edizioni</Link>
           </li>
-          <li>{editionId}</li>
+          <li>{edition.name}</li>
         </ul>
       </div>
       <h1 className="text-3xl font-bold mb-2">{edition.name}</h1>

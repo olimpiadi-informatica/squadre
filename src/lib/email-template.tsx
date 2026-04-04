@@ -6,7 +6,7 @@ import type { TeamCredential } from "~/lib/team";
 export function renderPasswordEmail(
   coach: string,
   roundName: string,
-  editionName: string,
+  editionYear: string,
   teams: TeamCredential[],
   startTime: string,
 ) {
@@ -14,7 +14,7 @@ export function renderPasswordEmail(
     <PasswordEmail
       coach={coach}
       roundName={roundName}
-      editionName={editionName}
+      editionYear={editionYear}
       teams={teams}
       startTime={startTime}
     />,
