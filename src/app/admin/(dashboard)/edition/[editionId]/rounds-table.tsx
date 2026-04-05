@@ -1,16 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { type RefObject, useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
-import { Button, Modal } from "@olinfo/react-components";
+import {
+  Button,
+  Form,
+  FormButton,
+  Modal,
+  SingleFileField,
+  SubmitButton,
+} from "@olinfo/react-components";
 import { intlFormat } from "date-fns";
 import { saveAs } from "file-saver";
 
 import { Table } from "~/components/table";
 import type { RoundAdminItem } from "~/lib/round";
 
-import { getFogliettiPdf, getRoundCredentials, toggleRoundVisibility } from "./actions";
+import { getFogliettiPdf, getRoundCredentials, uploadRoundResults } from "./actions";
 
 export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
   const itemMatch = useCallback(
@@ -18,27 +25,21 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
     [],
   );
 
-  const makePublicModalRef = useRef<HTMLDialogElement>(null);
-  const makePrivateModalRef = useRef<HTMLDialogElement>(null);
+  const uploadModalRef = useRef<HTMLDialogElement>(null);
 
   const [selectedRound, setSelectedRound] = useState<RoundAdminItem | null>(null);
 
-  async function confirmMakePublic() {
-    await toggleRoundVisibility(
-      selectedRound!.editionId,
-      selectedRound!.slug,
-      selectedRound!.public,
-    );
-    makePublicModalRef.current?.close();
+  function openUploadModal(round: RoundAdminItem) {
+    setSelectedRound(round);
+    uploadModalRef.current?.showModal();
   }
 
-  async function confirmMakePrivate() {
-    await toggleRoundVisibility(
-      selectedRound!.editionId,
-      selectedRound!.slug,
-      selectedRound!.public,
-    );
-    makePrivateModalRef.current?.close();
+  async function handleUpload({ file }: { file: File }) {
+    if (!selectedRound) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    await uploadRoundResults(selectedRound.editionId, selectedRound.slug, formData);
+    uploadModalRef.current?.close();
   }
 
   return (
@@ -47,37 +48,20 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
         data={rounds}
         itemMatch={itemMatch}
         header={TableHeaders}
-        row={(props) => (
-          <TableRow
-            {...props}
-            setSelectedRound={setSelectedRound}
-            makePrivateModalRef={makePrivateModalRef}
-            makePublicModalRef={makePublicModalRef}
-          />
-        )}
+        row={(props) => <TableRow {...props} openUploadModal={openUploadModal} />}
         className="grid-cols-[repeat(4,auto)]"
       />
-      <Modal ref={makePublicModalRef} title="Rendi pubblico il round?">
-        <p>{`Il round "${selectedRound?.title}" sarà visibile al pubblico.`}</p>
-        <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <Button className="btn-info" onClick={() => makePublicModalRef.current?.close()}>
-            Annulla
-          </Button>
-          <Button onClick={confirmMakePublic} className="btn-warning">
-            Conferma
-          </Button>
-        </div>
-      </Modal>
-      <Modal ref={makePrivateModalRef} title="Rendi privato il round?">
-        <p>{`Il round "${selectedRound?.title}" sarà nascosto al pubblico.`}</p>
-        <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <Button className="btn-info" onClick={() => makePrivateModalRef.current?.close()}>
-            Annulla
-          </Button>
-          <Button onClick={confirmMakePrivate} className="btn-warning">
-            Conferma
-          </Button>
-        </div>
+      <Modal ref={uploadModalRef} title="Carica risultati">
+        <p>Carica i risultati del {selectedRound?.title}</p>
+        <Form key={selectedRound?.slug} onSubmit={handleUpload} className="max-w-none">
+          <SingleFileField field="file" label="round.tar.gz" accept=".gz,.tgz" />
+          <div className="flex flex-wrap justify-end gap-2">
+            <FormButton className="btn-info" onClick={() => uploadModalRef.current?.close()}>
+              Annulla
+            </FormButton>
+            <SubmitButton className="btn-success">Carica</SubmitButton>
+          </div>
+        </Form>
       </Modal>
     </>
   );
@@ -96,14 +80,10 @@ function TableHeaders() {
 
 function TableRow({
   item: round,
-  setSelectedRound,
-  makePrivateModalRef,
-  makePublicModalRef,
+  openUploadModal,
 }: {
   item: RoundAdminItem;
-  setSelectedRound: (round: RoundAdminItem) => void;
-  makePrivateModalRef: RefObject<HTMLDialogElement | null>;
-  makePublicModalRef: RefObject<HTMLDialogElement | null>;
+  openUploadModal: (round: RoundAdminItem) => void;
 }) {
   return (
     <>
@@ -138,25 +118,9 @@ function TableRow({
             Scarica foglietti PDF
           </Button>
         )}
-        {round.public ? (
-          <Button
-            onClick={() => {
-              setSelectedRound(round);
-              makePrivateModalRef.current?.showModal();
-            }}
-            className="btn-warning btn-sm">
-            Rendi privato
-          </Button>
-        ) : (
-          <Button
-            onClick={() => {
-              setSelectedRound(round);
-              makePublicModalRef.current?.showModal();
-            }}
-            className="btn-error btn-sm">
-            Rendi pubblico
-          </Button>
-        )}
+        <Button onClick={() => openUploadModal(round)} className="btn-warning btn-sm">
+          Carica risultati
+        </Button>
       </div>
     </>
   );
