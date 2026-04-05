@@ -7,6 +7,9 @@ const config: NextConfig = {
   typedRoutes: true,
   experimental: {
     authInterrupts: true,
+    serverActions: {
+      bodySizeLimit: '100mb',
+    },
   },
 };
 
