@@ -11,17 +11,9 @@ import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
 import { createCredentialsPdf } from "~/lib/foglietti";
 import { listRegions } from "~/lib/region";
+import { parseRanking } from "~/lib/result";
 import { getRoundAdmin, updateRoundVisibility } from "~/lib/round";
 import { listRoundTeamsCredentials } from "~/lib/team";
-
-export async function toggleRoundVisibility(
-  editionId: string,
-  roundId: string,
-  currentPublic: boolean,
-) {
-  await updateRoundVisibility(editionId, roundId, !currentPublic);
-  revalidatePath(`/admin/edition/${editionId}`);
-}
 
 export async function getRoundCredentials(
   editionId: string,
@@ -86,4 +78,22 @@ export async function getFogliettiPdf(editionId: string, roundId: string) {
     password: t.password,
   }));
   return createCredentialsPdf(credentials);
+}
+
+export async function uploadRoundResults(
+  editionId: string,
+  roundSlug: string,
+  formData: FormData,
+): Promise<void> {
+  await verifyAdmin();
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) throw new Error("Nessun file fornito");
+
+  const roundRow = await getRoundAdmin(editionId, roundSlug);
+  if (!roundRow) throw new Error(`Round "${roundSlug}" non trovato`);
+
+  await parseRanking(file, editionId, roundRow.id);
+  await updateRoundVisibility(editionId, roundSlug, true);
+  revalidatePath(`/admin/edition/${editionId}`);
 }
