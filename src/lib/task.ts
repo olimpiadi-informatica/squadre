@@ -1,6 +1,6 @@
 import { cache } from "react";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, notInArray, sql } from "drizzle-orm";
 
 import { db } from "./db";
 import { edition, round, task, v00a_taskStats } from "./db/schema";
@@ -68,3 +68,72 @@ export const listTasks = cache((editionId?: string, roundSlug?: string): Promise
     )
     .orderBy(task.slug);
 });
+
+export type RoundTaskItem = {
+  slug: string;
+  title: string;
+  junior: boolean;
+  regular: boolean;
+};
+
+export function listRoundTasks(
+  editionId: string,
+  roundSlug: string,
+  junior: boolean,
+): Promise<RoundTaskItem[]> {
+  return db
+    .select({
+      slug: task.slug,
+      title: task.title,
+      junior: task.junior,
+      regular: task.regular,
+    })
+    .from(task)
+    .innerJoin(round, eq(round.id, task.roundId))
+    .where(
+      and(
+        eq(round.editionId, editionId),
+        eq(round.slug, roundSlug),
+        eq(task.regular, true).if(!junior),
+        eq(task.junior, true).if(junior),
+      ),
+    )
+    .orderBy(task.slug);
+}
+
+export async function saveRoundTasksForRound(
+  roundId: number,
+  tasks: RoundTaskItem[],
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.delete(task).where(
+      and(
+        eq(task.roundId, roundId),
+        notInArray(
+          task.slug,
+          tasks.map((t) => t.slug),
+        ),
+      ),
+    );
+    await tx
+      .insert(task)
+      .values(
+        tasks.map((t) => ({
+          slug: t.slug,
+          roundId: roundId,
+          title: t.title,
+          statement: "",
+          junior: t.junior,
+          regular: t.regular,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [task.slug, task.roundId],
+        set: {
+          title: sql.raw(`EXCLUDED.${task.title.name}`),
+          junior: sql.raw(`EXCLUDED.${task.junior.name}`),
+          regular: sql.raw(`EXCLUDED.${task.regular.name}`),
+        },
+      });
+  });
+}
