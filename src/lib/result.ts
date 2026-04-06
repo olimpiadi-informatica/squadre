@@ -88,7 +88,7 @@ async function processRanking(csvPath: string, editionId: string, roundId: numbe
     .values(scores)
     .onConflictDoUpdate({
       target: [teamTaskScore.taskId, teamTaskScore.teamId],
-      set: { score: sql`EXCLUDED.${teamTaskScore.score.name}` },
+      set: { score: sql.raw(`EXCLUDED.${teamTaskScore.score.name}`) },
     });
 }
 
