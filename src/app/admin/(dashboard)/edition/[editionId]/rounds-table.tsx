@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   Button,
@@ -28,10 +29,84 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
     [],
   );
 
-  const uploadModalRef = useRef<HTMLDialogElement>(null);
-  const taskModalRef = useRef<HTMLDialogElement>(null);
+  return (
+    <Table
+      data={rounds}
+      itemMatch={itemMatch}
+      header={TableHeaders}
+      row={TableRow}
+      className="grid-cols-[repeat(4,auto)]"
+    />
+  );
+}
 
-  const [selectedRound, setSelectedRound] = useState<RoundAdminItem | null>(null);
+function TableHeaders() {
+  return (
+    <>
+      <div>Titolo</div>
+      <div>Data</div>
+      <div>Email</div>
+      <div>Azioni</div>
+    </>
+  );
+}
+
+function TableRow({ item: round }: { item: RoundAdminItem }) {
+  return (
+    <>
+      <div>{round.title}</div>
+      <div>
+        {intlFormat(
+          round.startsAt,
+          { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Rome" },
+          { locale: "it-IT" },
+        )}
+      </div>
+      <div>
+        {round.slug !== "final" && (
+          <Link
+            href={`/admin/edition/${round.editionId}/${round.slug}/email`}
+            className="link link-info">
+            Gestisci email password
+          </Link>
+        )}
+      </div>
+      <div className="flex flex-wrap justify-center gap-2">
+        <Button onClick={() => downloadCredentials(false)} className="btn-info btn-sm">
+          Scarica regular.yaml
+        </Button>
+        {round.slug !== "final" && (
+          <Button onClick={() => downloadCredentials(true)} className="btn-info btn-sm">
+            Scarica debutant.yaml
+          </Button>
+        )}
+        {round.slug === "final" && (
+          <Button onClick={downloadFoglietti} className="btn-success btn-sm">
+            Scarica foglietti PDF
+          </Button>
+        )}
+        <TaskModalButton round={round} />
+        <UploadModalButton round={round} />
+      </div>
+    </>
+  );
+
+  async function downloadFoglietti() {
+    const pdfBytes = await getFogliettiPdf(round.editionId, round.slug);
+    saveAs(
+      new Blob([pdfBytes as Uint8Array<ArrayBuffer>], { type: "application/pdf" }),
+      "foglietti.pdf",
+    );
+  }
+
+  async function downloadCredentials(junior: boolean) {
+    const yaml = await getRoundCredentials(round.editionId, round.slug, junior);
+    saveAs(new Blob([yaml], { type: "text/yaml" }), junior ? "debutant.yaml" : "regular.yaml");
+  }
+}
+
+function TaskModalButton({ round }: { round: RoundAdminItem }) {
+  const modalRef = useRef<HTMLDialogElement>(null);
 
   const [supportsDirectoryPicker, setSupportsDirectoryPicker] = useState<boolean | null>(null);
   useEffect(() => {
@@ -41,24 +116,10 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
   const [taskList, setTaskList] = useState<TaskItem[]>([]);
   const [taskListError, setTaskListError] = useState<string | null>(null);
 
-  function openUploadModal(round: RoundAdminItem) {
-    setSelectedRound(round);
-    uploadModalRef.current?.showModal();
-  }
-
-  function openTaskModal(round: RoundAdminItem) {
-    setSelectedRound(round);
+  function openModal() {
     setTaskList([]);
     setTaskListError(null);
-    taskModalRef.current?.showModal();
-  }
-
-  async function handleUpload({ file }: { file: File }) {
-    if (!selectedRound) return;
-    const formData = new FormData();
-    formData.append("file", file);
-    await uploadRoundResults(selectedRound.editionId, selectedRound.slug, formData);
-    uploadModalRef.current?.close();
+    modalRef.current?.showModal();
   }
 
   async function handleLoadTaskList() {
@@ -108,141 +169,83 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
 
   return (
     <>
-      <Table
-        data={rounds}
-        itemMatch={itemMatch}
-        header={TableHeaders}
-        row={(props) => (
-          <TableRow {...props} openUploadModal={openUploadModal} openTaskModal={openTaskModal} />
-        )}
-        className="grid-cols-[repeat(4,auto)]"
-      />
-      <Modal ref={taskModalRef} title="Carica task">
-        <p>Carica la lista dei task del {selectedRound?.title}</p>
+      <Button onClick={openModal} className="btn-secondary btn-sm">
+        Carica task
+      </Button>
+      {createPortal(
+        <Modal ref={modalRef} title="Carica task">
+          <p>Carica la lista dei task del {round.title}</p>
 
-        {supportsDirectoryPicker === false && (
-          <div role="alert" className="alert alert-warning text-sm">
-            Il tuo browser non supporta la selezione di cartelle. Usa <strong>Google Chrome</strong>{" "}
-            per abilitare questa funzione.
+          {supportsDirectoryPicker === false && (
+            <div role="alert" className="alert alert-warning text-sm">
+              Il tuo browser non supporta la selezione di cartelle. Usa{" "}
+              <strong>Google Chrome</strong> per abilitare questa funzione.
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              className="btn-secondary btn-sm"
+              disabled={supportsDirectoryPicker === false}
+              onClick={handleLoadTaskList}>
+              Seleziona cartella
+            </Button>
+            {taskListError && <p className="text-error text-sm">{taskListError}</p>}
           </div>
-        )}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            className="btn-secondary btn-sm"
-            disabled={supportsDirectoryPicker === false}
-            onClick={handleLoadTaskList}>
-            Seleziona cartella
-          </Button>
-          {taskListError && <p className="text-error text-sm">{taskListError}</p>}
-        </div>
+          {taskList.length > 0 && (
+            <ul className="list-inside list-disc text-sm">
+              {taskList.map((task) => (
+                <li key={task.slug}>
+                  <span className="font-mono">{task.slug}</span> — {task.title}
+                </li>
+              ))}
+            </ul>
+          )}
 
-        {taskList.length > 0 && (
-          <ul className="list-inside list-disc text-sm">
-            {taskList.map((task) => (
-              <li key={task.slug}>
-                <span className="font-mono">{task.slug}</span> — {task.title}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="flex justify-end">
-          <Button className="btn-info btn-sm" onClick={() => taskModalRef.current?.close()}>
-            Chiudi
-          </Button>
-        </div>
-      </Modal>
-      <Modal ref={uploadModalRef} title="Carica risultati">
-        <p>Carica i risultati del {selectedRound?.title}</p>
-
-        <Form key={selectedRound?.slug} onSubmit={handleUpload} className="max-w-none">
-          <SingleFileField field="file" label="round.tar.gz" accept=".gz,.tgz" />
-          <div className="flex flex-wrap justify-end gap-2">
-            <FormButton className="btn-info" onClick={() => uploadModalRef.current?.close()}>
-              Annulla
-            </FormButton>
-            <SubmitButton className="btn-success">Carica</SubmitButton>
+          <div className="flex justify-end">
+            <Button className="btn-info btn-sm" onClick={() => modalRef.current?.close()}>
+              Chiudi
+            </Button>
           </div>
-        </Form>
-      </Modal>
+        </Modal>,
+        document.body,
+      )}
     </>
   );
 }
 
-function TableHeaders() {
-  return (
-    <>
-      <div>Titolo</div>
-      <div>Data</div>
-      <div>Email</div>
-      <div>Azioni</div>
-    </>
-  );
-}
+function UploadModalButton({ round }: { round: RoundAdminItem }) {
+  const modalRef = useRef<HTMLDialogElement>(null);
 
-function TableRow({
-  item: round,
-  openUploadModal,
-  openTaskModal,
-}: {
-  item: RoundAdminItem;
-  openUploadModal: (round: RoundAdminItem) => void;
-  openTaskModal: (round: RoundAdminItem) => void;
-}) {
-  return (
-    <>
-      <div>{round.title}</div>
-      <div>
-        {intlFormat(
-          round.startsAt,
-          { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Rome" },
-          { locale: "it-IT" },
-        )}
-      </div>
-      <div>
-        {round.slug !== "final" && (
-          <Link
-            href={`/admin/edition/${round.editionId}/${round.slug}/email`}
-            className="link link-info">
-            Gestisci email password
-          </Link>
-        )}
-      </div>
-      <div className="flex flex-wrap justify-center gap-2">
-        <Button onClick={() => downloadCredentials(false)} className="btn-info btn-sm">
-          Scarica regular.yaml
-        </Button>
-        {round.slug !== "final" && (
-          <Button onClick={() => downloadCredentials(true)} className="btn-info btn-sm">
-            Scarica debutant.yaml
-          </Button>
-        )}
-        {round.slug === "final" && (
-          <Button onClick={downloadFoglietti} className="btn-success btn-sm">
-            Scarica foglietti PDF
-          </Button>
-        )}
-        <Button onClick={() => openTaskModal(round)} className="btn-secondary btn-sm">
-          Carica task
-        </Button>
-        <Button onClick={() => openUploadModal(round)} className="btn-warning btn-sm">
-          Carica risultati
-        </Button>
-      </div>
-    </>
-  );
-
-  async function downloadFoglietti() {
-    const pdfBytes = await getFogliettiPdf(round.editionId, round.slug);
-    saveAs(
-      new Blob([pdfBytes as Uint8Array<ArrayBuffer>], { type: "application/pdf" }),
-      "foglietti.pdf",
-    );
+  async function handleUpload({ file }: { file: File }) {
+    const formData = new FormData();
+    formData.append("file", file);
+    await uploadRoundResults(round.editionId, round.slug, formData);
+    modalRef.current?.close();
   }
 
-  async function downloadCredentials(junior: boolean) {
-    const yaml = await getRoundCredentials(round.editionId, round.slug, junior);
-    saveAs(new Blob([yaml], { type: "text/yaml" }), junior ? "debutant.yaml" : "regular.yaml");
-  }
+  return (
+    <>
+      <Button onClick={() => modalRef.current?.showModal()} className="btn-warning btn-sm">
+        Carica risultati
+      </Button>
+      {createPortal(
+        <Modal ref={modalRef} title="Carica risultati">
+          <p>Carica i risultati del {round.title}</p>
+
+          <Form key={round.slug} onSubmit={handleUpload} className="max-w-none">
+            <SingleFileField field="file" label="round.tar.gz" accept=".gz,.tgz" />
+            <div className="flex flex-wrap justify-end gap-2">
+              <FormButton className="btn-info" onClick={() => modalRef.current?.close()}>
+                Annulla
+              </FormButton>
+              <SubmitButton className="btn-success">Carica</SubmitButton>
+            </div>
+          </Form>
+        </Modal>,
+        document.body,
+      )}
+    </>
+  );
 }
