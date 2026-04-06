@@ -1,9 +1,9 @@
 import { cache } from "react";
 
-import { and, eq } from "drizzle-orm";
+import { and, countDistinct, eq, sql } from "drizzle-orm";
 
 import { db } from "./db";
-import { edition, instituteEmail, round, task, v03b_roundStats } from "./db/schema";
+import { edition, instituteEmail, round, task, team, teamRound, v03b_roundStats } from "./db/schema";
 
 export type RoundAdminItem = {
   id: number;
@@ -12,6 +12,8 @@ export type RoundAdminItem = {
   editionId: string;
   startsAt: Date;
   public: boolean;
+  schoolCount: number;
+  teamCount: number;
   taskCount: number;
   sentEmailCount: number;
 };
@@ -37,6 +39,12 @@ export const listRoundsAdmin = cache(
         editionId: round.editionId,
         startsAt: round.startsAt,
         public: round.public,
+        schoolCount: sql<number>`${db
+          .select({ value: countDistinct(team.instituteId) })
+          .from(teamRound)
+          .innerJoin(team, eq(team.id, teamRound.teamId))
+          .where(eq(teamRound.roundId, round.id))}`,
+        teamCount: db.$count(teamRound, eq(teamRound.roundId, round.id)),
         taskCount: db.$count(task, eq(task.roundId, round.id)),
         sentEmailCount: db.$count(
           instituteEmail,

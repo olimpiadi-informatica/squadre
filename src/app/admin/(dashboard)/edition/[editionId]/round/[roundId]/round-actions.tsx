@@ -5,35 +5,40 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button, Form, FormButton, SingleFileField, SubmitButton } from "@olinfo/react-components";
 import { saveAs } from "file-saver";
+import { BookKey, FileKey, Mail, Upload } from "lucide-react";
 import YAML from "yaml";
 
 import { Modal } from "~/components/modal";
 import type { RoundAdminItem } from "~/lib/round";
 
-import { getFogliettiPdf, getRoundCredentials, uploadRoundResults } from "../../actions";
+import { getFogliettiPdf, getRoundCredentials, uploadRoundResults } from "./actions";
 
 type TaskItem = { slug: string; title: string };
 
 export function RoundActions({ round }: { round: RoundAdminItem }) {
   return (
     <div className="flex flex-wrap gap-2">
-      <Button onClick={() => downloadCredentials(round, false)} className="btn-info btn-sm">
+      <Button onClick={() => downloadCredentials(round, false)} className="btn-primary">
+        <FileKey className="size-5" />
         Scarica regular.yaml
       </Button>
       {round.slug !== "final" && (
-        <Button onClick={() => downloadCredentials(round, true)} className="btn-info btn-sm">
+        <Button onClick={() => downloadCredentials(round, true)} className="btn-primary">
+          <FileKey className="size-5" />
           Scarica debutant.yaml
         </Button>
       )}
       {round.slug === "final" && (
-        <Button onClick={() => downloadFoglietti(round)} className="btn-success btn-sm">
+        <Button onClick={() => downloadFoglietti(round)} className="btn-success">
+          <BookKey className="size-5" />
           Scarica foglietti PDF
         </Button>
       )}
       {round.slug !== "final" && (
         <Link
           href={`/admin/edition/${round.editionId}/round/${round.slug}/email`}
-          className="btn btn-outline btn-info btn-sm">
+          className="btn btn-primary">
+          <Mail className="size-5" />
           Gestisci email password
         </Link>
       )}
@@ -120,7 +125,8 @@ function TaskModalButton({ round }: { round: RoundAdminItem }) {
 
   return (
     <>
-      <Button onClick={openModal} className="btn-secondary btn-sm">
+      <Button onClick={openModal} className="btn-primary">
+        <Upload className="size-5" />
         Carica task
       </Button>
       <Modal ref={modalRef} title="Carica task">
@@ -135,7 +141,7 @@ function TaskModalButton({ round }: { round: RoundAdminItem }) {
 
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            className="btn-secondary btn-sm"
+            className="btn-primary"
             disabled={supportsDirectoryPicker === false}
             onClick={handleLoadTaskList}>
             Seleziona cartella
@@ -154,7 +160,7 @@ function TaskModalButton({ round }: { round: RoundAdminItem }) {
         )}
 
         <div className="flex justify-end">
-          <Button className="btn-info btn-sm" onClick={() => modalRef.current?.close()}>
+          <Button className="btn-info" onClick={() => modalRef.current?.close()}>
             Chiudi
           </Button>
         </div>
@@ -175,7 +181,8 @@ function UploadModalButton({ round }: { round: RoundAdminItem }) {
 
   return (
     <>
-      <Button onClick={() => modalRef.current?.showModal()} className="btn-warning btn-sm">
+      <Button onClick={() => modalRef.current?.showModal()} className="btn-primary">
+        <Upload className="size-5" />
         Carica risultati
       </Button>
       <Modal ref={modalRef} title="Carica risultati">

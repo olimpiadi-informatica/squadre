@@ -14,7 +14,7 @@ export function AdminRoundsTable({ rounds }: { rounds: RoundAdminItem[] }) {
       itemMatch={(search, round) => round.title.toLowerCase().includes(search)}
       header={TableHeaders}
       row={TableRow}
-      className="grid-cols-[repeat(4,auto)]"
+      className="grid-cols-[repeat(6,auto)]"
     />
   );
 }
@@ -24,8 +24,10 @@ function TableHeaders() {
     <>
       <div>Titolo</div>
       <div>Data</div>
-      <div>Task caricati</div>
-      <div>Email inviate</div>
+      <div>Scuole</div>
+      <div>Team</div>
+      <div>Task</div>
+      <div>Credenziali inviate</div>
     </>
   );
 }
@@ -47,8 +49,12 @@ function TableRow({ item: round }: { item: RoundAdminItem }) {
           { locale: "it-IT" },
         )}
       </div>
+      <div>{round.schoolCount}</div>
+      <div>{round.teamCount}</div>
       <div>{round.taskCount}</div>
-      <div>{round.sentEmailCount}</div>
+      <div>
+        {round.sentEmailCount} / {round.schoolCount}
+      </div>
     </>
   );
 }
