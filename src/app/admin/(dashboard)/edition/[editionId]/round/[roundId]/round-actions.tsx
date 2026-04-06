@@ -2,19 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 
-import {
-  Button,
-  Form,
-  FormButton,
-  Modal,
-  SingleFileField,
-  SubmitButton,
-} from "@olinfo/react-components";
+import { Button, Form, FormButton, SingleFileField, SubmitButton } from "@olinfo/react-components";
 import { saveAs } from "file-saver";
 import YAML from "yaml";
 
+import { Modal } from "~/components/modal";
 import type { RoundAdminItem } from "~/lib/round";
 
 import { getFogliettiPdf, getRoundCredentials, uploadRoundResults } from "../../actions";
@@ -130,45 +123,42 @@ function TaskModalButton({ round }: { round: RoundAdminItem }) {
       <Button onClick={openModal} className="btn-secondary btn-sm">
         Carica task
       </Button>
-      {createPortal(
-        <Modal ref={modalRef} title="Carica task">
-          <p>Carica la lista dei task del {round.title}</p>
+      <Modal ref={modalRef} title="Carica task">
+        <p>Carica la lista dei task del {round.title}</p>
 
-          {supportsDirectoryPicker === false && (
-            <div role="alert" className="alert alert-warning text-sm">
-              Il tuo browser non supporta la selezione di cartelle. Usa{" "}
-              <strong>Google Chrome</strong> per abilitare questa funzione.
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              className="btn-secondary btn-sm"
-              disabled={supportsDirectoryPicker === false}
-              onClick={handleLoadTaskList}>
-              Seleziona cartella
-            </Button>
-            {taskListError && <p className="text-error text-sm">{taskListError}</p>}
+        {supportsDirectoryPicker === false && (
+          <div role="alert" className="alert alert-warning text-sm">
+            Il tuo browser non supporta la selezione di cartelle. Usa <strong>Google Chrome</strong>{" "}
+            per abilitare questa funzione.
           </div>
+        )}
 
-          {taskList.length > 0 && (
-            <ul className="list-inside list-disc text-sm">
-              {taskList.map((task) => (
-                <li key={task.slug}>
-                  <span className="font-mono">{task.slug}</span> - {task.title}
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            className="btn-secondary btn-sm"
+            disabled={supportsDirectoryPicker === false}
+            onClick={handleLoadTaskList}>
+            Seleziona cartella
+          </Button>
+          {taskListError && <p className="text-error text-sm">{taskListError}</p>}
+        </div>
 
-          <div className="flex justify-end">
-            <Button className="btn-info btn-sm" onClick={() => modalRef.current?.close()}>
-              Chiudi
-            </Button>
-          </div>
-        </Modal>,
-        document.body,
-      )}
+        {taskList.length > 0 && (
+          <ul className="list-inside list-disc text-sm">
+            {taskList.map((task) => (
+              <li key={task.slug}>
+                <span className="font-mono">{task.slug}</span> - {task.title}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="flex justify-end">
+          <Button className="btn-info btn-sm" onClick={() => modalRef.current?.close()}>
+            Chiudi
+          </Button>
+        </div>
+      </Modal>
     </>
   );
 }
@@ -188,22 +178,19 @@ function UploadModalButton({ round }: { round: RoundAdminItem }) {
       <Button onClick={() => modalRef.current?.showModal()} className="btn-warning btn-sm">
         Carica risultati
       </Button>
-      {createPortal(
-        <Modal ref={modalRef} title="Carica risultati">
-          <p>Carica i risultati del {round.title}</p>
+      <Modal ref={modalRef} title="Carica risultati">
+        <p>Carica i risultati del {round.title}</p>
 
-          <Form key={round.slug} onSubmit={handleUpload} className="max-w-none">
-            <SingleFileField field="file" label="round.tar.gz" accept=".gz,.tgz" />
-            <div className="flex flex-wrap justify-end gap-2">
-              <FormButton className="btn-info" onClick={() => modalRef.current?.close()}>
-                Annulla
-              </FormButton>
-              <SubmitButton className="btn-success">Carica</SubmitButton>
-            </div>
-          </Form>
-        </Modal>,
-        document.body,
-      )}
+        <Form key={round.slug} onSubmit={handleUpload} className="max-w-none">
+          <SingleFileField field="file" label="round.tar.gz" accept=".gz,.tgz" />
+          <div className="flex flex-wrap justify-end gap-2">
+            <FormButton className="btn-info" onClick={() => modalRef.current?.close()}>
+              Annulla
+            </FormButton>
+            <SubmitButton className="btn-success">Carica</SubmitButton>
+          </div>
+        </Form>
+      </Modal>
     </>
   );
 }
