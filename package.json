@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "lint": "biome check --write",
+    "lint": "biome check --write --unsafe && tsc --noEmit",
     "email:dev": "email dev -d src/emails -p 3025"
   },
   "dependencies": {

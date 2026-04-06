@@ -23,9 +23,6 @@
       }
     ],
     "paths": {
-      "next/routes": [
-        "./.next/types/routes.d.ts"
-      ],
       "~/*": [
         "./src/*"
       ]

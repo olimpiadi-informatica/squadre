@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { createPortal } from "react-dom";
 
-import { Button, Modal } from "@olinfo/react-components";
+import { Button } from "@olinfo/react-components";
 
+import { Modal } from "~/components/modal";
 import { Table } from "~/components/table";
 import type { RoundEmail, RoundEmailStatus } from "~/lib/email";
 
@@ -48,22 +48,19 @@ function PreviewModalButton({
       <Button className="btn-ghost btn-xs" onClick={() => modalRef.current?.showModal()}>
         Visualizza
       </Button>
-      {createPortal(
-        <Modal ref={modalRef} title="Anteprima email">
-          <div className="h-[70vh]">
-            <iframe
-              src={
-                emailId === null
-                  ? `/admin/api/email/preview?editionId=${editionId}&roundId=${roundId}&instituteId=${instituteId}`
-                  : `/admin/api/email/${emailId}`
-              }
-              className="size-full rounded"
-              title="Anteprima email"
-            />
-          </div>
-        </Modal>,
-        document.body,
-      )}
+      <Modal ref={modalRef} title="Anteprima email">
+        <div className="h-[70vh]">
+          <iframe
+            src={
+              emailId === null
+                ? `/admin/api/email/preview?editionId=${editionId}&roundId=${roundId}&instituteId=${instituteId}`
+                : `/admin/api/email/${emailId}`
+            }
+            className="size-full rounded"
+            title="Anteprima email"
+          />
+        </div>
+      </Modal>
     </>
   );
 }
