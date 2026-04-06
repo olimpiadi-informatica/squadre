@@ -13,24 +13,26 @@ import { createCredentialsPdf } from "~/lib/foglietti";
 import { listRegions } from "~/lib/region";
 import { parseRanking } from "~/lib/result";
 import { getRoundAdmin, updateRoundVisibility } from "~/lib/round";
+import { listRoundTasks, type RoundTaskItem, saveRoundTasksForRound } from "~/lib/task";
 import { listRoundTeamsCredentials } from "~/lib/team";
 
 export async function getRoundCredentials(
   editionId: string,
-  roundId: string,
+  roundSlug: string,
   junior: boolean,
 ): Promise<string> {
   await verifyAdmin();
 
-  const [edition, round, regions, teamCredentials] = await Promise.all([
+  const [edition, round, regions, teamCredentials, roundTasks] = await Promise.all([
     getEditionAdmin(editionId),
-    getRoundAdmin(editionId, roundId),
+    getRoundAdmin(editionId, roundSlug),
     listRegions(),
-    listRoundTeamsCredentials(editionId, roundId, junior),
+    listRoundTeamsCredentials(editionId, roundSlug, junior),
+    listRoundTasks(editionId, roundSlug, junior),
   ]);
 
   if (!edition) throw new Error(`Edition ${editionId} not found`);
-  if (!round) throw new Error(`Round ${roundId} not found`);
+  if (!round) throw new Error(`Round ${roundSlug} not found`);
 
   const year = edition.year.replace(/\d{2}\//, "");
   const dateStr = format(new TZDate(round.startsAt, "Europe/Rome"), "MMMM do, yyyy");
@@ -50,8 +52,15 @@ export async function getRoundCredentials(
       timezone: "Europe/Rome",
       location: "Online",
       logo: "logo_ois.pdf",
-      languages: [],
-      tasks: [],
+      languages: [
+        "C++20 / g++",
+        "C11 / gcc",
+        "Java / JDK",
+        "Python 3 / PyPy",
+        "Pascal / fpc",
+        "C# / Mono",
+      ],
+      tasks: roundTasks.map((task) => task.slug),
       teams: regions.map((r) => ({ code: r.id.toUpperCase(), name: r.name })),
       users: teamCredentials.map((t) => ({
         first_name: t.name,
@@ -95,5 +104,18 @@ export async function uploadRoundResults(
 
   await parseRanking(file, editionId, roundRow.id);
   await updateRoundVisibility(editionId, roundSlug, true);
+  revalidatePath(`/admin/edition/${editionId}`);
+}
+
+export async function saveRoundTasks(
+  editionId: string,
+  roundId: number,
+  roundSlug: string,
+  inputTasks: RoundTaskItem[],
+): Promise<void> {
+  await verifyAdmin();
+  await saveRoundTasksForRound(roundId, inputTasks);
+
+  revalidatePath(`/admin/edition/${editionId}/round/${roundSlug}`);
   revalidatePath(`/admin/edition/${editionId}`);
 }

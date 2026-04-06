@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
 import { sendInstituteEmail } from "~/lib/email";
 import { getRoundAdmin } from "~/lib/round";
@@ -12,6 +13,8 @@ export async function sendEmail(
   instituteId: string,
   revalidate = true,
 ) {
+  await verifyAdmin();
+
   const [edition, round] = await Promise.all([
     getEditionAdmin(editionId),
     getRoundAdmin(editionId, roundId),

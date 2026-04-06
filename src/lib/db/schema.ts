@@ -39,15 +39,22 @@ export const round = pgTable("round", {
   startsAt: timestamp("starts_at").notNull().default(sql`'1970-01-01 00:00:00'`),
 });
 
-export const task = pgTable("task", {
-  id: serial().primaryKey(),
-  slug: text().notNull(),
-  roundId: integer("round_id")
-    .notNull()
-    .references(() => round.id, { onDelete: "cascade" }),
-  title: text().notNull(),
-  statement: text().notNull(),
-});
+export const task = pgTable(
+  "task",
+  {
+    id: serial().primaryKey(),
+    slug: text().notNull(),
+    roundId: integer("round_id")
+      .notNull()
+      .references(() => round.id, { onDelete: "cascade" }),
+    title: text().notNull(),
+    statement: text().notNull(),
+    junior: boolean().notNull().default(false),
+    regular: boolean().notNull().default(true),
+  },
+
+  (table) => [uniqueIndex("task_slug_round_id").on(table.slug, table.roundId)],
+);
 
 export const institute = pgTable("institute", {
   id: text().primaryKey().notNull(),
