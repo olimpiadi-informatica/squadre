@@ -20,7 +20,7 @@ import {
   nextTuesday,
   nextWednesday,
 } from "date-fns";
-import { maxBy } from "lodash";
+import { maxBy } from "es-toolkit/compat";
 
 import { Modal } from "~/components/modal";
 import type { EditionAdminItem } from "~/lib/edition";
