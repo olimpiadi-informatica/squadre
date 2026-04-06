@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Card, CardActions, CardBody } from "@olinfo/react-components";
-import { round } from "lodash";
+import { round } from "es-toolkit/compat";
 
 import { Highlights } from "~/components/highlights";
 import { listTaskScores } from "~/lib/score";

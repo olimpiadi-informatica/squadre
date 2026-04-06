@@ -6,7 +6,7 @@ import type { ReadableStream } from "node:stream/web";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { isString, uniqBy } from "lodash";
+import { isString, uniqBy } from "es-toolkit/compat";
 import Papa from "papaparse";
 import { z } from "zod";
 

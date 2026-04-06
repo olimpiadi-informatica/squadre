@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { random } from "lodash";
+import { random } from "es-toolkit/compat";
 
 import { generateWord } from "~/lib/password";
 
