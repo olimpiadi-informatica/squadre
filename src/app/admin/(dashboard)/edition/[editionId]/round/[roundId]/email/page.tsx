@@ -35,7 +35,9 @@ export default async function AdminEmailPage({ params }: Props) {
           <li>
             <Link href={`/admin/edition/${editionId}`}>{edition.name}</Link>
           </li>
-          <li>{round.title}</li>
+          <li>
+            <Link href={`/admin/edition/${editionId}/round/${roundId}`}>{round.title}</Link>
+          </li>
           <li>Email</li>
         </ul>
       </div>
