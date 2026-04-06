@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 
 import {
   Button,
@@ -84,23 +85,26 @@ export function NewEditionButton({ editions }: { editions: EditionAdminItem[] })
       <Button className="btn-primary" onClick={() => modalRef.current?.showModal()}>
         Crea nuova edizione
       </Button>
-      <Modal ref={modalRef} title="Crea nuova edizione">
-        <Form defaultValue={defaultValue} onSubmit={handleSubmit}>
-          <TextField field="id" label="ID edizione" placeholder="" />
-          <TextField field="year" label="Anno edizione" placeholder="" />
-          <TextField field="title" label="Titolo edizione" placeholder="" />
-          <SingleFileField field="csvFile" label="CSV partecipanti" accept=".csv" />
-          <DateTimeField field="round1Date" label="Round 1" placeholder="" />
-          <DateTimeField field="round2Date" label="Round 2" placeholder="" />
-          <DateTimeField field="round3Date" label="Round 3" placeholder="" />
-          <DateTimeField field="round4Date" label="Round 4" placeholder="" />
-          <DateTimeField field="roundFinalDate" label="Round finale" placeholder="" />
-          <div className="flex w-full flex-wrap justify-center gap-2">
-            <FormButton onClick={() => modalRef.current?.close()}>Annulla</FormButton>
-            <SubmitButton>Crea</SubmitButton>
-          </div>
-        </Form>
-      </Modal>
+      {createPortal(
+        <Modal ref={modalRef} title="Crea nuova edizione">
+          <Form defaultValue={defaultValue} onSubmit={handleSubmit}>
+            <TextField field="id" label="ID edizione" placeholder="" />
+            <TextField field="year" label="Anno edizione" placeholder="" />
+            <TextField field="title" label="Titolo edizione" placeholder="" />
+            <SingleFileField field="csvFile" label="CSV partecipanti" accept=".csv" />
+            <DateTimeField field="round1Date" label="Round 1" placeholder="" />
+            <DateTimeField field="round2Date" label="Round 2" placeholder="" />
+            <DateTimeField field="round3Date" label="Round 3" placeholder="" />
+            <DateTimeField field="round4Date" label="Round 4" placeholder="" />
+            <DateTimeField field="roundFinalDate" label="Round finale" placeholder="" />
+            <div className="flex w-full flex-wrap justify-center gap-2">
+              <FormButton onClick={() => modalRef.current?.close()}>Annulla</FormButton>
+              <SubmitButton>Crea</SubmitButton>
+            </div>
+          </Form>
+        </Modal>,
+        document.body,
+      )}
     </>
   );
 }

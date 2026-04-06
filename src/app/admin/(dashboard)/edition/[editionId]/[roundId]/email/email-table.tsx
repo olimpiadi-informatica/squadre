@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 
 import { Button, Modal } from "@olinfo/react-components";
 
@@ -29,16 +30,52 @@ const statusBadge: Record<RoundEmailStatus, string> = {
   "sending-failed": "badge-error",
 };
 
+function PreviewModalButton({
+  emailId,
+  instituteId,
+  editionId,
+  roundId,
+}: {
+  emailId: number | null;
+  instituteId: string;
+  editionId: string;
+  roundId: string;
+}) {
+  const modalRef = useRef<HTMLDialogElement>(null);
+
+  return (
+    <>
+      <Button className="btn-ghost btn-xs" onClick={() => modalRef.current?.showModal()}>
+        Visualizza
+      </Button>
+      {createPortal(
+        <Modal ref={modalRef} title="Anteprima email">
+          <div className="h-[70vh]">
+            <iframe
+              src={
+                emailId === null
+                  ? `/admin/api/email/preview?editionId=${editionId}&roundId=${roundId}&instituteId=${instituteId}`
+                  : `/admin/api/email/${emailId}`
+              }
+              className="size-full rounded"
+              title="Anteprima email"
+            />
+          </div>
+        </Modal>,
+        document.body,
+      )}
+    </>
+  );
+}
+
 function EmailRow({
   item,
   editionId,
   roundId,
-  onPreview,
 }: {
   item: RoundEmail;
   editionId: string;
   roundId: string;
-  onPreview: (emailId: number | null, instituteId: string) => void;
 }) {
   return (
     <>
@@ -60,21 +97,18 @@ function EmailRow({
           disabled={item.status !== "not-sent" && item.status !== "sending-failed"}>
           Invia
         </Button>
-        <Button
-          className="btn-ghost btn-xs"
-          onClick={() => onPreview(item.emailId, item.instituteId)}>
-          Visualizza
-        </Button>
+        <PreviewModalButton
+          emailId={item.emailId}
+          instituteId={item.instituteId}
+          editionId={editionId}
+          roundId={roundId}
+        />
       </div>
     </>
   );
 }
 
 export function EmailTable({ statuses, editionId, roundId }: Props) {
-  const previewModalRef = useRef<HTMLDialogElement>(null);
-  const [previewEmailId, setPreviewEmailId] = useState<number | null>(null);
-  const [previewInstituteId, setPreviewInstituteId] = useState<string | null>(null);
-
   const itemMatch = useCallback(
     (search: string, status: RoundEmail) =>
       status.instituteName.toLowerCase().includes(search) ||
@@ -82,41 +116,14 @@ export function EmailTable({ statuses, editionId, roundId }: Props) {
     [],
   );
 
-  function handlePreview(emailId: number | null, instituteId: string) {
-    setPreviewEmailId(emailId);
-    setPreviewInstituteId(instituteId);
-    previewModalRef.current?.showModal();
-  }
-
   return (
-    <>
-      <Table
-        data={statuses}
-        itemMatch={itemMatch}
-        header={TableHeaders}
-        row={(props) => (
-          <EmailRow {...props} editionId={editionId} roundId={roundId} onPreview={handlePreview} />
-        )}
-        className="grid-cols-[repeat(4,auto)]"
-      />
-
-      {/* Preview modal */}
-      <Modal ref={previewModalRef} title="Anteprima email">
-        <div className="h-[70vh]">
-          {previewInstituteId !== null && (
-            <iframe
-              src={
-                previewEmailId === null
-                  ? `/admin/api/email/preview?editionId=${editionId}&roundId=${roundId}&instituteId=${previewInstituteId}`
-                  : `/admin/api/email/${previewEmailId}`
-              }
-              className="size-full rounded"
-              title="Anteprima email"
-            />
-          )}
-        </div>
-      </Modal>
-    </>
+    <Table
+      data={statuses}
+      itemMatch={itemMatch}
+      header={TableHeaders}
+      row={(props) => <EmailRow {...props} editionId={editionId} roundId={roundId} />}
+      className="grid-cols-[repeat(4,auto)]"
+    />
   );
 }
 
