@@ -21,6 +21,6 @@ export async function sendEmail(
 
   await sendInstituteEmail(edition, round, instituteId);
   if (revalidate) {
-    revalidatePath(`/admin/edition/${editionId}/${roundId}/email`);
+    revalidatePath(`/admin/edition/${editionId}/round/${roundId}/email`);
   }
 }

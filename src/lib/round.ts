@@ -3,7 +3,7 @@ import { cache } from "react";
 import { and, eq } from "drizzle-orm";
 
 import { db } from "./db";
-import { edition, round, v03b_roundStats } from "./db/schema";
+import { edition, instituteEmail, round, task, v03b_roundStats } from "./db/schema";
 
 export type RoundAdminItem = {
   id: number;
@@ -12,6 +12,8 @@ export type RoundAdminItem = {
   editionId: string;
   startsAt: Date;
   public: boolean;
+  taskCount: number;
+  sentEmailCount: number;
 };
 
 export async function updateRoundVisibility(
@@ -35,6 +37,11 @@ export const listRoundsAdmin = cache(
         editionId: round.editionId,
         startsAt: round.startsAt,
         public: round.public,
+        taskCount: db.$count(task, eq(task.roundId, round.id)),
+        sentEmailCount: db.$count(
+          instituteEmail,
+          and(eq(instituteEmail.roundId, round.id), eq(instituteEmail.status, "sent")),
+        ),
       })
       .from(round)
       .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug ?? "").if(roundSlug)))
