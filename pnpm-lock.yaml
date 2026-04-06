@@ -53,6 +53,9 @@ importers:
       '@types/node':
         specifier: ^25.5.2
         version: 25.5.2
+      '@types/nodemailer':
+        specifier: ^7.0.11
+        version: 7.0.11
       '@types/papaparse':
         specifier: ^5.5.2
         version: 5.5.2
@@ -62,6 +65,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.14)
+      '@types/wicg-file-system-access':
+        specifier: ^2023.10.7
+        version: 2023.10.7
       autoprefixer:
         specifier: ^10.4.27
         version: 10.4.27(postcss@8.5.8)
@@ -129,9 +135,6 @@ importers:
       '@biomejs/biome':
         specifier: ^2.4.10
         version: 2.4.10
-      '@types/nodemailer':
-        specifier: ^7.0.11
-        version: 7.0.11
       drizzle-kit:
         specifier: ^0.31.10
         version: 0.31.10
@@ -1567,6 +1570,9 @@ packages:
 
   '@types/whatwg-url@13.0.0':
     resolution: {integrity: sha512-N8WXpbE6Wgri7KUSvrmQcqrMllKZ9uxkYWMt+mCSGwNc0Hsw9VQTW7ApqI4XNrx6/SaM2QQJCzMPDEXE058s+Q==}
+
+  '@types/wicg-file-system-access@2023.10.7':
+    resolution: {integrity: sha512-g49ijasEJvCd7ifmAY2D0wdEtt1xRjBbA33PJTiv8mKBr7DoMsPeISoJ8oQOTopSRi+FBWPpPW5ouDj2QPKtGA==}
 
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
@@ -4384,6 +4390,8 @@ snapshots:
     dependencies:
       '@types/webidl-conversions': 7.0.3
     optional: true
+
+  '@types/wicg-file-system-access@2023.10.7': {}
 
   '@types/ws@8.18.1':
     dependencies:
