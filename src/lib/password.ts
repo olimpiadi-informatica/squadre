@@ -1,4 +1,4 @@
-import { sample, shuffle } from "lodash";
+import { sample, shuffle } from "es-toolkit/compat";
 
 const vowels = "a e i o u".split(" ");
 const consonants = "b c d f g l m n p r s t v z".split(" ");

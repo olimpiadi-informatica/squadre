@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { TZDate } from "@date-fns/tz";
 import { addHours, format, getUnixTime, subMinutes } from "date-fns";
-import { truncate } from "lodash";
+import { truncate } from "es-toolkit/compat";
 import YAML from "yaml";
 
 import { verifyAdmin } from "~/lib/admin";
