@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 
 import { Card, CardBody } from "@olinfo/react-components";
-import { groupBy } from "lodash";
+import { groupBy } from "es-toolkit/compat";
 
 import { Highlights } from "~/components/highlights";
 import { Rank } from "~/components/rank";

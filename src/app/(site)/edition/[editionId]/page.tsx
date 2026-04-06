@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Card, CardBody } from "@olinfo/react-components";
-import { groupBy } from "lodash";
+import { groupBy } from "es-toolkit/compat";
 
 import { Highlights } from "~/components/highlights";
 import { getEdition } from "~/lib/edition";
