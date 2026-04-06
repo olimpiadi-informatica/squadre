@@ -42,20 +42,24 @@ export default async function AdminRoundPage({ params }: Props) {
 
       <Card>
         <CardBody title="Dettagli round">
-          <div className="grid gap-2 text-sm md:grid-cols-3">
+          <div className="grid grid-cols-[repeat(2,auto)] gap-x-4 w-fit">
+            <p className="font-semibold">Data:</p>
             <p>
-              <span className="font-semibold">Data:</span>{" "}
               {intlFormat(
                 round.startsAt,
                 { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Rome" },
                 { locale: "it-IT" },
               )}
             </p>
+            <p className="font-semibold">Scuole:</p>
+            <p>{round.schoolCount}</p>
+            <p className="font-semibold">Team:</p>
+            <p>{round.teamCount}</p>
+            <p className="font-semibold">Task:</p>
+            <p>{round.taskCount}</p>
+            <p className="font-semibold">Credenziali inviate:</p>
             <p>
-              <span className="font-semibold">Task caricati:</span> {round.taskCount}
-            </p>
-            <p>
-              <span className="font-semibold">Email inviate:</span> {round.sentEmailCount}
+              {round.sentEmailCount} / {round.schoolCount}
             </p>
           </div>
         </CardBody>
