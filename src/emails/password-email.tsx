@@ -10,6 +10,7 @@ export interface PasswordEmailProps {
   editionYear: string;
   teams: TeamCredential[];
   startTime: string;
+  credentialsPdfUrl: string;
 }
 
 export default function PasswordEmail({
@@ -18,6 +19,7 @@ export default function PasswordEmail({
   editionYear,
   teams,
   startTime,
+  credentialsPdfUrl,
 }: PasswordEmailProps) {
   return (
     <Html>
@@ -64,6 +66,11 @@ export default function PasswordEmail({
               ))}
             </tbody>
           </table>
+
+          <Text style={paragraph}>
+            È possibile scaricare le credenziali al seguente link:{" "}
+            <Link href={credentialsPdfUrl}>{credentialsPdfUrl}</Link>
+          </Text>
 
           <Text style={paragraph}>
             <strong>Attenzione</strong>: al fine di distribuire il carico sui server durante

@@ -9,6 +9,7 @@ export function renderPasswordEmail(
   editionYear: string,
   teams: TeamCredential[],
   startTime: string,
+  credentialsPdfUrl: string,
 ) {
   return render(
     <PasswordEmail
@@ -17,6 +18,7 @@ export function renderPasswordEmail(
       editionYear={editionYear}
       teams={teams}
       startTime={startTime}
+      credentialsPdfUrl={credentialsPdfUrl}
     />,
   );
 }
