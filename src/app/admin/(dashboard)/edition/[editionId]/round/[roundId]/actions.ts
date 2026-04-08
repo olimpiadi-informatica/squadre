@@ -11,8 +11,8 @@ import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
 import { createCredentialsPdf } from "~/lib/foglietti";
 import { listRegions } from "~/lib/region";
-import { parseRanking } from "~/lib/result";
-import { getRoundAdmin, updateRoundVisibility } from "~/lib/round";
+import { parseRanking, UploadResultStep } from "~/lib/result";
+import { getRoundAdmin } from "~/lib/round";
 import { listRoundTasks, type RoundTaskItem, saveRoundTasksForRound } from "~/lib/task";
 import { listRoundTeamsCredentials } from "~/lib/team";
 
@@ -93,18 +93,39 @@ export async function uploadRoundResults(
   editionId: string,
   roundSlug: string,
   formData: FormData,
-): Promise<void> {
+): Promise<ReadableStream<{ step: UploadResultStep; error?: string }>> {
   await verifyAdmin();
 
-  const file = formData.get("file");
-  if (!(file instanceof File)) throw new Error("Nessun file fornito");
+  return new ReadableStream<{ step: UploadResultStep; error?: string }>({
+    async start(controller) {
+      try {
+        const file = formData.get("file");
+        if (!(file instanceof File)) {
+          controller.enqueue({
+            step: UploadResultStep.UPLOAD_ARCHIVE,
+            error: "Nessun file caricato",
+          });
+          return;
+        }
 
-  const roundRow = await getRoundAdmin(editionId, roundSlug);
-  if (!roundRow) throw new Error(`Round "${roundSlug}" non trovato`);
+        let lastStep = UploadResultStep.UPLOAD_ARCHIVE;
+        try {
+          for await (const step of parseRanking(file, editionId, roundSlug)) {
+            lastStep = step;
+            controller.enqueue({ step });
+          }
+        } catch (err: any) {
+          controller.enqueue({ step: lastStep, error: err.message });
+        }
 
-  await parseRanking(file, editionId, roundRow.id);
-  await updateRoundVisibility(editionId, roundSlug, true);
-  revalidatePath(`/admin/edition/${editionId}`);
+        revalidatePath(`/admin/edition/${editionId}`);
+      } catch (err) {
+        controller.error(err);
+      } finally {
+        controller.close();
+      }
+    },
+  });
 }
 
 export async function saveRoundTasks(
