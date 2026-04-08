@@ -55,10 +55,15 @@ export async function createCredentialsPdf(credentials: Credential[]) {
     const centerAreaRight = pageWidth - 210;
     const centerX = (centerAreaLeft + centerAreaRight) / 2;
 
+    const teamNameY = yCenter + 12;
+    const schoolY = yCenter - 4;
+    const url = "https://gara.squadre.olinfo.it";
+    const urlY = yCenter - 22;
+
     const teamNameWidth = helveticaBold.widthOfTextAtSize(cred.teamName, 18);
     page.drawText(cred.teamName, {
       x: centerX - teamNameWidth / 2,
-      y: yCenter + 8,
+      y: teamNameY,
       size: 18,
       font: helveticaBold,
     });
@@ -66,12 +71,20 @@ export async function createCredentialsPdf(credentials: Credential[]) {
     const schoolWidth = helvetica.widthOfTextAtSize(cred.school, 12);
     page.drawText(cred.school, {
       x: centerX - schoolWidth / 2,
-      y: yCenter - 10,
+      y: schoolY,
       size: 12,
       font: helvetica,
     });
 
-    page.drawText("slug", {
+    const urlWidth = helvetica.widthOfTextAtSize(url, 10);
+    page.drawText(url, {
+      x: centerX - urlWidth / 2,
+      y: urlY,
+      size: 10,
+      font: helvetica,
+    });
+
+    page.drawText("username", {
       x: pageWidth - 200,
       y: yCenter + 10,
       size: 12,
