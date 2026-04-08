@@ -9,6 +9,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 import { coalesce, median } from "./utils";
@@ -132,6 +133,7 @@ export const instituteEmail = pgTable(
   "institute_email",
   {
     id: serial().primaryKey(),
+    token: uuid().defaultRandom().notNull(),
     instituteId: text("institute_id")
       .notNull()
       .references(() => institute.id),

@@ -44,7 +44,14 @@ export async function GET(request: NextRequest) {
   const start = addSeconds(subMinutes(round.startsAt, 5), delay);
   const startTime = format(new TZDate(start, "Europe/Rome"), "HH:mm");
 
-  const html = await renderPasswordEmail(coach, round.title, edition.year, teamsData, startTime);
+  const html = await renderPasswordEmail(
+    coach,
+    round.title,
+    edition.year,
+    teamsData,
+    startTime,
+    "about:blank",
+  );
 
   return new Response(html, {
     headers: { "Content-Type": "text/html; charset=utf-8" },

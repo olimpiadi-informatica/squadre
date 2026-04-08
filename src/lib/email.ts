@@ -95,7 +95,7 @@ export async function sendInstituteEmail(
       address,
       status: "sending",
     })
-    .returning({ id: instituteEmail.id });
+    .returning({ id: instituteEmail.id, token: instituteEmail.token });
 
   try {
     const coach = teamsData[0].coach;
@@ -103,7 +103,15 @@ export async function sendInstituteEmail(
     const start = addSeconds(subMinutes(round.startsAt, 5), delay);
     const startTime = format(new TZDate(start, "Europe/Rome"), "HH:mm");
 
-    const html = await renderPasswordEmail(coach, round.title, edition.year, teamsData, startTime);
+    const credentialsPdfUrl = `https://squadre.olinfo.it/teacher/${encodeURIComponent(email.token)}/credenziali-round${encodeURIComponent(round.slug)}.pdf`;
+    const html = await renderPasswordEmail(
+      coach,
+      round.title,
+      edition.year,
+      teamsData,
+      startTime,
+      credentialsPdfUrl,
+    );
     await db.update(instituteEmail).set({ html }).where(eq(instituteEmail.id, email.id));
 
     const transporter = createTransporter();
