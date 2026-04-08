@@ -9,8 +9,8 @@ import { BookKey, FileKey, Mail } from "lucide-react";
 import type { RoundAdminItem } from "~/lib/round";
 
 import { getFogliettiPdf, getRoundCredentials } from "./actions";
+import { ResultsModalButton } from "./results-modal-button";
 import { TaskModalButton } from "./task-modal-button";
-import { UploadModalButton } from "./upload-modal-button";
 
 export function RoundActions({ round }: { round: RoundAdminItem }) {
   return (
@@ -68,7 +68,7 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
         <li className="step step-primary">
           <div className="flex flex-col items-start gap-2 my-4">
             <div className="text-left text-xl font-semibold">Risultati</div>
-            <UploadModalButton round={round} />
+            <ResultsModalButton round={round} />
           </div>
         </li>
       </ul>

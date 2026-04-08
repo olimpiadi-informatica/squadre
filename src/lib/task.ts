@@ -80,9 +80,10 @@ export function listRoundTasks(
   editionId: string,
   roundSlug: string,
   junior: boolean,
-): Promise<RoundTaskItem[]> {
+): Promise<(RoundTaskItem & { id: number })[]> {
   return db
     .select({
+      id: task.id,
       slug: task.slug,
       title: task.title,
       junior: task.junior,

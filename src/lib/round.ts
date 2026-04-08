@@ -26,17 +26,6 @@ export type RoundAdminItem = {
   sentEmailCount: number;
 };
 
-export async function updateRoundVisibility(
-  editionId: string,
-  roundSlug: string,
-  isPublic: boolean,
-): Promise<void> {
-  await db
-    .update(round)
-    .set({ public: isPublic })
-    .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug)));
-}
-
 export const listRoundsAdmin = cache(
   (editionId: string, roundSlug?: string): Promise<RoundAdminItem[]> => {
     return db
