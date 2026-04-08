@@ -8,7 +8,7 @@ import { BookKey, FileKey, Mail } from "lucide-react";
 
 import type { RoundAdminItem } from "~/lib/round";
 
-import { getFogliettiPdf, getRoundCredentials } from "./actions";
+import { getRoundCredentials } from "./actions";
 import { ResultsModalButton } from "./results-modal-button";
 import { TaskModalButton } from "./task-modal-button";
 
@@ -42,12 +42,14 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
         {round.slug === "final" && (
           <li className="step step-primary">
             <div className="flex flex-col items-start gap-2 my-4">
-              <div className="text-left text-xl font-semibold">Email</div>
+              <div className="text-left text-xl font-semibold">Foglietti</div>
 
-              <Button onClick={() => downloadFoglietti(round)} className="btn-success">
+              <Link
+                href={`/admin/api/foglietti.pdf?editionId=${encodeURIComponent(round.editionId)}&roundId=${encodeURIComponent(round.slug)}`}
+                className="btn btn-primary">
                 <BookKey className="size-5" />
-                Scarica foglietti PDF
-              </Button>
+                Salva foglietti
+              </Link>
             </div>
           </li>
         )}
@@ -73,14 +75,6 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
         </li>
       </ul>
     </div>
-  );
-}
-
-async function downloadFoglietti(round: RoundAdminItem) {
-  const pdfBytes = await getFogliettiPdf(round.editionId, round.slug);
-  saveAs(
-    new Blob([pdfBytes as Uint8Array<ArrayBuffer>], { type: "application/pdf" }),
-    "foglietti.pdf",
   );
 }
 
