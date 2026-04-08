@@ -10,6 +10,7 @@ const config: NextConfig = {
     serverActions: {
       bodySizeLimit: '100mb',
     },
+    viewTransition: true,
   },
 };
 

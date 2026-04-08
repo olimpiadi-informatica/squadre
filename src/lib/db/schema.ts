@@ -66,20 +66,24 @@ export const institute = pgTable("institute", {
   email: text(),
 });
 
-export const team = pgTable("team", {
-  id: serial().primaryKey(),
-  slug: text().notNull(),
-  editionId: text("edition_id")
-    .notNull()
-    .references(() => edition.id, { onDelete: "cascade" }),
-  name: text().notNull(),
-  instituteId: text("inst_id")
-    .notNull()
-    .references(() => institute.id),
-  coach: text().notNull(),
-  junior: boolean().notNull().default(false),
-  finalist: boolean(),
-});
+export const team = pgTable(
+  "team",
+  {
+    id: serial().primaryKey(),
+    slug: text().notNull(),
+    editionId: text("edition_id")
+      .notNull()
+      .references(() => edition.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    instituteId: text("inst_id")
+      .notNull()
+      .references(() => institute.id),
+    coach: text().notNull(),
+    junior: boolean().notNull().default(false),
+    finalist: boolean(),
+  },
+  (table) => [uniqueIndex("team_slug_edition_id").on(table.slug, table.editionId)],
+);
 
 export const teamRound = pgTable(
   "team_round",
