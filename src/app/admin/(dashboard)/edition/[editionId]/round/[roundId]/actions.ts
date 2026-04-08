@@ -4,12 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import { TZDate } from "@date-fns/tz";
 import { addHours, format, getUnixTime, subMinutes } from "date-fns";
-import { truncate } from "es-toolkit/compat";
 import YAML from "yaml";
 
 import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
-import { createCredentialsPdf } from "~/lib/foglietti";
 import { listRegions } from "~/lib/region";
 import { parseRanking, UploadResultStep } from "~/lib/result";
 import { getRoundAdmin } from "~/lib/round";
@@ -74,19 +72,6 @@ export async function getRoundCredentials(
     },
     { lineWidth: 0 },
   );
-}
-
-export async function getFogliettiPdf(editionId: string, roundId: string) {
-  await verifyAdmin();
-
-  const teamCredentials = await listRoundTeamsCredentials(editionId, roundId);
-  const credentials = teamCredentials.map((t) => ({
-    teamName: truncate(t.name, { length: 36 }),
-    school: truncate(`${t.instituteName}, ${t.instituteCity}`, { length: 64 }),
-    username: t.slug,
-    password: t.password,
-  }));
-  return createCredentialsPdf(credentials);
 }
 
 export async function uploadRoundResults(
