@@ -9,7 +9,7 @@ import YAML from "yaml";
 import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
 import { listRegions } from "~/lib/region";
-import { parseRanking, UploadResultStep } from "~/lib/result";
+import { parseResult, UploadResultStep } from "~/lib/result";
 import { getRoundAdmin } from "~/lib/round";
 import { listRoundTasks, type RoundTaskItem, saveRoundTasksForRound } from "~/lib/task";
 import { listRoundTeamsCredentials } from "~/lib/team";
@@ -95,11 +95,12 @@ export async function uploadRoundResults(
 
         let lastStep = UploadResultStep.UPLOAD_ARCHIVE;
         try {
-          for await (const step of parseRanking(file, editionId, roundSlug)) {
+          for await (const step of parseResult(file, editionId, roundSlug)) {
             lastStep = step;
             controller.enqueue({ step });
           }
         } catch (err: any) {
+          console.error(err);
           controller.enqueue({ step: lastStep, error: err.message });
         }
 

@@ -15,11 +15,11 @@ import { uploadRoundResults } from "./actions";
 const stepMessages = [
   "Caricamento archivio",
   "Estrazione archivio",
-  "Validazione archivio",
   "Lettura ranking",
-  "Salvataggio risultati",
+  "Lettura internet check",
+  "Salvataggio ranking",
+  "Salvataggio internet check",
   "Pubblicazione round",
-  "Caricamento completato",
 ] as const;
 
 type UploadStatus = {
