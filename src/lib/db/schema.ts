@@ -149,6 +149,11 @@ export const instituteEmail = pgTable(
   ],
 );
 
+export const emailTemplate = pgTable("email_templates", {
+  id: text().primaryKey().notNull(),
+  content: text().notNull(),
+});
+
 // ─── Better Auth tables ───────────────────────────────────────────────────────
 
 export const user = pgTable("user", {
