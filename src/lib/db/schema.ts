@@ -1,5 +1,6 @@
 import { and, avg, countDistinct, eq, gt, max, min, ne, or, sql, sum } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   index,
   integer,
@@ -115,6 +116,24 @@ export const teamTaskScore = pgTable(
     score: integer().notNull(),
   },
   (table) => [uniqueIndex("task_score_task_id_team_id_unique").on(table.taskId, table.teamId)],
+);
+
+export const internetCheck = pgTable(
+  "internet_check",
+  {
+    id: serial().primaryKey(),
+    teamId: integer("team_id")
+      .notNull()
+      .references(() => team.id, { onDelete: "cascade" }),
+    roundId: integer("round_id")
+      .notNull()
+      .references(() => round.id, { onDelete: "cascade" }),
+    ts: bigint("ts", { mode: "number" }).notNull(),
+    serverTs: bigint("server_ts", { mode: "number" }).notNull(),
+    ic: boolean().array().notNull(),
+    pcHash: text("pc_hash").notNull(),
+  },
+  (table) => [index("idx_internet_check_team_round").on(table.teamId, table.roundId)],
 );
 
 export const highlight = pgTable(
