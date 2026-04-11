@@ -12,7 +12,11 @@ import { listRoundTeamsCredentials } from "~/lib/team";
 import { db } from "./db";
 import { institute, instituteEmail, round, team } from "./db/schema";
 import type { EditionAdminItem } from "./edition";
-import { renderPasswordEmail } from "./email-template";
+import {
+  getEmailTemplateContent,
+  PASSWORD_EMAIL_TEMPLATE_ID,
+  renderPasswordEmail,
+} from "./email-template";
 import type { RoundAdminItem } from "./round";
 
 export type RoundEmailStatus = "not-sent" | "sending" | "sent" | "sending-failed";
@@ -86,6 +90,7 @@ export async function sendInstituteEmail(
 
   const address = teamsData[0].instituteEmail;
   if (!address) throw new Error(`Institute ${instituteId} has no email address`);
+  const template = (await getEmailTemplateContent(PASSWORD_EMAIL_TEMPLATE_ID)) ?? "";
 
   const [email] = await db
     .insert(instituteEmail)
@@ -111,6 +116,7 @@ export async function sendInstituteEmail(
       teamsData,
       startTime,
       credentialsPdfUrl,
+      template,
     );
     await db.update(instituteEmail).set({ html }).where(eq(instituteEmail.id, email.id));
 
@@ -118,7 +124,8 @@ export async function sendInstituteEmail(
     const messageInfo = await transporter.sendMail({
       from: "Olimpiadi di Informatica a Squadre <ois@olimpiadi-scientifiche.it>",
       to: address,
-      subject: `Password OIS ${round.title} - Edizione ${edition.name}`,
+      replyTo: "ois@aldini.istruzioneer.it",
+      subject: `Password OIS ${round.title} - Edizione ${edition.year}`,
       html,
     });
     const message = (messageInfo as StreamTransport.SentMessageInfo).message;
