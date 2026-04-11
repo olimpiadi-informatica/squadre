@@ -6,10 +6,12 @@ import { Card, CardActions, CardBody } from "@olinfo/react-components";
 import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
 import { listRoundEmailStatuses } from "~/lib/email";
+import { getEmailTemplateContent, PASSWORD_EMAIL_TEMPLATE_ID } from "~/lib/email-template";
 import { getRoundAdmin } from "~/lib/round";
 
 import { BulkSendButton } from "./bulk-send";
 import { EmailTable } from "./email-table";
+import { PasswordTemplateModal } from "./password-template-modal";
 
 type Props = {
   params: Promise<{ editionId: string; roundId: string }>;
@@ -23,7 +25,10 @@ export default async function AdminEmailPage({ params }: Props) {
   const round = await getRoundAdmin(editionId, roundId);
   if (!edition || !round) notFound();
 
-  const statuses = await listRoundEmailStatuses(editionId, roundId);
+  const [statuses, passwordTemplate] = await Promise.all([
+    listRoundEmailStatuses(editionId, roundId),
+    getEmailTemplateContent(PASSWORD_EMAIL_TEMPLATE_ID),
+  ]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -54,6 +59,18 @@ export default async function AdminEmailPage({ params }: Props) {
             </ul>
             <CardActions>
               <BulkSendButton editionId={editionId} roundId={roundId} statuses={statuses} />
+            </CardActions>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody title="Template password">
+            <p>Apri il modal per modificare il template delle email con le password.</p>
+            <CardActions>
+              <PasswordTemplateModal
+                editionId={editionId}
+                roundId={roundId}
+                content={passwordTemplate ?? ""}
+              />
             </CardActions>
           </CardBody>
         </Card>

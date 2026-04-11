@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { Button } from "@olinfo/react-components";
 
@@ -42,23 +42,25 @@ function PreviewModalButton({
   roundId: string;
 }) {
   const modalRef = useRef<HTMLDialogElement>(null);
+  const [src, setSrc] = useState<string | undefined>(undefined);
+
+  const onClick = () => {
+    setSrc(
+      emailId === null
+        ? `/admin/api/email/preview?editionId=${editionId}&roundId=${roundId}&instituteId=${instituteId}`
+        : `/admin/api/email/${emailId}`,
+    );
+    modalRef.current?.showModal();
+  };
 
   return (
     <>
-      <Button className="btn-ghost btn-xs" onClick={() => modalRef.current?.showModal()}>
+      <Button className="btn-ghost btn-xs" onClick={onClick}>
         Visualizza
       </Button>
       <Modal ref={modalRef} title="Anteprima email">
         <div className="h-[70vh]">
-          <iframe
-            src={
-              emailId === null
-                ? `/admin/api/email/preview?editionId=${editionId}&roundId=${roundId}&instituteId=${instituteId}`
-                : `/admin/api/email/${emailId}`
-            }
-            className="size-full rounded"
-            title="Anteprima email"
-          />
+          <iframe src={src} className="size-full rounded" title="Anteprima email" />
         </div>
       </Modal>
     </>

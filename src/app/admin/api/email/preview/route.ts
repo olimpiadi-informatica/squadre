@@ -5,7 +5,11 @@ import { addSeconds, format, subMinutes } from "date-fns";
 
 import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
-import { renderPasswordEmail } from "~/lib/email-template";
+import {
+  getEmailTemplateContent,
+  PASSWORD_EMAIL_TEMPLATE_ID,
+  renderPasswordEmail,
+} from "~/lib/email-template";
 import { getRoundAdmin } from "~/lib/round";
 import { listRoundTeamsCredentials } from "~/lib/team";
 
@@ -43,6 +47,7 @@ export async function GET(request: NextRequest) {
   const delay = teamsData[0].delay;
   const start = addSeconds(subMinutes(round.startsAt, 5), delay);
   const startTime = format(new TZDate(start, "Europe/Rome"), "HH:mm");
+  const template = (await getEmailTemplateContent(PASSWORD_EMAIL_TEMPLATE_ID)) ?? "";
 
   const html = await renderPasswordEmail(
     coach,
@@ -51,6 +56,7 @@ export async function GET(request: NextRequest) {
     teamsData,
     startTime,
     "about:blank",
+    template,
   );
 
   return new Response(html, {
