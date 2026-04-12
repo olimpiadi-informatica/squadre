@@ -1,6 +1,5 @@
 import { and, avg, countDistinct, eq, gt, max, min, ne, or, sql, sum } from "drizzle-orm";
 import {
-  bigint,
   boolean,
   index,
   integer,
@@ -128,8 +127,8 @@ export const internetCheck = pgTable(
     roundId: integer("round_id")
       .notNull()
       .references(() => round.id, { onDelete: "cascade" }),
-    ts: bigint("ts", { mode: "number" }).notNull(),
-    serverTs: bigint("server_ts", { mode: "number" }).notNull(),
+    ts: timestamp("ts").notNull(),
+    serverTs: timestamp("server_ts").notNull(),
     ic: boolean().array().notNull(),
     pcHash: text("pc_hash").notNull(),
   },

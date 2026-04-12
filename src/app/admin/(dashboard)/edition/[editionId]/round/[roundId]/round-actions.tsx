@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { Button } from "@olinfo/react-components";
 import { saveAs } from "file-saver";
-import { BookKey, FileKey, Mail } from "lucide-react";
+import { BookKey, FileKey, Mail, Wifi } from "lucide-react";
 
 import type { RoundAdminItem } from "~/lib/round";
 
@@ -71,6 +71,18 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
           <div className="flex flex-col items-start gap-2 my-4">
             <div className="text-left text-xl font-semibold">Risultati</div>
             <ResultsModalButton round={round} />
+          </div>
+        </li>
+        <li className="step step-primary">
+          <div className="flex flex-col items-start gap-2 my-4">
+            <div className="text-left text-xl font-semibold">Internet</div>
+
+            <Link
+              href={`/admin/edition/${round.editionId}/round/${round.slug}/internet`}
+              className="btn btn-primary">
+              <Wifi className="size-5" />
+              Controllo internet
+            </Link>
           </div>
         </li>
       </ul>
