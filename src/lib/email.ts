@@ -108,7 +108,7 @@ export async function sendInstituteEmail(
     const start = addSeconds(subMinutes(round.startsAt, 5), delay);
     const startTime = format(new TZDate(start, "Europe/Rome"), "HH:mm");
 
-    const credentialsPdfUrl = `https://squadre.olinfo.it/teacher/${encodeURIComponent(email.token)}/credenziali-round${encodeURIComponent(round.slug)}.pdf`;
+    const credentialsPdfUrl = `https://squadre.olinfo.it/teacher/c/${encodeURIComponent(email.token)}/credenziali-round${encodeURIComponent(round.slug)}.pdf`;
     const html = await renderPasswordEmail(
       coach,
       round.title,
