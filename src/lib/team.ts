@@ -187,6 +187,41 @@ export type TeamCredential = {
   delay: number;
 };
 
+export type TeamAdminItem = {
+  id: number;
+  slug: string;
+  name: string;
+  instituteName: string;
+  instituteCity: string;
+  delay: number;
+};
+
+export const getTeamAdmin = cache(
+  async (
+    editionId: string,
+    roundSlug: string,
+    teamSlug: string,
+  ): Promise<TeamAdminItem | undefined> => {
+    const [result] = await db
+      .select({
+        id: team.id,
+        slug: team.slug,
+        name: team.name,
+        instituteName: institute.name,
+        instituteCity: institute.city,
+        delay: teamRound.delay,
+      })
+      .from(teamRound)
+      .innerJoin(team, eq(team.id, teamRound.teamId))
+      .innerJoin(round, eq(round.id, teamRound.roundId))
+      .innerJoin(institute, eq(institute.id, team.instituteId))
+      .where(
+        and(eq(team.editionId, editionId), eq(round.slug, roundSlug), eq(team.slug, teamSlug)),
+      );
+    return result;
+  },
+);
+
 export const listRoundTeamsCredentials = (
   editionId: string,
   roundSlug: string,
