@@ -31,8 +31,8 @@ export async function processInternetChecks(
         rows.push({
           teamId: teams[team],
           roundId,
-          ts: parsedLine.ts,
-          serverTs: parsedLine.server_ts,
+          ts: new Date(parsedLine.ts),
+          serverTs: new Date(parsedLine.server_ts),
           ic: parsedLine.ic,
           pcHash: getPcHash(parsedLine),
         });

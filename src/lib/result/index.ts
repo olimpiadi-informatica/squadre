@@ -12,6 +12,7 @@ import { extract } from "tar";
 import { db } from "~/lib/db";
 import { internetCheck, round, team, teamTaskScore } from "~/lib/db/schema";
 import { getRoundAdmin } from "~/lib/round";
+import { refreshViews } from "~/lib/view";
 
 import { processInternetChecks } from "./internet";
 import { processRanking } from "./ranking";
@@ -87,6 +88,7 @@ export async function* parseResult(
     .update(round)
     .set({ public: true })
     .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug)));
+  await refreshViews();
 }
 
 async function getTeams(editionId: string) {
