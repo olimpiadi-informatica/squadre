@@ -29,6 +29,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
       instituteId: instituteEmail.instituteId,
       editionId: round.editionId,
       roundStartsAt: round.startsAt,
+      roundTitle: round.title,
     })
     .from(instituteEmail)
     .innerJoin(round, eq(round.id, instituteEmail.roundId))
@@ -54,7 +55,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
 
   const credentials = teamCredentials.map((t) => ({
     teamName: truncate(t.name, { length: 36 }),
-    school: truncate(`${t.instituteName}, ${t.instituteCity}`, { length: 64 }),
+    subtitle: email.roundTitle,
     username: t.slug,
     password: t.password,
   }));
