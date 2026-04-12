@@ -2,7 +2,7 @@ import { PDFDocument, rgb as rgbColor, StandardFonts } from "@cantoo/pdf-lib";
 
 export interface Credential {
   teamName: string;
-  school: string;
+  subtitle: string;
   username: string;
   password: string;
 }
@@ -68,8 +68,8 @@ export async function createCredentialsPdf(credentials: Credential[]) {
       font: helveticaBold,
     });
 
-    const schoolWidth = helvetica.widthOfTextAtSize(cred.school, 12);
-    page.drawText(cred.school, {
+    const schoolWidth = helvetica.widthOfTextAtSize(cred.subtitle, 12);
+    page.drawText(cred.subtitle, {
       x: centerX - schoolWidth / 2,
       y: schoolY,
       size: 12,
