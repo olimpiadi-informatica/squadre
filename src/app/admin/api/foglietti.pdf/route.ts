@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
   const teamCredentials = await listRoundTeamsCredentials(editionId, round.slug);
   const credentials = teamCredentials.map((t) => ({
     teamName: truncate(t.name, { length: 36 }),
-    school: truncate(`${t.instituteName}, ${t.instituteCity}`, { length: 64 }),
+    subtitle: truncate(`${t.instituteName}, ${t.instituteCity}`, { length: 64 }),
     username: t.slug,
     password: t.password,
   }));
