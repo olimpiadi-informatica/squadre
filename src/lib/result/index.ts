@@ -6,13 +6,14 @@ import { pipeline } from "node:stream/promises";
 import type { ReadableStream } from "node:stream/web";
 
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { chunk } from "es-toolkit";
+import { chunk, keyBy, mapValues } from "es-toolkit";
 import { extract } from "tar";
 
 import { db } from "~/lib/db";
-import { internetCheck, round, team, teamTaskScore } from "~/lib/db/schema";
+import { internetCheck, round, teamTaskScore } from "~/lib/db/schema";
 import { getRoundAdmin } from "~/lib/round";
 import { shouldPublishRound } from "~/lib/round-config";
+import { listRoundTeamsCredentials } from "~/lib/team";
 import { refreshViews } from "~/lib/view";
 
 import { processInternetChecks } from "./internet";
@@ -59,15 +60,20 @@ export async function* parseResult(
   const internetPath = getPath(roundPath, ["internet", "internet-check"]);
 
   yield UploadResultStep.PARSE_RANKIND;
-  const teams = await getTeams(editionId);
-  const scores = await processRanking(rankingPath, editionId, roundSlug, teams, false);
-  const juniorScores = await processRanking(rankingJuniorPath, editionId, roundSlug, teams, true);
+  const teams = keyBy(await listRoundTeamsCredentials(editionId, roundSlug), (t) => t.slug);
+  const teamIds = mapValues(teams, (t) => t.id);
+  if (Object.keys(teams).length === 0) {
+    throw new Error("Nessuna squadra trovata per questo round");
+  }
+
+  const scores = await processRanking(rankingPath, editionId, roundSlug, teamIds, false);
+  const juniorScores = await processRanking(rankingJuniorPath, editionId, roundSlug, teamIds, true);
 
   yield UploadResultStep.PARSE_INTERNET;
-  const internetChecks = await processInternetChecks(internetPath, roundData.id, teams);
+  const internetChecks = await processInternetChecks(internetPath, roundData, teams);
 
   yield UploadResultStep.SAVE_RANKIND;
-  await db.delete(teamTaskScore).where(inArray(teamTaskScore.teamId, Object.values(teams)));
+  await db.delete(teamTaskScore).where(inArray(teamTaskScore.teamId, Object.values(teamIds)));
   for (const scoreChunk of chunk([...scores, ...juniorScores], 500)) {
     await db
       .insert(teamTaskScore)
@@ -90,18 +96,6 @@ export async function* parseResult(
     .set({ public: shouldPublishRound(roundSlug) })
     .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug)));
   await refreshViews();
-}
-
-async function getTeams(editionId: string) {
-  const teams = await db
-    .select({ id: team.id, slug: team.slug })
-    .from(team)
-    .where(eq(team.editionId, editionId));
-  if (teams.length === 0) {
-    throw new Error("Nessuna squadra trovata per questa edizione");
-  }
-
-  return Object.fromEntries(teams.map((t) => [t.slug, t.id]));
 }
 
 function getPath(basePath: string, fileNames: string[]) {
