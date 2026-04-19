@@ -1,29 +1,46 @@
-import { and, count, countDistinct, eq, exists, gt, sql } from "drizzle-orm";
+import { and, countDistinct, eq, exists, gt, inArray, ne, sql } from "drizzle-orm";
 
 import { db } from "./db";
-import { institute, internetCheck, round, task, team, teamRound, teamTaskScore } from "./db/schema";
+import {
+  type InternetCheckStatus,
+  institute,
+  internetCheck,
+  round,
+  task,
+  team,
+  teamRound,
+  teamTaskScore,
+} from "./db/schema";
 
-export type TeamInternetCheck = {
-  ts: Date;
-  serverTs: Date;
-  ic: boolean[];
+export type TeamInternetSegment = {
+  startTs: Date;
+  endTs: Date;
+  status: InternetCheckStatus;
   pcHash: string;
+  userAgent: string | null;
+  browserName: string | null;
+  browserMajor: number | null;
+  osName: string | null;
 };
 
 export function getTeamInternetChecks(
   roundId: number,
   teamId: number,
-): Promise<TeamInternetCheck[]> {
+): Promise<TeamInternetSegment[]> {
   return db
     .select({
-      ts: internetCheck.ts,
-      serverTs: internetCheck.serverTs,
-      ic: internetCheck.ic,
+      startTs: internetCheck.startTs,
+      endTs: internetCheck.endTs,
+      status: internetCheck.status,
       pcHash: internetCheck.pcHash,
+      userAgent: internetCheck.userAgent,
+      browserName: internetCheck.browserName,
+      browserMajor: internetCheck.browserMajor,
+      osName: internetCheck.osName,
     })
     .from(internetCheck)
     .where(and(eq(internetCheck.roundId, roundId), eq(internetCheck.teamId, teamId)))
-    .orderBy(internetCheck.serverTs);
+    .orderBy(internetCheck.pcHash, internetCheck.startTs);
 }
 
 export type TeamRoundInternetCheck = {
@@ -35,7 +52,10 @@ export type TeamRoundInternetCheck = {
   roundSlug: string;
   numPc: number;
   numChecks: number;
-  numSuccessChecks: number;
+  numSucceededChecks: number;
+  numFailedChecks: number;
+  numMissingChecks: number;
+  hasIssues: boolean;
 };
 
 export function getTeamRoundInternetChecks(
@@ -51,8 +71,15 @@ export function getTeamRoundInternetChecks(
       editionId: round.editionId,
       roundSlug: round.slug,
       numPc: countDistinct(internetCheck.pcHash),
-      numChecks: count(internetCheck.id),
-      numSuccessChecks: sql<number>`COUNT(*) FILTER (WHERE NOT (FALSE = ANY(${internetCheck.ic})))`,
+      numChecks: sql<number>`COUNT(*) FILTER (WHERE ${ne(internetCheck.status, "empty")})`,
+      numSucceededChecks: sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "succeeded")})`,
+      numFailedChecks: sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "failed")})`,
+      numMissingChecks: sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "missing")})`,
+      hasIssues: sql<boolean>`
+        COUNT(*) FILTER (WHERE ${inArray(internetCheck.status, ["failed", "missing"])}) > 0
+        OR COUNT(*) FILTER (WHERE ${ne(internetCheck.status, "empty")}) = 0
+        OR COUNT(DISTINCT ${internetCheck.pcHash}) > 2
+      `,
     })
     .from(teamRound)
     .innerJoin(team, eq(team.id, teamRound.teamId))

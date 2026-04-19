@@ -174,6 +174,7 @@ export const listEditionTeams = cache((editionId: string): Promise<TeamResultIte
 });
 
 export type TeamCredential = {
+  id: number;
   slug: string;
   name: string;
   junior: boolean;
@@ -230,6 +231,7 @@ export const listRoundTeamsCredentials = (
 ): Promise<TeamCredential[]> => {
   return db
     .select({
+      id: team.id,
       slug: team.slug,
       name: team.name,
       junior: team.junior,
