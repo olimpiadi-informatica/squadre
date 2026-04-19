@@ -12,6 +12,7 @@ import { extract } from "tar";
 import { db } from "~/lib/db";
 import { internetCheck, round, team, teamTaskScore } from "~/lib/db/schema";
 import { getRoundAdmin } from "~/lib/round";
+import { shouldPublishRound } from "~/lib/round-config";
 import { refreshViews } from "~/lib/view";
 
 import { processInternetChecks } from "./internet";
@@ -86,7 +87,7 @@ export async function* parseResult(
   yield UploadResultStep.PUBLISH_ROUND;
   await db
     .update(round)
-    .set({ public: true })
+    .set({ public: shouldPublishRound(roundSlug) })
     .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug)));
   await refreshViews();
 }

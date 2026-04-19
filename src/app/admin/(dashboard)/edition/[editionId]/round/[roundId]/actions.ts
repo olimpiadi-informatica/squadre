@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { TZDate } from "@date-fns/tz";
-import { addHours, format, getUnixTime, subMinutes } from "date-fns";
+import { format, getUnixTime } from "date-fns";
 import YAML from "yaml";
 
 import { verifyAdmin } from "~/lib/admin";
@@ -11,6 +11,7 @@ import { getEditionAdmin } from "~/lib/edition";
 import { listRegions } from "~/lib/region";
 import { parseResult, UploadResultStep } from "~/lib/result";
 import { getRoundAdmin } from "~/lib/round";
+import { getRoundEndForTeam, getRoundStartForTeam } from "~/lib/round-config";
 import { listRoundTasks, type RoundTaskItem, saveRoundTasksForRound } from "~/lib/task";
 import { listRoundTeamsCredentials } from "~/lib/team";
 
@@ -34,8 +35,8 @@ export async function getRoundCredentials(
 
   const year = edition.year.replace(/\d{2}\//, "");
   const dateStr = format(new TZDate(round.startsAt, "Europe/Rome"), "MMMM do, yyyy");
-  const start = round.slug.length === 1 ? subMinutes(round.startsAt, 5) : round.startsAt;
-  const stop = addHours(start, 3);
+  const start = getRoundStartForTeam(round.startsAt, round.slug);
+  const stop = getRoundEndForTeam(round.startsAt, round.endsAt, round.slug);
 
   return YAML.stringify(
     {

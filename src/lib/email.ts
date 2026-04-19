@@ -2,11 +2,12 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { TZDate } from "@date-fns/tz";
-import { addSeconds, format, subMinutes } from "date-fns";
+import { format } from "date-fns";
 import { and, eq, exists, sql } from "drizzle-orm";
 import nodemailer from "nodemailer";
 import type StreamTransport from "nodemailer/lib/stream-transport";
 
+import { getRoundStartForTeam } from "~/lib/round-config";
 import { listRoundTeamsCredentials } from "~/lib/team";
 
 import { db } from "./db";
@@ -105,10 +106,10 @@ export async function sendInstituteEmail(
   try {
     const coach = teamsData[0].coach;
     const delay = teamsData[0].delay;
-    const start = addSeconds(subMinutes(round.startsAt, 5), delay);
+    const start = getRoundStartForTeam(round.startsAt, round.slug, delay);
     const startTime = format(new TZDate(start, "Europe/Rome"), "HH:mm");
 
-    const credentialsPdfUrl = `https://squadre.olinfo.it/teacher/c/${encodeURIComponent(email.token)}/credenziali-round${encodeURIComponent(round.slug)}.pdf`;
+    const credentialsPdfUrl = `https://squadre.olinfo.it/teacher/c/${encodeURIComponent(email.token)}/credenziali-round-${encodeURIComponent(round.slug)}.pdf`;
     const html = await renderPasswordEmail(
       coach,
       round.title,
