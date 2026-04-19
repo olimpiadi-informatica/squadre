@@ -19,6 +19,7 @@ export type RoundAdminItem = {
   title: string;
   editionId: string;
   startsAt: Date;
+  endsAt: Date;
   public: boolean;
   schoolCount: number;
   teamCount: number;
@@ -35,6 +36,7 @@ export const listRoundsAdmin = cache(
         title: round.title,
         editionId: round.editionId,
         startsAt: round.startsAt,
+        endsAt: round.endsAt,
         public: round.public,
         schoolCount: sql<number>`${db
           .select({ value: countDistinct(team.instituteId) })
@@ -116,6 +118,6 @@ export const listAllRounds = cache((editionId?: string): Promise<RoundItem[]> =>
     })
     .from(round)
     .innerJoin(edition, and(eq(round.editionId, edition.id), eq(edition.public, true)))
-    .where(eq(round.editionId, editionId ?? "").if(editionId))
-    .orderBy(round.title);
+    .where(and(eq(round.editionId, editionId ?? "").if(editionId), eq(round.public, true)))
+    .orderBy(round.startsAt, round.slug);
 });

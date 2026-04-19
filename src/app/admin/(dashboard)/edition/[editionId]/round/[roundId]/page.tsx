@@ -51,6 +51,14 @@ export default async function AdminRoundPage({ params }: Props) {
                 { locale: "it-IT" },
               )}
             </p>
+            <p className="font-semibold">Fine:</p>
+            <p>
+              {intlFormat(
+                round.endsAt,
+                { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Rome" },
+                { locale: "it-IT" },
+              )}
+            </p>
             <p className="font-semibold">Scuole:</p>
             <p>{round.schoolCount}</p>
             <p className="font-semibold">Team:</p>

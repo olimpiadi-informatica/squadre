@@ -12,6 +12,7 @@ import {
   TextField,
 } from "@olinfo/react-components";
 import {
+  addDays,
   getMonth,
   getYear,
   nextFriday,
@@ -19,6 +20,7 @@ import {
   nextThursday,
   nextTuesday,
   nextWednesday,
+  subWeeks,
 } from "date-fns";
 import { maxBy } from "es-toolkit/compat";
 
@@ -54,11 +56,20 @@ function getDefaultData(editions: EditionAdminItem[]) {
       }),
     ) ?? 0;
 
+  const round1Date = nextMonday(new Date(editionYear, 10, 7, 14, 30));
+  const practiceStartDate = subWeeks(new Date(round1Date), 1);
+  practiceStartDate.setHours(7, 0, 0, 0);
+
+  const practiceEndDate = addDays(new Date(practiceStartDate), 5);
+  practiceEndDate.setHours(19, 0, 0, 0);
+
   return {
     id: String(newId),
     year: `${editionYear}/${(editionYear + 1) % 100}`,
     title: `${newId}${ordinalSuffix(newId)} Edition`,
-    round1Date: nextMonday(new Date(editionYear, 10, 7, 14, 30)),
+    practiceStartDate,
+    practiceEndDate,
+    round1Date,
     round2Date: nextTuesday(new Date(editionYear, 11, 7, 14, 30)),
     round3Date: nextWednesday(new Date(editionYear + 1, 0, 14, 14, 30)),
     round4Date: nextThursday(new Date(editionYear + 1, 1, 14, 14, 30)),
@@ -90,6 +101,8 @@ export function NewEditionButton({ editions }: { editions: EditionAdminItem[] })
           <TextField field="year" label="Anno edizione" placeholder="" />
           <TextField field="title" label="Titolo edizione" placeholder="" />
           <SingleFileField field="csvFile" label="CSV partecipanti" accept=".csv" />
+          <DateTimeField field="practiceStartDate" label="Practice: inizio" placeholder="" />
+          <DateTimeField field="practiceEndDate" label="Practice: fine" placeholder="" />
           <DateTimeField field="round1Date" label="Round 1" placeholder="" />
           <DateTimeField field="round2Date" label="Round 2" placeholder="" />
           <DateTimeField field="round3Date" label="Round 3" placeholder="" />

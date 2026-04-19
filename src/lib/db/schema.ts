@@ -38,6 +38,7 @@ export const round = pgTable("round", {
   fullscore: integer().notNull(),
   public: boolean().notNull().default(true),
   startsAt: timestamp("starts_at").notNull().default(sql`'1970-01-01 00:00:00'`),
+  endsAt: timestamp("ends_at").notNull().default(sql`'1970-01-01 00:00:00'`),
 });
 
 export const task = pgTable(

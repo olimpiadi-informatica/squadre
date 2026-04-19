@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 
 import { TZDate } from "@date-fns/tz";
-import { addSeconds, format, subMinutes } from "date-fns";
+import { format } from "date-fns";
 
 import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
@@ -11,6 +11,7 @@ import {
   renderPasswordEmail,
 } from "~/lib/email-template";
 import { getRoundAdmin } from "~/lib/round";
+import { getRoundStartForTeam } from "~/lib/round-config";
 import { listRoundTeamsCredentials } from "~/lib/team";
 
 export async function GET(request: NextRequest) {
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
 
   const coach = teamsData[0].coach;
   const delay = teamsData[0].delay;
-  const start = addSeconds(subMinutes(round.startsAt, 5), delay);
+  const start = getRoundStartForTeam(round.startsAt, round.slug, delay);
   const startTime = format(new TZDate(start, "Europe/Rome"), "HH:mm");
   const template = (await getEmailTemplateContent(PASSWORD_EMAIL_TEMPLATE_ID)) ?? "";
 

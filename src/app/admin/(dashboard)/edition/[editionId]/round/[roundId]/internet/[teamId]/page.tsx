@@ -4,13 +4,12 @@ import { notFound } from "next/navigation";
 import { Card, CardBody } from "@olinfo/react-components";
 import clsx from "clsx";
 import {
-  addMilliseconds,
   addSeconds,
   differenceInMilliseconds,
-  hoursToMilliseconds,
   intlFormat,
   max,
   min,
+  minutesToMilliseconds,
 } from "date-fns";
 import { countBy, groupBy, round } from "es-toolkit";
 
@@ -18,15 +17,18 @@ import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
 import { getTeamInternetChecks, type TeamInternetCheck } from "~/lib/internet-check";
 import { getRoundAdmin } from "~/lib/round";
+import {
+  getRoundDurationMinutes,
+  getRoundEndForTeam,
+  getRoundStartForTeam,
+} from "~/lib/round-config";
 import { getTeamAdmin } from "~/lib/team";
 
 type Props = {
   params: Promise<{ editionId: string; roundId: string; teamId: string }>;
 };
 
-const ROUND_DURATION_MS = hoursToMilliseconds(3);
-const ROUND_DURATION_MINUTES = ROUND_DURATION_MS / 60_000;
-const CHECK_VALIDITY_MS = 75_000;
+const CHECK_VALIDITY_SEC = 100;
 
 export default async function AdminRoundInternetTeamPage({ params }: Props) {
   await verifyAdmin();
@@ -40,8 +42,10 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
 
   if (!edition || !round || !team) notFound();
 
-  const raceStart = addSeconds(round.startsAt, team.delay);
-  const raceEnd = addMilliseconds(raceStart, ROUND_DURATION_MS);
+  const raceStart = getRoundStartForTeam(round.startsAt, round.slug, team.delay);
+  const raceEnd = getRoundEndForTeam(round.startsAt, round.endsAt, round.slug, team.delay);
+  const roundDurationMinutes = getRoundDurationMinutes(round.startsAt, round.endsAt, round.slug);
+
   const allChecks = await getTeamInternetChecks(round.id, team.id);
   const checks = allChecks.filter(
     (check) => check.serverTs >= raceStart && check.serverTs <= raceEnd,
@@ -56,7 +60,7 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
 
   const pcChecks = groupBy(checks, (c) => c.pcHash);
   for (const [pcHash, check] of lastPreStartCheckByPc) {
-    const isStillValidAtRaceStart = addMilliseconds(check.serverTs, CHECK_VALIDITY_MS) > raceStart;
+    const isStillValidAtRaceStart = addSeconds(check.serverTs, CHECK_VALIDITY_SEC) > raceStart;
     if (!isStillValidAtRaceStart) continue;
     pcChecks[pcHash] = [check, ...(pcChecks[pcHash] ?? [])];
   }
@@ -66,7 +70,7 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
   const lastCheck = allChecks.at(-1);
   const numPc = Object.keys(pcChecks).length;
   const averageChecksPerPcPerMinute =
-    numPc === 0 ? null : (checks.length / numPc / ROUND_DURATION_MINUTES).toFixed(2);
+    numPc === 0 ? null : (checks.length / numPc / roundDurationMinutes).toFixed(2);
 
   return (
     <div className="flex flex-col gap-4">
@@ -122,7 +126,13 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
       ) : (
         <div className="flex flex-col gap-4">
           {Object.entries(pcChecks).map(([pc, pcChecks]) => (
-            <PcInternet key={pc} checks={pcChecks} raceStart={raceStart} raceEnd={raceEnd} />
+            <PcInternet
+              key={pc}
+              checks={pcChecks}
+              raceStart={raceStart}
+              raceEnd={raceEnd}
+              roundDurationMinutes={roundDurationMinutes}
+            />
           ))}
         </div>
       )}
@@ -134,10 +144,12 @@ function PcInternet({
   checks,
   raceStart,
   raceEnd,
+  roundDurationMinutes,
 }: {
   checks: TeamInternetCheck[];
   raceStart: Date;
   raceEnd: Date;
+  roundDurationMinutes: number;
 }) {
   const segments = getCheckSegments(checks, raceStart, raceEnd);
   const scoredSegments = segments.filter((segment) => segment.type !== "empty");
@@ -162,7 +174,9 @@ function PcInternet({
       </div>
       <div className="h-5 flex w-full rounded border border-base-300 bg-base-200">
         {segments.map((segment, index) => {
-          const width = differenceInMilliseconds(segment.end, segment.start) / ROUND_DURATION_MS;
+          const width =
+            differenceInMilliseconds(segment.end, segment.start) /
+            minutesToMilliseconds(roundDurationMinutes);
           const isEmptySegment = segment.type === "empty";
           return (
             <div
@@ -205,11 +219,7 @@ function getCheckSegments(
     const checkStart = check.serverTs;
     const nextCheckStart = checks[index + 1]?.serverTs ?? raceEnd;
     const segmentStart = max([raceStart, checkStart]);
-    const segmentEnd = min([
-      raceEnd,
-      nextCheckStart,
-      addMilliseconds(checkStart, CHECK_VALIDITY_MS),
-    ]);
+    const segmentEnd = min([raceEnd, nextCheckStart, addSeconds(checkStart, CHECK_VALIDITY_SEC)]);
 
     if (hasRenderedCheckSegment && segmentStart > cursor) {
       segments.push({

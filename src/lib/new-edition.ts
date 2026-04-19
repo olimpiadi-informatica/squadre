@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { random } from "es-toolkit/compat";
 
 import { generateWord } from "~/lib/password";
+import { getDefaultRoundEndsAt, roundHasDelay } from "~/lib/round-config";
 
 import { db } from "./db";
 import { edition, institute, round, team, teamRound } from "./db/schema";
@@ -10,6 +11,8 @@ export type EditionData = {
   id: string;
   year: string;
   title: string;
+  practiceStartDate: Date;
+  practiceEndDate: Date;
   round1Date: Date;
   round2Date: Date;
   round3Date: Date;
@@ -25,7 +28,18 @@ export async function createNewEdition(
   institutes: InstituteInsert[],
   teams: TeamInsert[],
 ): Promise<void> {
-  const { id, year, title, round1Date, round2Date, round3Date, round4Date, roundFinalDate } = data;
+  const {
+    id,
+    year,
+    title,
+    practiceStartDate,
+    practiceEndDate,
+    round1Date,
+    round2Date,
+    round3Date,
+    round4Date,
+    roundFinalDate,
+  } = data;
 
   await db.transaction(async (tx) => {
     await tx.insert(edition).values({ id, year, title, public: false });
@@ -34,12 +48,22 @@ export async function createNewEdition(
       .insert(round)
       .values([
         {
+          slug: "practice",
+          editionId: id,
+          title: "Practice",
+          fullscore: 0,
+          public: false,
+          startsAt: practiceStartDate,
+          endsAt: practiceEndDate,
+        },
+        {
           slug: "1",
           editionId: id,
           title: "Round 1",
           fullscore: 0,
           public: false,
           startsAt: round1Date,
+          endsAt: getDefaultRoundEndsAt(round1Date, "1"),
         },
         {
           slug: "2",
@@ -48,6 +72,7 @@ export async function createNewEdition(
           fullscore: 0,
           public: false,
           startsAt: round2Date,
+          endsAt: getDefaultRoundEndsAt(round2Date, "2"),
         },
         {
           slug: "3",
@@ -56,6 +81,7 @@ export async function createNewEdition(
           fullscore: 0,
           public: false,
           startsAt: round3Date,
+          endsAt: getDefaultRoundEndsAt(round3Date, "3"),
         },
         {
           slug: "4",
@@ -64,6 +90,7 @@ export async function createNewEdition(
           fullscore: 0,
           public: false,
           startsAt: round4Date,
+          endsAt: getDefaultRoundEndsAt(round4Date, "4"),
         },
         {
           slug: "final",
@@ -72,6 +99,7 @@ export async function createNewEdition(
           fullscore: 0,
           public: false,
           startsAt: roundFinalDate,
+          endsAt: getDefaultRoundEndsAt(roundFinalDate, "final"),
         },
       ])
       .returning({ id: round.id, slug: round.slug });
@@ -107,7 +135,7 @@ export async function createNewEdition(
                 roundId: round.id,
                 teamId: t.id,
                 password: generateWord(),
-                delay: round.slug.length === 1 ? delays[t.instituteId]! : 0,
+                delay: roundHasDelay(round.slug) ? delays[t.instituteId]! : 0,
               }) satisfies typeof teamRound.$inferInsert,
           ),
         ),
