@@ -1,18 +1,39 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { Button } from "@olinfo/react-components";
-import { saveAs } from "file-saver";
+import clsx from "clsx";
 import { BookKey, FileKey, Mail, Wifi } from "lucide-react";
 
 import type { RoundAdminItem } from "~/lib/round";
 
-import { getRoundCredentials } from "./actions";
+import { getMirrorCredentials, getRoundCredentials } from "./actions";
 import { ResultsModalButton } from "./results-modal-button";
 import { TaskModalButton } from "./task-modal-button";
 
 export function RoundActions({ round }: { round: RoundAdminItem }) {
+  const [supportsDirectoryPicker, setSupportsDirectoryPicker] = useState<boolean | null>(null);
+  const [isWritingCredentials, setIsWritingCredentials] = useState(false);
+
+  useEffect(() => {
+    setSupportsDirectoryPicker("showDirectoryPicker" in window);
+  }, []);
+
+  async function handleWriteCredentials() {
+    setIsWritingCredentials(true);
+
+    try {
+      await writeCredentials(round);
+    } catch (err) {
+      console.error(err);
+      window.alert(err instanceof Error ? err.message : "Errore durante il salvataggio dei file.");
+    } finally {
+      setIsWritingCredentials(false);
+    }
+  }
+
   return (
     <div className="flex flex-wrap gap-2">
       <ul className="steps steps-vertical">
@@ -25,17 +46,18 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
         <li className="step step-primary">
           <div className="flex flex-col items-start gap-2 my-4">
             <div className="text-left text-xl font-semibold">Utenti</div>
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={() => downloadCredentials(round, false)} className="btn-primary">
+            <div
+              className={clsx(supportsDirectoryPicker === false && "tooltip")}
+              data-tip="È necessario un browser Chromium-based">
+              <Button
+                onClick={handleWriteCredentials}
+                className="btn-primary"
+                disabled={supportsDirectoryPicker === false || isWritingCredentials}>
                 <FileKey className="size-5" />
-                Scarica regular.yaml
+                {round.slug === "final"
+                  ? "Scrivi regular.yaml e mirror-regular.yaml"
+                  : "Scrivi regular.yaml, debutant.yaml e mirror-*"}
               </Button>
-              {round.slug !== "final" && (
-                <Button onClick={() => downloadCredentials(round, true)} className="btn-primary">
-                  <FileKey className="size-5" />
-                  Scarica debutant.yaml
-                </Button>
-              )}
             </div>
           </div>
         </li>
@@ -90,7 +112,55 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
   );
 }
 
-async function downloadCredentials(round: RoundAdminItem, junior: boolean) {
-  const yaml = await getRoundCredentials(round.editionId, round.slug, junior);
-  saveAs(new Blob([yaml], { type: "text/yaml" }), junior ? "debutant.yaml" : "regular.yaml");
+async function writeCredentials(round: RoundAdminItem) {
+  let dirHandle: FileSystemDirectoryHandle;
+  try {
+    dirHandle = await window.showDirectoryPicker();
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") return;
+    throw err;
+  }
+
+  const [regularYaml, mirrorRegularYaml, debutantYaml, mirrorDebutantYaml] = await Promise.all([
+    getRoundCredentials(round.editionId, round.slug, false),
+    getMirrorCredentials(round.editionId, round.slug, false),
+    round.slug === "final"
+      ? Promise.resolve(null)
+      : getRoundCredentials(round.editionId, round.slug, true),
+    round.slug === "final"
+      ? Promise.resolve(null)
+      : getMirrorCredentials(round.editionId, round.slug, true),
+  ]);
+
+  await deleteFileIfExists(dirHandle, "contest.yaml");
+  await writeTextFile(dirHandle, "regular.yaml", regularYaml);
+  await writeTextFile(dirHandle, "mirror-regular.yaml", mirrorRegularYaml);
+
+  if (debutantYaml !== null) {
+    await writeTextFile(dirHandle, "debutant.yaml", debutantYaml);
+  }
+
+  if (mirrorDebutantYaml !== null) {
+    await writeTextFile(dirHandle, "mirror-debutant.yaml", mirrorDebutantYaml);
+  }
+}
+
+async function deleteFileIfExists(dirHandle: FileSystemDirectoryHandle, fileName: string) {
+  try {
+    await dirHandle.removeEntry(fileName);
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "NotFoundError") return;
+    throw err;
+  }
+}
+
+async function writeTextFile(
+  dirHandle: FileSystemDirectoryHandle,
+  fileName: string,
+  content: string,
+) {
+  const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(content);
+  await writable.close();
 }

@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache";
 
 import { TZDate } from "@date-fns/tz";
-import { format, getUnixTime } from "date-fns";
+import { format, getUnixTime, hoursToSeconds } from "date-fns";
 import YAML from "yaml";
 
 import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
+import { mirrorTeams } from "~/lib/mirror-teams";
 import { listRegions } from "~/lib/region";
 import { parseResult, UploadResultStep } from "~/lib/result";
 import { getRoundAdmin } from "~/lib/round";
@@ -20,23 +21,8 @@ export async function getRoundCredentials(
   roundSlug: string,
   junior: boolean,
 ): Promise<string> {
-  await verifyAdmin();
-
-  const [edition, round, regions, teamCredentials, roundTasks] = await Promise.all([
-    getEditionAdmin(editionId),
-    getRoundAdmin(editionId, roundSlug),
-    listRegions(),
-    listRoundTeamsCredentials(editionId, roundSlug, junior),
-    listRoundTasks(editionId, roundSlug, junior),
-  ]);
-
-  if (!edition) throw new Error(`Edition ${editionId} not found`);
-  if (!round) throw new Error(`Round ${roundSlug} not found`);
-
-  const year = edition.year.replace(/\d{2}\//, "");
-  const dateStr = format(new TZDate(round.startsAt, "Europe/Rome"), "MMMM do, yyyy");
-  const start = getRoundStartForTeam(round.startsAt, round.slug);
-  const stop = getRoundEndForTeam(round.startsAt, round.endsAt, round.slug);
+  const { year, dateStr, start, contestStop, round, roundTasks, regions, teamCredentials } =
+    await getCredentialData(editionId, roundSlug, junior);
 
   return YAML.stringify(
     {
@@ -44,7 +30,7 @@ export async function getRoundCredentials(
       description: `OIS${year} -- ${round.title} (${junior ? "debutant" : "regular"})`,
       date: dateStr,
       start: getUnixTime(start),
-      stop: getUnixTime(stop),
+      stop: getUnixTime(contestStop),
       token_mode: "disabled",
       allow_registration: false,
       allow_user_tests: false,
@@ -73,6 +59,85 @@ export async function getRoundCredentials(
     },
     { lineWidth: 0 },
   );
+}
+
+export async function getMirrorCredentials(
+  editionId: string,
+  roundSlug: string,
+  junior: boolean,
+): Promise<string> {
+  const { year, dateStr, start, contestStop, round, roundTasks } = await getCredentialData(
+    editionId,
+    roundSlug,
+    junior,
+  );
+
+  return YAML.stringify(
+    {
+      name: `round${round.slug}${junior ? "-debutant" : ""}`,
+      description: `IIOT${year} -- ${round.title} (${junior ? "debutant" : "regular"})`,
+      date: dateStr,
+      start: getUnixTime(start),
+      stop: getUnixTime(contestStop),
+      token_mode: "disabled",
+      allow_registration: true,
+      allow_user_tests: false,
+      per_user_time: hoursToSeconds(3),
+      timezone: "Europe/Rome",
+      location: "Online",
+      logo: "logo.pdf",
+      languages: [
+        "C++20 / g++",
+        "C11 / gcc",
+        "Java / JDK",
+        "Python 3 / PyPy",
+        "Pascal / fpc",
+        "C# / Mono",
+      ],
+      tasks: roundTasks.map((task) => task.slug),
+      teams: mirrorTeams,
+      users: mirrorTeams.map((team) => ({
+        team: team.code,
+        username: team.code,
+        password: team.code,
+        hidden: true,
+        last_name: "",
+        first_name: team.name,
+      })),
+    },
+    { lineWidth: 0 },
+  );
+}
+
+async function getCredentialData(editionId: string, roundSlug: string, junior: boolean) {
+  await verifyAdmin();
+
+  const [edition, round, roundTasks, regions, teamCredentials] = await Promise.all([
+    getEditionAdmin(editionId),
+    getRoundAdmin(editionId, roundSlug),
+    listRoundTasks(editionId, roundSlug, junior),
+    listRegions(),
+    listRoundTeamsCredentials(editionId, roundSlug, junior),
+  ]);
+
+  if (!edition) throw new Error(`Edition ${editionId} not found`);
+  if (!round) throw new Error(`Round ${roundSlug} not found`);
+
+  const year = edition.year.replace(/\d{2}\//, "");
+  const dateStr = format(new TZDate(round.startsAt, "Europe/Rome"), "MMMM do, yyyy");
+  const start = getRoundStartForTeam(round.startsAt, round.slug);
+  const contestStop = getRoundEndForTeam(round.startsAt, round.endsAt, round.slug);
+
+  return {
+    year,
+    dateStr,
+    start,
+    contestStop,
+    round,
+    roundTasks,
+    regions,
+    teamCredentials,
+  };
 }
 
 export async function uploadRoundResults(
