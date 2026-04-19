@@ -118,6 +118,9 @@ export const teamTaskScore = pgTable(
   (table) => [uniqueIndex("task_score_task_id_team_id_unique").on(table.taskId, table.teamId)],
 );
 
+export const internetCheckStatusValues = ["succeeded", "failed", "missing", "empty"] as const;
+export type InternetCheckStatus = (typeof internetCheckStatusValues)[number];
+
 export const internetCheck = pgTable(
   "internet_check",
   {
@@ -128,10 +131,14 @@ export const internetCheck = pgTable(
     roundId: integer("round_id")
       .notNull()
       .references(() => round.id, { onDelete: "cascade" }),
-    ts: timestamp("ts").notNull(),
-    serverTs: timestamp("server_ts").notNull(),
-    ic: boolean().array().notNull(),
+    startTs: timestamp("start_ts").notNull(),
+    endTs: timestamp("end_ts").notNull(),
+    status: text().notNull().$type<InternetCheckStatus>(),
     pcHash: text("pc_hash").notNull(),
+    userAgent: text("user_agent"),
+    browserName: text("browser_name"),
+    browserMajor: integer("browser_major"),
+    osName: text("os_name"),
   },
   (table) => [index("idx_internet_check_team_round").on(table.teamId, table.roundId)],
 );
