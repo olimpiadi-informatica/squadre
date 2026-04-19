@@ -16,7 +16,7 @@ type RouteContext = {
 
 export async function GET(_request: Request, { params }: RouteContext) {
   const { token, pdfName } = await params;
-  const roundMatch = /^credenziali-round(\d)\.pdf$/.exec(pdfName);
+  const roundMatch = /^credenziali-round-(\w+)\.pdf$/i.exec(pdfName);
 
   if (!roundMatch) {
     return new Response("Invalid file name", { status: 404 });
@@ -28,7 +28,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     .select({
       instituteId: instituteEmail.instituteId,
       editionId: round.editionId,
-      roundStartsAt: round.startsAt,
+      roundEndsAt: round.endsAt,
       roundTitle: round.title,
     })
     .from(instituteEmail)
@@ -39,7 +39,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     return new Response("Invalid token", { status: 404 });
   }
 
-  if (isPast(addDays(email.roundStartsAt, 1))) {
+  if (isPast(addDays(email.roundEndsAt, 1))) {
     return new Response("Token expired", { status: 404 });
   }
 
