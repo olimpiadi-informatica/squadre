@@ -3,19 +3,13 @@ import { notFound } from "next/navigation";
 
 import { Card, CardBody } from "@olinfo/react-components";
 import clsx from "clsx";
-import {
-  addSeconds,
-  differenceInMilliseconds,
-  intlFormat,
-  max,
-  min,
-  minutesToMilliseconds,
-} from "date-fns";
-import { countBy, groupBy, round } from "es-toolkit";
+import { intlFormat, minutesToMilliseconds } from "date-fns";
+import { countBy, groupBy, minBy, round } from "es-toolkit";
+import { maxBy } from "es-toolkit/compat";
 
 import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
-import { getTeamInternetChecks, type TeamInternetCheck } from "~/lib/internet-check";
+import { getTeamInternetChecks, type TeamInternetSegment } from "~/lib/internet-check";
 import { getRoundAdmin } from "~/lib/round";
 import {
   getRoundDurationMinutes,
@@ -27,8 +21,6 @@ import { getTeamAdmin } from "~/lib/team";
 type Props = {
   params: Promise<{ editionId: string; roundId: string; teamId: string }>;
 };
-
-const CHECK_VALIDITY_SEC = 100;
 
 export default async function AdminRoundInternetTeamPage({ params }: Props) {
   await verifyAdmin();
@@ -46,31 +38,18 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
   const raceEnd = getRoundEndForTeam(round.startsAt, round.endsAt, round.slug, team.delay);
   const roundDurationMinutes = getRoundDurationMinutes(round.startsAt, round.endsAt, round.slug);
 
-  const allChecks = await getTeamInternetChecks(round.id, team.id);
-  const checks = allChecks.filter(
-    (check) => check.serverTs >= raceStart && check.serverTs <= raceEnd,
+  const segments = await getTeamInternetChecks(round.id, team.id);
+  const pcChecks = groupBy(segments, (segment) => segment.pcHash);
+  const actualChecks = segments.filter(
+    (segment) => segment.status === "succeeded" || segment.status === "failed",
   );
-  const lastPreStartCheckByPc = new Map<string, TeamInternetCheck>();
-  for (const check of allChecks) {
-    if (check.serverTs >= raceStart) {
-      break;
-    }
-    lastPreStartCheckByPc.set(check.pcHash, check);
-  }
-
-  const pcChecks = groupBy(checks, (c) => c.pcHash);
-  for (const [pcHash, check] of lastPreStartCheckByPc) {
-    const isStillValidAtRaceStart = addSeconds(check.serverTs, CHECK_VALIDITY_SEC) > raceStart;
-    if (!isStillValidAtRaceStart) continue;
-    pcChecks[pcHash] = [check, ...(pcChecks[pcHash] ?? [])];
-  }
-
-  const totalPassedChecks = checks.filter((check) => isCheckPassed(check)).length;
-  const firstCheck = allChecks.at(0);
-  const lastCheck = allChecks.at(-1);
+  const scoredSegments = segments.filter((segment) => segment.status !== "empty");
+  const totalSucceededChecks = segments.filter((segment) => segment.status === "succeeded").length;
+  const firstCheck = minBy(actualChecks, (s) => s.startTs.getTime());
+  const lastCheck = maxBy(actualChecks, (s) => s.startTs.getTime());
   const numPc = Object.keys(pcChecks).length;
   const averageChecksPerPcPerMinute =
-    numPc === 0 ? null : (checks.length / numPc / roundDurationMinutes).toFixed(2);
+    numPc === 0 ? null : (actualChecks.length / numPc / roundDurationMinutes).toFixed(2);
 
   return (
     <div className="flex flex-col gap-4">
@@ -103,7 +82,7 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
             </p>
             <p className="font-semibold">Controlli:</p>
             <p>
-              {totalPassedChecks} / {checks.length}
+              {totalSucceededChecks} / {scoredSegments.length}
             </p>
             <p className="font-semibold">PC monitorati:</p>
             <p>{numPc}</p>
@@ -114,9 +93,9 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
               {formatCheckTs(raceStart)} - {formatCheckTs(raceEnd)}
             </p>
             <p className="font-semibold">Primo check:</p>
-            <p>{formatCheckTs(firstCheck?.serverTs)}</p>
+            <p>{formatCheckTs(firstCheck?.startTs)}</p>
             <p className="font-semibold">Ultimo check:</p>
-            <p>{formatCheckTs(lastCheck?.serverTs)}</p>
+            <p>{formatCheckTs(lastCheck?.startTs)}</p>
           </div>
         </CardBody>
       </Card>
@@ -125,12 +104,10 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
         <p className="italic opacity-70">Nessun internet check disponibile per questo team.</p>
       ) : (
         <div className="flex flex-col gap-4">
-          {Object.entries(pcChecks).map(([pc, pcChecks]) => (
+          {Object.entries(pcChecks).map(([pc, pcSegments]) => (
             <PcInternet
               key={pc}
-              checks={pcChecks}
-              raceStart={raceStart}
-              raceEnd={raceEnd}
+              segments={pcSegments}
               roundDurationMinutes={roundDurationMinutes}
             />
           ))}
@@ -141,49 +118,60 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
 }
 
 function PcInternet({
-  checks,
-  raceStart,
-  raceEnd,
+  segments,
   roundDurationMinutes,
 }: {
-  checks: TeamInternetCheck[];
-  raceStart: Date;
-  raceEnd: Date;
+  segments: TeamInternetSegment[];
   roundDurationMinutes: number;
 }) {
-  const segments = getCheckSegments(checks, raceStart, raceEnd);
-  const scoredSegments = segments.filter((segment) => segment.type !== "empty");
-
-  const pcHash = checks[0].pcHash;
-
+  const scoredSegments = segments.filter((segment) => segment.status !== "empty");
+  const pcInfo = segments[0];
   const totalChecks = scoredSegments.length;
-  const checkTypes = countBy(scoredSegments, (s) => s.type);
-  const passRate = totalChecks === 0 ? 0 : round(((checkTypes.passed ?? 0) / totalChecks) * 100, 1);
+  const checkTypes = countBy(scoredSegments, (segment) => segment.status);
+  const successRate =
+    totalChecks === 0 ? 0 : round(((checkTypes.succeeded ?? 0) / totalChecks) * 100, 1);
 
   return (
     <div className="p-3 border border-base-content/10 rounded-lg bg-base-200">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <h2 className="font-semibold">
-          PC: <code>{pcHash.slice(0, 8)}</code>
-        </h2>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+        <div>
+          <h2 className="font-semibold">
+            PC: <code>{pcInfo.pcHash.slice(0, 8)}</code>
+          </h2>
+          <div className="grid grid-cols-[repeat(2,auto)] gap-x-3 text-sm opacity-80">
+            <p className="font-semibold">Browser:</p>
+            <p>
+              {pcInfo.browserName ?? "-"} {pcInfo.browserMajor}
+            </p>
+            <p className="font-semibold">OS:</p>
+            <p>{pcInfo.osName ?? "-"}</p>
+          </div>
+        </div>
         <div className="text-sm">
-          pass rate: <span className="font-semibold">{passRate}%</span> | passed:{" "}
-          {checkTypes.passed ?? 0} | failed: {checkTypes.failed ?? 0} | missing:{" "}
+          success rate: <span className="font-semibold">{successRate}%</span> | succeeded:{" "}
+          {checkTypes.succeeded ?? 0} | failed: {checkTypes.failed ?? 0} | missing:{" "}
           {checkTypes.missing ?? 0}
         </div>
       </div>
       <div className="h-5 flex w-full rounded border border-base-300 bg-base-200">
         {segments.map((segment, index) => {
           const width =
-            differenceInMilliseconds(segment.end, segment.start) /
+            (segment.endTs.getTime() - segment.startTs.getTime()) /
             minutesToMilliseconds(roundDurationMinutes);
-          const isEmptySegment = segment.type === "empty";
+          const isEmptySegment = segment.status === "empty";
+
           return (
             <div
               key={index}
-              className={clsx("h-full", segment.colorClass, !isEmptySegment && "tooltip")}
+              className={clsx(
+                "h-full",
+                getSegmentColorClass(segment.status),
+                !isEmptySegment && "tooltip",
+              )}
               data-tip={
-                segment.tooltip ? `${formatCheckTs(segment.start)} ${segment.tooltip}` : undefined
+                isEmptySegment
+                  ? undefined
+                  : `${formatCheckTs(segment.startTs)} ${formatSegmentLabel(segment.status)}`
               }
               style={{ width: `${width * 100}%` }}
             />
@@ -194,79 +182,30 @@ function PcInternet({
   );
 }
 
-function isCheckPassed({ ic }: TeamInternetCheck) {
-  return ic.every((value) => value);
+function getSegmentColorClass(status: TeamInternetSegment["status"]) {
+  switch (status) {
+    case "succeeded":
+      return "bg-success";
+    case "failed":
+      return "bg-error";
+    case "missing":
+      return "bg-warning";
+    case "empty":
+      return "bg-base-content/10";
+  }
 }
 
-type CheckSegment = {
-  start: Date;
-  end: Date;
-  type: "passed" | "failed" | "missing" | "empty";
-  colorClass: string;
-  tooltip?: string;
-};
-
-function getCheckSegments(
-  checks: TeamInternetCheck[],
-  raceStart: Date,
-  raceEnd: Date,
-): CheckSegment[] {
-  const segments: CheckSegment[] = [];
-  let cursor = raceStart;
-  let hasRenderedCheckSegment = false;
-
-  for (const [index, check] of checks.entries()) {
-    const checkStart = check.serverTs;
-    const nextCheckStart = checks[index + 1]?.serverTs ?? raceEnd;
-    const segmentStart = max([raceStart, checkStart]);
-    const segmentEnd = min([raceEnd, nextCheckStart, addSeconds(checkStart, CHECK_VALIDITY_SEC)]);
-
-    if (hasRenderedCheckSegment && segmentStart > cursor) {
-      segments.push({
-        start: cursor,
-        end: segmentStart,
-        type: "missing",
-        colorClass: "bg-warning",
-        tooltip: "⚠️",
-      });
-    }
-
-    if (segmentEnd > segmentStart) {
-      const passed = isCheckPassed(check);
-      segments.push({
-        start: segmentStart,
-        end: segmentEnd,
-        type: passed ? "passed" : "failed",
-        colorClass: passed ? "bg-success" : "bg-error",
-        tooltip: passed ? "✅" : "❌",
-      });
-      hasRenderedCheckSegment = true;
-      cursor = segmentEnd;
-    } else if (segmentStart > cursor) {
-      cursor = segmentStart;
-    }
+function formatSegmentLabel(status: TeamInternetSegment["status"]) {
+  switch (status) {
+    case "succeeded":
+      return "✅";
+    case "failed":
+      return "❌";
+    case "missing":
+      return "⚠️";
+    case "empty":
+      return "";
   }
-
-  if (hasRenderedCheckSegment && cursor < raceEnd) {
-    segments.push({
-      start: cursor,
-      end: raceEnd,
-      type: "empty",
-      colorClass: "bg-base-content/10",
-    });
-  }
-
-  const firstScoredSegment = segments.find((segment) => segment.type !== "empty");
-  if (firstScoredSegment && firstScoredSegment.start > raceStart) {
-    segments.unshift({
-      start: raceStart,
-      end: firstScoredSegment.start,
-      type: "empty",
-      colorClass: "bg-base-content/10",
-    });
-  }
-
-  return segments.filter((segment) => segment.end > segment.start);
 }
 
 function formatCheckTs(ts?: Date) {
