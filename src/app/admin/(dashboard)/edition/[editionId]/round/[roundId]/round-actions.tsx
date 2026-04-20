@@ -54,9 +54,7 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
                 className="btn-primary"
                 disabled={supportsDirectoryPicker === false || isWritingCredentials}>
                 <FileKey className="size-5" />
-                {round.slug === "final"
-                  ? "Scrivi regular.yaml e mirror-regular.yaml"
-                  : "Scrivi regular.yaml, debutant.yaml e mirror-*"}
+                {round.slug === "final" ? "Crea regular.yaml" : "Crea regular.yaml e debutant.yaml"}
               </Button>
             </div>
           </div>
