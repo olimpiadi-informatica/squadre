@@ -109,7 +109,7 @@ export function InternetTable({ teams }: { teams: TeamRoundInternetCheck[] }) {
           failedThreshold: DEFAULT_FAILED_THRESHOLD,
         }}
         onSubmit={() => {}}
-        className="max-w-none !w-full ![align-items:unset] gap-4">
+        className="!max-w-none !w-full ![align-items:unset] gap-4">
         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
           <NumberField
             field="missingThreshold"

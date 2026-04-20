@@ -16,8 +16,10 @@ const stepMessages = [
   "Caricamento archivio",
   "Estrazione archivio",
   "Lettura ranking",
+  "Lettura submission",
   "Lettura internet check",
   "Salvataggio ranking",
+  "Salvataggio submission",
   "Salvataggio internet check",
   "Pubblicazione round",
 ] as const;

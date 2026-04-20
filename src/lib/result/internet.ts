@@ -2,7 +2,7 @@ import { hash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { addSeconds, max, min } from "date-fns";
+import { addSeconds, clamp, max, min } from "date-fns";
 import { groupBy, isPlainObject, sortBy } from "es-toolkit";
 import { UAParser } from "ua-parser-js";
 import { z } from "zod";
@@ -31,6 +31,7 @@ export async function processInternetChecks(
   internetPath: string,
   roundData: RoundAdminItem,
   teams: Record<string, TeamCredential>,
+  lastSubmissionByTeamRoundId: Record<number, Date | undefined>,
 ) {
   const rows: InternetCheckInsert[] = [];
   const rawChecksByTeam = new Map<string, ParsedInternetCheck[]>();
@@ -70,7 +71,11 @@ export async function processInternetChecks(
   }
 
   for (const [teamSlug, team] of Object.entries(teams)) {
-    rows.push(...buildTeamInternetChecks(rawChecksByTeam.get(teamSlug) ?? [], roundData, team));
+    rows.push(
+      ...buildTeamInternetChecks(rawChecksByTeam.get(teamSlug) ?? [], roundData, team, {
+        lastSubmissionTs: lastSubmissionByTeamRoundId[team.teamRoundId],
+      }),
+    );
   }
 
   return rows;
@@ -80,9 +85,12 @@ function buildTeamInternetChecks(
   checks: ParsedInternetCheck[],
   roundData: RoundAdminItem,
   team: TeamCredential,
+  options: {
+    lastSubmissionTs?: Date;
+  },
 ): InternetCheckInsert[] {
-  const raceStart = getRoundStartForTeam(roundData.startsAt, roundData.slug, team.delay);
-  const raceEnd = getRoundEndForTeam(
+  const contestStart = getRoundStartForTeam(roundData.startsAt, roundData.slug, team.delay);
+  const contestEnd = getRoundEndForTeam(
     roundData.startsAt,
     roundData.endsAt,
     roundData.slug,
@@ -92,10 +100,10 @@ function buildTeamInternetChecks(
 
   return Object.values(checksByPc).flatMap((pcChecks) =>
     buildPcInternetChecks(pcChecks, {
-      teamId: team.id,
-      roundId: roundData.id,
-      raceStart,
-      raceEnd,
+      teamRoundId: team.teamRoundId,
+      contestStart,
+      contestEnd,
+      lastSubmissionTs: options.lastSubmissionTs,
     }),
   );
 }
@@ -103,20 +111,23 @@ function buildTeamInternetChecks(
 function buildPcInternetChecks(
   checks: ParsedInternetCheck[],
   context: {
-    teamId: number;
-    roundId: number;
-    raceStart: Date;
-    raceEnd: Date;
+    teamRoundId: number;
+    contestStart: Date;
+    contestEnd: Date;
+    lastSubmissionTs?: Date;
   },
 ): InternetCheckInsert[] {
-  const { raceStart, raceEnd } = context;
+  const { contestStart, contestEnd, lastSubmissionTs } = context;
   const checksDuringRace = checks.filter(
-    (check) => check.serverTs >= raceStart && check.serverTs <= raceEnd,
+    (check) => check.serverTs >= contestStart && check.serverTs <= contestEnd,
   );
-  const lastPreStartCheck = checks.findLast((check) => check.serverTs < raceStart);
+  const lastPreStartCheck = checks.findLast((check) => check.serverTs < contestStart);
   const effectiveChecks = [...checksDuringRace];
 
-  if (lastPreStartCheck && addSeconds(lastPreStartCheck.serverTs, CHECK_VALIDITY_SEC) > raceStart) {
+  if (
+    lastPreStartCheck &&
+    addSeconds(lastPreStartCheck.serverTs, CHECK_VALIDITY_SEC) > contestStart
+  ) {
     effectiveChecks.unshift(lastPreStartCheck);
   }
 
@@ -126,21 +137,29 @@ function buildPcInternetChecks(
 
   const pcMeta = effectiveChecks[0];
   const rows: InternetCheckInsert[] = [];
-  let cursor = raceStart;
+  let cursor = contestStart;
   let hasRenderedCheckSegment = false;
+  const lastRelevantTs =
+    lastSubmissionTs == null
+      ? contestEnd
+      : clamp(lastSubmissionTs, { start: contestStart, end: contestEnd });
 
   for (const [index, check] of effectiveChecks.entries()) {
     const checkStart = check.serverTs;
-    const nextCheckStart = effectiveChecks[index + 1]?.serverTs ?? raceEnd;
-    const segmentStart = max([raceStart, checkStart]);
-    const segmentEnd = min([raceEnd, nextCheckStart, addSeconds(checkStart, CHECK_VALIDITY_SEC)]);
+    const nextCheckStart = effectiveChecks[index + 1]?.serverTs ?? contestEnd;
+    const segmentStart = max([contestStart, checkStart]);
+    const segmentEnd = min([
+      contestEnd,
+      nextCheckStart,
+      addSeconds(checkStart, CHECK_VALIDITY_SEC),
+    ]);
 
     if (hasRenderedCheckSegment && segmentStart > cursor) {
       rows.push(
-        ...createChunkedSyntheticRows(pcMeta, context, {
+        ...createGapRows(pcMeta, context.teamRoundId, {
           startTs: cursor,
           endTs: segmentStart,
-          status: "missing",
+          lastRelevantTs,
           chunkSizeSec: CHECK_VALIDITY_SEC,
         }),
       );
@@ -148,7 +167,7 @@ function buildPcInternetChecks(
 
     if (segmentEnd > segmentStart) {
       rows.push(
-        createCheckRow(check, context, {
+        createCheckRow(check, context.teamRoundId, {
           startTs: segmentStart,
           endTs: segmentEnd,
           status: getCheckStatus(check.ic),
@@ -161,21 +180,22 @@ function buildPcInternetChecks(
     }
   }
 
-  if (hasRenderedCheckSegment && cursor < raceEnd) {
+  if (hasRenderedCheckSegment && cursor < contestEnd) {
     rows.push(
-      createSyntheticRow(pcMeta, context, {
+      ...createGapRows(pcMeta, context.teamRoundId, {
         startTs: cursor,
-        endTs: raceEnd,
-        status: "empty",
+        endTs: contestEnd,
+        lastRelevantTs,
+        chunkSizeSec: CHECK_VALIDITY_SEC,
       }),
     );
   }
 
   const firstScoredRow = rows.find((row) => row.status !== "empty");
-  if (firstScoredRow && firstScoredRow.startTs > raceStart) {
+  if (firstScoredRow && firstScoredRow.startTs > contestStart) {
     rows.unshift(
-      createSyntheticRow(pcMeta, context, {
-        startTs: raceStart,
+      createSyntheticRow(pcMeta, context.teamRoundId, {
+        startTs: contestStart,
         endTs: firstScoredRow.startTs,
         status: "empty",
       }),
@@ -187,7 +207,7 @@ function buildPcInternetChecks(
 
 function createCheckRow(
   check: ParsedInternetCheck,
-  context: { teamId: number; roundId: number },
+  teamRoundId: number,
   segment: {
     startTs: Date;
     endTs: Date;
@@ -195,8 +215,7 @@ function createCheckRow(
   },
 ): InternetCheckInsert {
   return {
-    teamId: context.teamId,
-    roundId: context.roundId,
+    teamRoundId: teamRoundId,
     startTs: segment.startTs,
     endTs: segment.endTs,
     status: segment.status,
@@ -210,7 +229,7 @@ function createCheckRow(
 
 function createSyntheticRow(
   pcMeta: ParsedInternetCheck,
-  context: { teamId: number; roundId: number },
+  teamRoundId: number,
   segment: {
     startTs: Date;
     endTs: Date;
@@ -218,8 +237,7 @@ function createSyntheticRow(
   },
 ): InternetCheckInsert {
   return {
-    teamId: context.teamId,
-    roundId: context.roundId,
+    teamRoundId: teamRoundId,
     startTs: segment.startTs,
     endTs: segment.endTs,
     status: segment.status,
@@ -231,9 +249,47 @@ function createSyntheticRow(
   };
 }
 
+function createGapRows(
+  pcMeta: ParsedInternetCheck,
+  teamRoundId: number,
+  segment: {
+    startTs: Date;
+    endTs: Date;
+    lastRelevantTs: Date;
+    chunkSizeSec: number;
+  },
+): InternetCheckInsert[] {
+  const rows: InternetCheckInsert[] = [];
+  const missingEnd = min([segment.endTs, segment.lastRelevantTs]);
+
+  if (missingEnd > segment.startTs) {
+    rows.push(
+      ...createChunkedSyntheticRows(pcMeta, teamRoundId, {
+        startTs: segment.startTs,
+        endTs: missingEnd,
+        status: "missing",
+        chunkSizeSec: segment.chunkSizeSec,
+      }),
+    );
+  }
+
+  const emptyStart = max([segment.startTs, segment.lastRelevantTs]);
+  if (segment.endTs > emptyStart) {
+    rows.push(
+      createSyntheticRow(pcMeta, teamRoundId, {
+        startTs: emptyStart,
+        endTs: segment.endTs,
+        status: "empty",
+      }),
+    );
+  }
+
+  return rows;
+}
+
 function createChunkedSyntheticRows(
   pcMeta: ParsedInternetCheck,
-  context: { teamId: number; roundId: number },
+  teamRoundId: number,
   segment: {
     startTs: Date;
     endTs: Date;
@@ -247,7 +303,7 @@ function createChunkedSyntheticRows(
   while (cursor < segment.endTs) {
     const chunkEnd = min([segment.endTs, addSeconds(cursor, segment.chunkSizeSec)]);
     rows.push(
-      createSyntheticRow(pcMeta, context, {
+      createSyntheticRow(pcMeta, teamRoundId, {
         startTs: cursor,
         endTs: chunkEnd,
         status: segment.status,
