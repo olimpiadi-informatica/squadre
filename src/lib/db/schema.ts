@@ -121,26 +121,42 @@ export const teamTaskScore = pgTable(
 export const internetCheckStatusValues = ["succeeded", "failed", "missing", "empty"] as const;
 export type InternetCheckStatus = (typeof internetCheckStatusValues)[number];
 
-export const internetCheck = pgTable(
-  "internet_check",
+export const internetCheck = pgTable("internet_check", {
+  id: serial().primaryKey(),
+  teamRoundId: integer("team_round_id")
+    .notNull()
+    .references(() => teamRound.id, { onDelete: "cascade" }),
+  startTs: timestamp("start_ts").notNull(),
+  endTs: timestamp("end_ts").notNull(),
+  status: text().notNull().$type<InternetCheckStatus>(),
+  pcHash: text("pc_hash").notNull(),
+  userAgent: text("user_agent"),
+  browserName: text("browser_name"),
+  browserMajor: integer("browser_major"),
+  osName: text("os_name"),
+});
+
+export const submission = pgTable(
+  "submission",
   {
     id: serial().primaryKey(),
-    teamId: integer("team_id")
+    slug: text().notNull(),
+    teamRoundId: integer("team_round_id")
       .notNull()
-      .references(() => team.id, { onDelete: "cascade" }),
-    roundId: integer("round_id")
+      .references(() => teamRound.id, { onDelete: "cascade" }),
+    taskId: integer("task_id")
       .notNull()
-      .references(() => round.id, { onDelete: "cascade" }),
-    startTs: timestamp("start_ts").notNull(),
-    endTs: timestamp("end_ts").notNull(),
-    status: text().notNull().$type<InternetCheckStatus>(),
-    pcHash: text("pc_hash").notNull(),
-    userAgent: text("user_agent"),
-    browserName: text("browser_name"),
-    browserMajor: integer("browser_major"),
-    osName: text("os_name"),
+      .references(() => task.id, { onDelete: "cascade" }),
+    score: integer().notNull(),
+    timestamp: timestamp().notNull(),
+    language: text().notNull(),
+    code: text().notNull(),
   },
-  (table) => [index("idx_internet_check_team_round").on(table.teamId, table.roundId)],
+  (table) => [
+    index("idx_submission_team_round").on(table.teamRoundId),
+    index("idx_submission_task").on(table.taskId),
+    index("idx_submission_timestamp").on(table.timestamp),
+  ],
 );
 
 export const highlight = pgTable(

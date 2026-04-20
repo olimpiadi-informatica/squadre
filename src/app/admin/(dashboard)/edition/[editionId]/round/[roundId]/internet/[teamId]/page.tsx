@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 
 import { Card, CardBody } from "@olinfo/react-components";
 import clsx from "clsx";
-import { intlFormat, minutesToMilliseconds } from "date-fns";
-import { countBy, groupBy, minBy, round } from "es-toolkit";
+import { differenceInMilliseconds, intlFormat } from "date-fns";
+import { clamp, countBy, groupBy, minBy, round } from "es-toolkit";
 import { maxBy } from "es-toolkit/compat";
 
 import { verifyAdmin } from "~/lib/admin";
@@ -16,6 +16,7 @@ import {
   getRoundEndForTeam,
   getRoundStartForTeam,
 } from "~/lib/round-config";
+import { getTeamRoundSubmissions, type TeamRoundSubmission } from "~/lib/submission";
 import { getTeamAdmin } from "~/lib/team";
 
 type Props = {
@@ -34,11 +35,15 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
 
   if (!edition || !round || !team) notFound();
 
-  const raceStart = getRoundStartForTeam(round.startsAt, round.slug, team.delay);
-  const raceEnd = getRoundEndForTeam(round.startsAt, round.endsAt, round.slug, team.delay);
+  const contestStart = getRoundStartForTeam(round.startsAt, round.slug, team.delay);
+  const contestEnd = getRoundEndForTeam(round.startsAt, round.endsAt, round.slug, team.delay);
   const roundDurationMinutes = getRoundDurationMinutes(round.startsAt, round.endsAt, round.slug);
+  const timelineDurationMs = Math.max(differenceInMilliseconds(contestEnd, contestStart), 1);
 
-  const segments = await getTeamInternetChecks(round.id, team.id);
+  const [segments, submissions] = await Promise.all([
+    getTeamInternetChecks(round.id, team.id),
+    getTeamRoundSubmissions(round.id, team.id),
+  ]);
   const pcChecks = groupBy(segments, (segment) => segment.pcHash);
   const actualChecks = segments.filter(
     (segment) => segment.status === "succeeded" || segment.status === "failed",
@@ -90,7 +95,7 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
             <p>{averageChecksPerPcPerMinute ?? "-"}</p>
             <p className="font-semibold">Intervallo gara:</p>
             <p>
-              {formatCheckTs(raceStart)} - {formatCheckTs(raceEnd)}
+              {formatCheckTs(contestStart)} - {formatCheckTs(contestEnd)}
             </p>
             <p className="font-semibold">Primo check:</p>
             <p>{formatCheckTs(firstCheck?.startTs)}</p>
@@ -108,7 +113,9 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
             <PcInternet
               key={pc}
               segments={pcSegments}
-              roundDurationMinutes={roundDurationMinutes}
+              contestStart={contestStart}
+              timelineDurationMs={timelineDurationMs}
+              submissions={submissions}
             />
           ))}
         </div>
@@ -119,10 +126,14 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
 
 function PcInternet({
   segments,
-  roundDurationMinutes,
+  contestStart,
+  timelineDurationMs,
+  submissions,
 }: {
   segments: TeamInternetSegment[];
-  roundDurationMinutes: number;
+  contestStart: Date;
+  timelineDurationMs: number;
+  submissions: TeamRoundSubmission[];
 }) {
   const scoredSegments = segments.filter((segment) => segment.status !== "empty");
   const pcInfo = segments[0];
@@ -156,8 +167,7 @@ function PcInternet({
       <div className="h-5 flex w-full rounded border border-base-300 bg-base-200">
         {segments.map((segment, index) => {
           const width =
-            (segment.endTs.getTime() - segment.startTs.getTime()) /
-            minutesToMilliseconds(roundDurationMinutes);
+            differenceInMilliseconds(segment.endTs, segment.startTs) / timelineDurationMs;
           const isEmptySegment = segment.status === "empty";
 
           return (
@@ -178,6 +188,28 @@ function PcInternet({
           );
         })}
       </div>
+      {submissions.length > 0 && (
+        <div className="relative h-4 mt-2">
+          {submissions.map((submission, index) => {
+            const left = clamp(
+              (differenceInMilliseconds(submission.timestamp, contestStart) / timelineDurationMs) *
+                100,
+              0,
+              100,
+            );
+
+            return (
+              <div
+                key={`${submission.taskSlug}-${submission.timestamp.toISOString()}-${index}`}
+                className="tooltip absolute -translate-x-1/2"
+                data-tip={`${formatCheckTs(submission.timestamp)} ${submission.taskSlug}`}
+                style={{ left: `${left}%` }}>
+                <div className="mt-1 h-2.5 w-2.5 rounded-full bg-info border border-info-content/20" />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
