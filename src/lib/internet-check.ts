@@ -39,7 +39,8 @@ export function getTeamInternetChecks(
       osName: internetCheck.osName,
     })
     .from(internetCheck)
-    .where(and(eq(internetCheck.roundId, roundId), eq(internetCheck.teamId, teamId)))
+    .innerJoin(teamRound, eq(teamRound.id, internetCheck.teamRoundId))
+    .where(and(eq(teamRound.teamId, teamId), eq(teamRound.roundId, roundId)))
     .orderBy(internetCheck.pcHash, internetCheck.startTs);
 }
 
@@ -85,10 +86,7 @@ export function getTeamRoundInternetChecks(
     .innerJoin(team, eq(team.id, teamRound.teamId))
     .innerJoin(round, eq(round.id, teamRound.roundId))
     .innerJoin(institute, eq(institute.id, team.instituteId))
-    .leftJoin(
-      internetCheck,
-      and(eq(internetCheck.teamId, teamRound.teamId), eq(internetCheck.roundId, teamRound.roundId)),
-    )
+    .leftJoin(internetCheck, eq(internetCheck.teamRoundId, teamRound.id))
     .where(
       and(
         eq(round.editionId, editionId),
