@@ -174,7 +174,8 @@ export const listEditionTeams = cache((editionId: string): Promise<TeamResultIte
 });
 
 export type TeamCredential = {
-  id: number;
+  teamId: number;
+  teamRoundId: number;
   slug: string;
   name: string;
   junior: boolean;
@@ -231,7 +232,8 @@ export const listRoundTeamsCredentials = (
 ): Promise<TeamCredential[]> => {
   return db
     .select({
-      id: team.id,
+      teamId: team.id,
+      teamRoundId: teamRound.id,
       slug: team.slug,
       name: team.name,
       junior: team.junior,
