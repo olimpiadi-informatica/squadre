@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { TZDate } from "@date-fns/tz";
 import { format, getUnixTime, hoursToSeconds } from "date-fns";
+import { delay } from "es-toolkit";
 import YAML from "yaml";
 
 import { verifyAdmin } from "~/lib/admin";
@@ -15,6 +16,15 @@ import { getRoundAdmin } from "~/lib/round";
 import { getRoundEndForTeam, getRoundStartForTeam } from "~/lib/round-config";
 import { listRoundTasks, type RoundTaskItem, saveRoundTasksForRound } from "~/lib/task";
 import { listRoundTeamsCredentials } from "~/lib/team";
+
+const languages = [
+  "C++20 / g++",
+  "C11 / gcc",
+  "Java / JDK",
+  "Python 3 / PyPy",
+  "Pascal / fpc",
+  "C# / Mono",
+];
 
 export async function getRoundCredentials(
   editionId: string,
@@ -37,14 +47,7 @@ export async function getRoundCredentials(
       timezone: "Europe/Rome",
       location: "Online",
       logo: "logo_ois.pdf",
-      languages: [
-        "C++20 / g++",
-        "C11 / gcc",
-        "Java / JDK",
-        "Python 3 / PyPy",
-        "Pascal / fpc",
-        "C# / Mono",
-      ],
+      languages,
       tasks: roundTasks.map((task) => task.slug),
       teams: regions.map((r) => ({ code: r.id.toUpperCase(), name: r.name })),
       users: teamCredentials.map((t) => ({
@@ -86,14 +89,7 @@ export async function getMirrorCredentials(
       timezone: "Europe/Rome",
       location: "Online",
       logo: "logo.pdf",
-      languages: [
-        "C++20 / g++",
-        "C11 / gcc",
-        "Java / JDK",
-        "Python 3 / PyPy",
-        "Pascal / fpc",
-        "C# / Mono",
-      ],
+      languages,
       tasks: roundTasks.map((task) => task.slug),
       teams: mirrorTeams,
       users: mirrorTeams.map((team) => ({
@@ -160,9 +156,14 @@ export async function uploadRoundResults(
         }
 
         let lastStep = UploadResultStep.UPLOAD_ARCHIVE;
+        let stepThrottle = delay(1000);
         try {
           for await (const step of parseResult(file, editionId, roundSlug)) {
-            lastStep = step;
+            if (lastStep !== step) {
+              lastStep = step;
+              await stepThrottle;
+              stepThrottle = delay(1000);
+            }
             controller.enqueue({ step });
           }
         } catch (err: any) {
