@@ -1,7 +1,9 @@
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
-import { useCallback } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo } from "react";
 
 import { CheckboxField, Form, NumberField } from "@olinfo/react-components";
 import clsx from "clsx";
@@ -13,6 +15,12 @@ const DEFAULT_ONLY_ISSUES = true;
 const DEFAULT_MISSING_THRESHOLD = 5;
 const DEFAULT_FAILED_THRESHOLD = 1;
 
+type InternetFilterState = {
+  onlyIssues: boolean;
+  missingThreshold: number;
+  failedThreshold: number;
+};
+
 function showTeam(
   item: TeamRoundInternetCheck,
   onlyIssues: boolean = DEFAULT_ONLY_ISSUES,
@@ -22,7 +30,6 @@ function showTeam(
   if (!onlyIssues) return true;
   return (
     item.numFailedChecks >= failThreshold ||
-    item.numChecks === 0 ||
     item.numPc > 2 ||
     item.numMissingChecks >= missingThreshold
   );
@@ -56,27 +63,21 @@ function InternetTeamRoundRow({
           {item.numSucceededChecks} / {item.numChecks}
         </div>
         <div className="text-xs opacity-70">
-          {item.numChecks === 0 ? (
-            "nessun check"
-          ) : (
-            <>
-              <span
-                className={clsx(
-                  hasFailedIssues && "font-semibold text-error",
-                  hasFailedWarning && "font-semibold text-warning",
-                )}>
-                fail {item.numFailedChecks}
-              </span>
-              <span> · </span>
-              <span
-                className={clsx(
-                  hasMissingIssues && "font-semibold text-error",
-                  hasMissingWarning && "font-semibold text-warning",
-                )}>
-                missing {item.numMissingChecks}
-              </span>
-            </>
-          )}
+          <span
+            className={clsx(
+              hasFailedIssues && "font-semibold text-error",
+              hasFailedWarning && "font-semibold text-warning",
+            )}>
+            fail {item.numFailedChecks}
+          </span>
+          <span> · </span>
+          <span
+            className={clsx(
+              hasMissingIssues && "font-semibold text-error",
+              hasMissingWarning && "font-semibold text-warning",
+            )}>
+            missing {item.numMissingChecks}
+          </span>
         </div>
       </div>
       <div>
@@ -91,6 +92,23 @@ function InternetTeamRoundRow({
 }
 
 export function InternetTable({ teams }: { teams: TeamRoundInternetCheck[] }) {
+  const searchParams = useSearchParams();
+
+  const defaultValue = useMemo(
+    () => ({
+      onlyIssues: parseBooleanFilter(searchParams.get("onlyIssues"), DEFAULT_ONLY_ISSUES),
+      missingThreshold: parseNumberFilter(
+        searchParams.get("missingThreshold"),
+        DEFAULT_MISSING_THRESHOLD,
+      ),
+      failedThreshold: parseNumberFilter(
+        searchParams.get("failedThreshold"),
+        DEFAULT_FAILED_THRESHOLD,
+      ),
+    }),
+    [searchParams],
+  );
+
   const itemMatch = useCallback(
     (search: string, item: TeamRoundInternetCheck) =>
       item.teamSlug.toLowerCase().includes(search) ||
@@ -103,11 +121,7 @@ export function InternetTable({ teams }: { teams: TeamRoundInternetCheck[] }) {
   return (
     <div className="flex flex-col gap-3">
       <Form
-        defaultValue={{
-          onlyIssues: DEFAULT_ONLY_ISSUES,
-          missingThreshold: DEFAULT_MISSING_THRESHOLD,
-          failedThreshold: DEFAULT_FAILED_THRESHOLD,
-        }}
+        defaultValue={defaultValue}
         onSubmit={() => {}}
         className="!max-w-none !w-full ![align-items:unset] gap-4">
         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
@@ -123,23 +137,14 @@ export function InternetTable({ teams }: { teams: TeamRoundInternetCheck[] }) {
             placeholder="Failed threshold"
             min={1}
           />
-          <CheckboxField field="onlyIssues" label="Solo team con controlli falliti" />
+          <CheckboxField field="onlyIssues" label="Solo team sospetti" />
         </div>
-        {({ onlyIssues, missingThreshold, failedThreshold }) => (
-          <Table
-            data={teams.filter((team) =>
-              showTeam(team, onlyIssues, missingThreshold, failedThreshold),
-            )}
+        {(filters) => (
+          <InternetTableContent
+            teams={teams}
+            filters={filters}
             itemMatch={itemMatch}
-            header={InternetTableHeaders}
-            row={({ item }: { item: TeamRoundInternetCheck }) => (
-              <InternetTeamRoundRow
-                item={item}
-                missingThreshold={missingThreshold ?? DEFAULT_MISSING_THRESHOLD}
-                failedThreshold={failedThreshold ?? DEFAULT_FAILED_THRESHOLD}
-              />
-            )}
-            className="grid-cols-[repeat(6,auto)]"
+            searchParams={searchParams}
           />
         )}
       </Form>
@@ -147,11 +152,118 @@ export function InternetTable({ teams }: { teams: TeamRoundInternetCheck[] }) {
   );
 }
 
+function InternetTableContent({
+  teams,
+  filters,
+  itemMatch,
+  searchParams,
+}: {
+  teams: TeamRoundInternetCheck[];
+  filters: Partial<InternetFilterState>;
+  itemMatch: (search: string, item: TeamRoundInternetCheck) => boolean;
+  searchParams: ReturnType<typeof useSearchParams>;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const onlyIssues = filters.onlyIssues ?? DEFAULT_ONLY_ISSUES;
+  const missingThreshold = filters.missingThreshold ?? DEFAULT_MISSING_THRESHOLD;
+  const failedThreshold = filters.failedThreshold ?? DEFAULT_FAILED_THRESHOLD;
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams(searchParams);
+    setBooleanFilter(nextParams, "onlyIssues", onlyIssues, DEFAULT_ONLY_ISSUES);
+    setNumberFilter(
+      nextParams,
+      "missingThreshold",
+      filters.missingThreshold,
+      DEFAULT_MISSING_THRESHOLD,
+    );
+    setNumberFilter(
+      nextParams,
+      "failedThreshold",
+      filters.failedThreshold,
+      DEFAULT_FAILED_THRESHOLD,
+    );
+
+    const nextQuery = nextParams.toString();
+    if (nextQuery === searchParams.toString()) return;
+
+    router.replace((nextQuery ? `${pathname}?${nextQuery}` : pathname) as Route, {
+      scroll: false,
+    });
+  }, [
+    filters.failedThreshold,
+    filters.missingThreshold,
+    onlyIssues,
+    pathname,
+    router,
+    searchParams,
+  ]);
+
+  return (
+    <Table
+      data={teams.filter((team) => showTeam(team, onlyIssues, missingThreshold, failedThreshold))}
+      itemMatch={itemMatch}
+      header={InternetTableHeaders}
+      row={({ item }: { item: TeamRoundInternetCheck }) => (
+        <InternetTeamRoundRow
+          item={item}
+          missingThreshold={missingThreshold}
+          failedThreshold={failedThreshold}
+        />
+      )}
+      className="grid-cols-[repeat(6,auto)]"
+    />
+  );
+}
+
+function parseBooleanFilter(value: string | null, fallback: boolean) {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return fallback;
+}
+
+function parseNumberFilter(value: string | null, fallback: number) {
+  if (value == null) return fallback;
+
+  const parsedValue = Number(value);
+  return Number.isInteger(parsedValue) && parsedValue >= 1 ? parsedValue : fallback;
+}
+
+function setBooleanFilter(
+  params: URLSearchParams,
+  key: string,
+  value: boolean,
+  defaultValue: boolean,
+) {
+  if (value === defaultValue) {
+    params.delete(key);
+    return;
+  }
+
+  params.set(key, String(value));
+}
+
+function setNumberFilter(
+  params: URLSearchParams,
+  key: string,
+  value: number | undefined,
+  defaultValue: number,
+) {
+  if (value == null || value === defaultValue) {
+    params.delete(key);
+    return;
+  }
+
+  params.set(key, String(value));
+}
+
 function InternetTableHeaders() {
   return (
     <>
-      <div>Slug</div>
-      <div>Team</div>
+      <div>Username</div>
+      <div>Nome</div>
       <div>Istituto</div>
       <div>PC</div>
       <div>Check</div>

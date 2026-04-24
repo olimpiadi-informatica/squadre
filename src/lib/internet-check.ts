@@ -78,7 +78,6 @@ export function getTeamRoundInternetChecks(
       numMissingChecks: sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "missing")})`,
       hasIssues: sql<boolean>`
         COUNT(*) FILTER (WHERE ${inArray(internetCheck.status, ["failed", "missing"])}) > 0
-        OR COUNT(*) FILTER (WHERE ${ne(internetCheck.status, "empty")}) = 0
         OR COUNT(DISTINCT ${internetCheck.pcHash}) > 2
       `,
     })
