@@ -31,6 +31,7 @@ export async function processInternetChecks(
   internetPath: string,
   roundData: RoundAdminItem,
   teams: Record<string, TeamCredential>,
+  firstSubmissionByTeamRoundId: Record<number, Date | undefined>,
   lastSubmissionByTeamRoundId: Record<number, Date | undefined>,
 ) {
   const rows: InternetCheckInsert[] = [];
@@ -73,6 +74,7 @@ export async function processInternetChecks(
   for (const [teamSlug, team] of Object.entries(teams)) {
     rows.push(
       ...buildTeamInternetChecks(rawChecksByTeam.get(teamSlug) ?? [], roundData, team, {
+        firstSubmissionTs: firstSubmissionByTeamRoundId[team.teamRoundId],
         lastSubmissionTs: lastSubmissionByTeamRoundId[team.teamRoundId],
       }),
     );
@@ -86,6 +88,7 @@ function buildTeamInternetChecks(
   roundData: RoundAdminItem,
   team: TeamCredential,
   options: {
+    firstSubmissionTs?: Date;
     lastSubmissionTs?: Date;
   },
 ): InternetCheckInsert[] {
@@ -103,6 +106,7 @@ function buildTeamInternetChecks(
       teamRoundId: team.teamRoundId,
       contestStart,
       contestEnd,
+      firstSubmissionTs: options.firstSubmissionTs,
       lastSubmissionTs: options.lastSubmissionTs,
     }),
   );
@@ -114,10 +118,11 @@ function buildPcInternetChecks(
     teamRoundId: number;
     contestStart: Date;
     contestEnd: Date;
+    firstSubmissionTs?: Date;
     lastSubmissionTs?: Date;
   },
 ): InternetCheckInsert[] {
-  const { contestStart, contestEnd, lastSubmissionTs } = context;
+  const { contestStart, contestEnd, firstSubmissionTs, lastSubmissionTs } = context;
   const checksDuringRace = checks.filter(
     (check) => check.serverTs >= contestStart && check.serverTs <= contestEnd,
   );
@@ -139,6 +144,10 @@ function buildPcInternetChecks(
   const rows: InternetCheckInsert[] = [];
   let cursor = contestStart;
   let hasRenderedCheckSegment = false;
+  const firstRelevantTs =
+    firstSubmissionTs == null
+      ? contestEnd
+      : clamp(firstSubmissionTs, { start: contestStart, end: contestEnd });
   const lastRelevantTs =
     lastSubmissionTs == null
       ? contestEnd
@@ -194,15 +203,54 @@ function buildPcInternetChecks(
   const firstScoredRow = rows.find((row) => row.status !== "empty");
   if (firstScoredRow && firstScoredRow.startTs > contestStart) {
     rows.unshift(
-      createSyntheticRow(pcMeta, context.teamRoundId, {
+      ...createInitialRows(pcMeta, context.teamRoundId, {
         startTs: contestStart,
         endTs: firstScoredRow.startTs,
-        status: "empty",
+        firstRelevantTs,
+        chunkSizeSec: CHECK_VALIDITY_SEC,
       }),
     );
   }
 
   return rows.filter((row) => row.endTs > row.startTs);
+}
+
+function createInitialRows(
+  pcMeta: ParsedInternetCheck,
+  teamRoundId: number,
+  segment: {
+    startTs: Date;
+    endTs: Date;
+    firstRelevantTs: Date;
+    chunkSizeSec: number;
+  },
+): InternetCheckInsert[] {
+  const rows: InternetCheckInsert[] = [];
+  const emptyEnd = min([segment.endTs, segment.firstRelevantTs]);
+
+  if (emptyEnd > segment.startTs) {
+    rows.push(
+      createSyntheticRow(pcMeta, teamRoundId, {
+        startTs: segment.startTs,
+        endTs: emptyEnd,
+        status: "empty",
+      }),
+    );
+  }
+
+  const missingStart = max([segment.startTs, segment.firstRelevantTs]);
+  if (segment.endTs > missingStart) {
+    rows.push(
+      ...createChunkedSyntheticRows(pcMeta, teamRoundId, {
+        startTs: missingStart,
+        endTs: segment.endTs,
+        status: "missing",
+        chunkSizeSec: segment.chunkSizeSec,
+      }),
+    );
+  }
+
+  return rows;
 }
 
 function createCheckRow(

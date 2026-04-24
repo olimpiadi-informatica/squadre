@@ -6,7 +6,7 @@ import { pipeline } from "node:stream/promises";
 import type { ReadableStream } from "node:stream/web";
 
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { chunk, groupBy, keyBy, mapValues } from "es-toolkit";
+import { chunk, groupBy, keyBy, mapValues, minBy } from "es-toolkit";
 import { maxBy } from "es-toolkit/compat";
 import { extract } from "tar";
 
@@ -77,6 +77,14 @@ export async function* parseResult(
 
   yield UploadResultStep.PARSE_SUBMISSIONS;
   const submissions = await processSubmissions(submissionsPath, editionId, roundSlug, teams);
+  const firstSubmissionByTeamRoundId = mapValues(
+    groupBy(submissions, (s) => s.teamRoundId),
+    (subs) =>
+      minBy(
+        subs.map((s) => s.timestamp),
+        (t) => t.getTime(),
+      ),
+  );
   const lastSubmissionByTeamRoundId = mapValues(
     groupBy(submissions, (s) => s.teamRoundId),
     (subs) =>
@@ -91,6 +99,7 @@ export async function* parseResult(
     internetPath,
     roundData,
     teams,
+    firstSubmissionByTeamRoundId,
     lastSubmissionByTeamRoundId,
   );
 
