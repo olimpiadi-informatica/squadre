@@ -11,11 +11,7 @@ import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
 import { getTeamInternetChecks, type TeamInternetSegment } from "~/lib/internet-check";
 import { getRoundAdmin } from "~/lib/round";
-import {
-  getRoundDurationMinutes,
-  getRoundEndForTeam,
-  getRoundStartForTeam,
-} from "~/lib/round-config";
+import { getRoundEndForTeam, getRoundStartForTeam } from "~/lib/round-config";
 import { getTeamRoundSubmissions, type TeamRoundSubmission } from "~/lib/submission";
 import { getTeamAdmin } from "~/lib/team";
 
@@ -37,7 +33,6 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
 
   const contestStart = getRoundStartForTeam(round.startsAt, round.slug, team.delay);
   const contestEnd = getRoundEndForTeam(round.startsAt, round.endsAt, round.slug, team.delay);
-  const roundDurationMinutes = getRoundDurationMinutes(round.startsAt, round.endsAt, round.slug);
   const timelineDurationMs = Math.max(differenceInMilliseconds(contestEnd, contestStart), 1);
 
   const [segments, submissions] = await Promise.all([
@@ -52,9 +47,8 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
   const totalSucceededChecks = segments.filter((segment) => segment.status === "succeeded").length;
   const firstCheck = minBy(actualChecks, (s) => s.startTs.getTime());
   const lastCheck = maxBy(actualChecks, (s) => s.startTs.getTime());
+  const lastSubmission = maxBy(submissions, (s) => s.timestamp.getTime());
   const numPc = Object.keys(pcChecks).length;
-  const averageChecksPerPcPerMinute =
-    numPc === 0 ? null : (actualChecks.length / numPc / roundDurationMinutes).toFixed(2);
 
   return (
     <div className="flex flex-col gap-4">
@@ -91,8 +85,6 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
             </p>
             <p className="font-semibold">PC monitorati:</p>
             <p>{numPc}</p>
-            <p className="font-semibold">Check/min:</p>
-            <p>{averageChecksPerPcPerMinute ?? "-"}</p>
             <p className="font-semibold">Intervallo gara:</p>
             <p>
               {formatCheckTs(contestStart)} - {formatCheckTs(contestEnd)}
@@ -101,25 +93,23 @@ export default async function AdminRoundInternetTeamPage({ params }: Props) {
             <p>{formatCheckTs(firstCheck?.startTs)}</p>
             <p className="font-semibold">Ultimo check:</p>
             <p>{formatCheckTs(lastCheck?.startTs)}</p>
+            <p className="font-semibold">Ultima submission:</p>
+            <p>{formatCheckTs(lastSubmission?.timestamp)}</p>
           </div>
         </CardBody>
       </Card>
 
-      {Object.keys(pcChecks).length === 0 ? (
-        <p className="italic opacity-70">Nessun internet check disponibile per questo team.</p>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {Object.entries(pcChecks).map(([pc, pcSegments]) => (
-            <PcInternet
-              key={pc}
-              segments={pcSegments}
-              contestStart={contestStart}
-              timelineDurationMs={timelineDurationMs}
-              submissions={submissions}
-            />
-          ))}
-        </div>
-      )}
+      <div className="flex flex-col gap-4">
+        {Object.entries(pcChecks).map(([pc, pcSegments]) => (
+          <PcInternet
+            key={pc}
+            segments={pcSegments}
+            contestStart={contestStart}
+            timelineDurationMs={timelineDurationMs}
+            submissions={submissions}
+          />
+        ))}
+      </div>
     </div>
   );
 }
