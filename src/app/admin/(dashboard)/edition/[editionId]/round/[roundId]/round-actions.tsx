@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@olinfo/react-components";
 import clsx from "clsx";
-import { BookKey, FileKey, Mail, Wifi } from "lucide-react";
+import { BookKey, FileKey, Mail, ShieldAlert, Wifi } from "lucide-react";
 
 import type { RoundAdminItem } from "~/lib/round";
 
@@ -26,9 +26,6 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
 
     try {
       await writeCredentials(round);
-    } catch (err) {
-      console.error(err);
-      window.alert(err instanceof Error ? err.message : "Errore durante il salvataggio dei file.");
     } finally {
       setIsWritingCredentials(false);
     }
@@ -102,6 +99,18 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
               className="btn btn-primary">
               <Wifi className="size-5" />
               Controllo internet
+            </Link>
+          </div>
+        </li>
+        <li className="step step-primary">
+          <div className="flex flex-col items-start gap-2 my-4">
+            <div className="text-left text-xl font-semibold">Penalizzazioni</div>
+
+            <Link
+              href={`/admin/edition/${round.editionId}/round/${round.slug}/penalization`}
+              className="btn btn-primary">
+              <ShieldAlert className="size-5" />
+              Gestisci penalizzazioni
             </Link>
           </div>
         </li>
