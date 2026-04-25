@@ -11,7 +11,7 @@ import { getRoundStartForTeam } from "~/lib/round-config";
 import { listRoundTeamsCredentials } from "~/lib/team";
 
 import { db } from "./db";
-import { institute, instituteEmail, round, team } from "./db/schema";
+import { credentialEmail, email as emailTable, institute, round, team } from "./db/schema";
 import type { EditionAdminItem } from "./edition";
 import {
   getEmailTemplateContent,
@@ -40,16 +40,17 @@ export function listRoundEmailStatuses(
       instituteId: institute.id,
       instituteName: institute.name,
       instituteCity: institute.city,
-      address: sql<string | null>`COALESCE(${instituteEmail.address}, ${institute.email})`,
-      status: sql<RoundEmailStatus>`COALESCE(${instituteEmail.status}, 'not-sent')`,
-      emailId: instituteEmail.id,
+      address: sql<string | null>`COALESCE(${emailTable.address}, ${institute.email})`,
+      status: sql<RoundEmailStatus>`COALESCE(${emailTable.status}, 'not-sent')`,
+      emailId: emailTable.id,
     })
     .from(institute)
     .crossJoin(round)
     .leftJoin(
-      instituteEmail,
-      and(eq(instituteEmail.instituteId, institute.id), eq(instituteEmail.roundId, round.id)),
+      credentialEmail,
+      and(eq(credentialEmail.instituteId, institute.id), eq(credentialEmail.roundId, round.id)),
     )
+    .leftJoin(emailTable, eq(emailTable.id, credentialEmail.emailId))
     .where(
       and(
         exists(
@@ -93,15 +94,28 @@ export async function sendInstituteEmail(
   if (!address) throw new Error(`Institute ${instituteId} has no email address`);
   const template = (await getEmailTemplateContent(PASSWORD_EMAIL_TEMPLATE_ID)) ?? "";
 
-  const [email] = await db
-    .insert(instituteEmail)
-    .values({
-      instituteId,
-      roundId: round.id,
-      address,
-      status: "sending",
-    })
-    .returning({ id: instituteEmail.id, token: instituteEmail.token });
+  const [credential] = await db.transaction(async (tx) => {
+    const [emailRecord] = await tx
+      .insert(emailTable)
+      .values({
+        address,
+        status: "sending",
+      })
+      .returning({ id: emailTable.id });
+
+    return tx
+      .insert(credentialEmail)
+      .values({
+        instituteId,
+        roundId: round.id,
+        emailId: emailRecord.id,
+      })
+      .returning({
+        id: credentialEmail.id,
+        token: credentialEmail.token,
+        emailId: credentialEmail.emailId,
+      });
+  });
 
   try {
     const coach = teamsData[0].coach;
@@ -109,7 +123,7 @@ export async function sendInstituteEmail(
     const start = getRoundStartForTeam(round.startsAt, round.slug, delay);
     const startTime = format(new TZDate(start, "Europe/Rome"), "HH:mm");
 
-    const credentialsPdfUrl = `https://squadre.olinfo.it/teacher/c/${encodeURIComponent(email.token)}/credenziali-round-${encodeURIComponent(round.slug)}.pdf`;
+    const credentialsPdfUrl = `https://squadre.olinfo.it/teacher/c/${encodeURIComponent(credential.token)}/credenziali-round-${encodeURIComponent(round.slug)}.pdf`;
     const html = await renderPasswordEmail(
       coach,
       round.title,
@@ -119,7 +133,7 @@ export async function sendInstituteEmail(
       credentialsPdfUrl,
       template,
     );
-    await db.update(instituteEmail).set({ html }).where(eq(instituteEmail.id, email.id));
+    await db.update(emailTable).set({ html }).where(eq(emailTable.id, credential.emailId));
 
     const transporter = createTransporter();
     const messageInfo = await transporter.sendMail({
@@ -135,20 +149,23 @@ export async function sendInstituteEmail(
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, `${Date.now()}.eml`), message);
 
-    await db.update(instituteEmail).set({ status: "sent" }).where(eq(instituteEmail.id, email.id));
+    await db
+      .update(emailTable)
+      .set({ status: "sent" })
+      .where(eq(emailTable.id, credential.emailId));
   } catch (err) {
     console.error(err);
     await db
-      .update(instituteEmail)
+      .update(emailTable)
       .set({ status: "sending-failed" })
-      .where(eq(instituteEmail.id, email.id));
+      .where(eq(emailTable.id, credential.emailId));
   }
 }
 
 export async function getInstituteEmailHtml(emailId: number): Promise<string | null> {
   const [row] = await db
-    .select({ html: instituteEmail.html })
-    .from(instituteEmail)
-    .where(eq(instituteEmail.id, emailId));
+    .select({ html: emailTable.html })
+    .from(emailTable)
+    .where(eq(emailTable.id, emailId));
   return row?.html ?? null;
 }
