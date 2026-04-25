@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { TZDate } from "@date-fns/tz";
 import { isValid, parse } from "date-fns";
-import { flatMapAsync, keyBy } from "es-toolkit";
+import { flatMapAsync, keyBy, limitAsync } from "es-toolkit";
 
 import type { submission } from "~/lib/db/schema";
 import { listRoundTasks } from "~/lib/task";
@@ -28,7 +28,7 @@ export async function processSubmissions(
 
   return flatMapAsync(
     files.filter((entry) => entry.isFile()),
-    async (entry) => {
+    limitAsync(async (entry) => {
       const filePath = path.join(subsPath, entry.name);
       const code = await readFile(filePath, "utf8");
 
@@ -62,7 +62,7 @@ export async function processSubmissions(
           code,
         } satisfies typeof submission.$inferInsert,
       ];
-    },
+    }, 64),
   );
 }
 
