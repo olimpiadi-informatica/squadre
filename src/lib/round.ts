@@ -1,11 +1,12 @@
 import { cache } from "react";
 
-import { and, countDistinct, eq, sql } from "drizzle-orm";
+import { and, count, countDistinct, eq, sql } from "drizzle-orm";
 
 import { db } from "./db";
 import {
+  credentialEmail,
   edition,
-  instituteEmail,
+  email as emailTable,
   round,
   task,
   team,
@@ -45,10 +46,11 @@ export const listRoundsAdmin = cache(
           .where(eq(teamRound.roundId, round.id))}`,
         teamCount: db.$count(teamRound, eq(teamRound.roundId, round.id)),
         taskCount: db.$count(task, eq(task.roundId, round.id)),
-        sentEmailCount: db.$count(
-          instituteEmail,
-          and(eq(instituteEmail.roundId, round.id), eq(instituteEmail.status, "sent")),
-        ),
+        sentEmailCount: sql<number>`${db
+          .select({ value: count() })
+          .from(credentialEmail)
+          .innerJoin(emailTable, eq(emailTable.id, credentialEmail.emailId))
+          .where(and(eq(credentialEmail.roundId, round.id), eq(emailTable.status, "sent")))}`,
       })
       .from(round)
       .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug ?? "").if(roundSlug)))

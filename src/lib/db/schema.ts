@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgMaterializedView,
   pgTable,
   serial,
@@ -171,8 +172,15 @@ export const highlight = pgTable(
   (table) => [index("idx_highlight_page_id").on(table.page, table.id)],
 );
 
-export const instituteEmail = pgTable(
-  "institute_email",
+export const email = pgTable("email", {
+  id: serial().primaryKey(),
+  address: text().notNull(),
+  status: text().notNull().$type<"sending" | "sent" | "sending-failed">(),
+  html: text(),
+});
+
+export const credentialEmail = pgTable(
+  "credential_email",
   {
     id: serial().primaryKey(),
     token: uuid().defaultRandom().notNull(),
@@ -182,14 +190,46 @@ export const instituteEmail = pgTable(
     roundId: integer("round_id")
       .notNull()
       .references(() => round.id, { onDelete: "cascade" }),
-    address: text(),
-    status: text().notNull().$type<"sending" | "sent" | "sending-failed">(),
-    html: text(),
+    emailId: integer("email_id")
+      .notNull()
+      .references(() => email.id, { onDelete: "cascade" }),
   },
   (table) => [
-    uniqueIndex("round_email_institute_id_round_id_unique").on(table.instituteId, table.roundId),
+    uniqueIndex("credential_email_institute_id_round_id_unique").on(
+      table.instituteId,
+      table.roundId,
+    ),
   ],
 );
+
+export const penalizationLevelValues = ["yellow", "red"] as const;
+export type PenalizationLevel = (typeof penalizationLevelValues)[number];
+
+export const penalizationTypeValues = [
+  "screen-recording",
+  "internet-check",
+  "plagiarism",
+  "ai",
+  "other",
+] as const;
+export type PenalizationType = (typeof penalizationTypeValues)[number];
+
+export const penalization = pgTable("penalization", {
+  id: serial().primaryKey(),
+  token: uuid().defaultRandom().notNull(),
+  teamRoundId: integer("team_round_id")
+    .notNull()
+    .references(() => teamRound.id, { onDelete: "cascade" }),
+  level: text().notNull().$type<PenalizationLevel>(),
+  type: text().notNull().$type<PenalizationType>(),
+  data: jsonb(),
+  description: text().notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  appealAllowed: boolean("appeal_allowed").notNull(),
+  emailId: integer("email_id")
+    .notNull()
+    .references(() => email.id, { onDelete: "cascade" }),
+});
 
 export const emailTemplate = pgTable("email_templates", {
   id: text().primaryKey().notNull(),

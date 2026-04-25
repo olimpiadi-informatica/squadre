@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { truncate } from "es-toolkit/compat";
 
 import { db } from "~/lib/db";
-import { instituteEmail, round } from "~/lib/db/schema";
+import { credentialEmail, round } from "~/lib/db/schema";
 import { createCredentialsPdf } from "~/lib/foglietti";
 import { listRoundTeamsCredentials } from "~/lib/team";
 
@@ -26,14 +26,14 @@ export async function GET(_request: Request, { params }: RouteContext) {
 
   const [email] = await db
     .select({
-      instituteId: instituteEmail.instituteId,
+      instituteId: credentialEmail.instituteId,
       editionId: round.editionId,
       roundEndsAt: round.endsAt,
       roundTitle: round.title,
     })
-    .from(instituteEmail)
-    .innerJoin(round, eq(round.id, instituteEmail.roundId))
-    .where(and(eq(round.slug, roundId), eq(instituteEmail.token, token)));
+    .from(credentialEmail)
+    .innerJoin(round, eq(round.id, credentialEmail.roundId))
+    .where(and(eq(round.slug, roundId), eq(credentialEmail.token, token)));
 
   if (!email) {
     return new Response("Invalid token", { status: 404 });
