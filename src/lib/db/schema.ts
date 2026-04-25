@@ -3,7 +3,6 @@ import {
   boolean,
   index,
   integer,
-  jsonb,
   pgMaterializedView,
   pgTable,
   serial,
@@ -214,22 +213,38 @@ export const penalizationTypeValues = [
 ] as const;
 export type PenalizationType = (typeof penalizationTypeValues)[number];
 
-export const penalization = pgTable("penalization", {
-  id: serial().primaryKey(),
-  token: uuid().defaultRandom().notNull(),
-  teamRoundId: integer("team_round_id")
-    .notNull()
-    .references(() => teamRound.id, { onDelete: "cascade" }),
-  level: text().notNull().$type<PenalizationLevel>(),
-  type: text().notNull().$type<PenalizationType>(),
-  data: jsonb(),
-  description: text().notNull(),
-  createdAt: timestamp("created_at").notNull(),
-  appealAllowed: boolean("appeal_allowed").notNull(),
-  emailId: integer("email_id")
-    .notNull()
-    .references(() => email.id, { onDelete: "cascade" }),
-});
+export const penalization = pgTable(
+  "penalization",
+  {
+    id: serial().primaryKey(),
+    teamRoundId: integer("team_round_id")
+      .notNull()
+      .references(() => teamRound.id, { onDelete: "cascade" }),
+    relatedTeamRoundId: integer("related_team_round_id").references(() => teamRound.id, {
+      onDelete: "cascade",
+    }),
+    level: text().notNull().$type<PenalizationLevel>(),
+    type: text().notNull().$type<PenalizationType>(),
+    submissionId: integer("submission_id").references(() => submission.id, {
+      onDelete: "set null",
+    }),
+    relatedSubmissionId: integer("related_submission_id").references(() => submission.id, {
+      onDelete: "set null",
+    }),
+    description: text().notNull(),
+    createdAt: timestamp("created_at").notNull(),
+    sentAt: timestamp("sent_at"),
+    appealAllowed: boolean().notNull(),
+    allowAppealUntil: timestamp("allow_appeal_until"),
+    appealedAt: timestamp("appealed_at"),
+    confirmedAt: timestamp("confirmed_at"),
+  },
+  (table) => [
+    index("idx_penalization_team_round_type").on(table.teamRoundId, table.type),
+    index("idx_penalization_submission").on(table.submissionId),
+    index("idx_penalization_related_submission").on(table.relatedSubmissionId),
+  ],
+);
 
 export const emailTemplate = pgTable("email_templates", {
   id: text().primaryKey().notNull(),
