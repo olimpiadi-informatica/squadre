@@ -11,11 +11,9 @@ import { getRoundAdmin } from "~/lib/round";
 import { PenalizationTable } from "./penalization-table";
 import { UploadPlagiarismButton } from "./upload-plagiarism-button";
 
-type Props = {
-  params: Promise<{ editionId: string; roundId: string }>;
-};
-
-export default async function AdminRoundPenalizationPage({ params }: Props) {
+export default async function AdminRoundPenalizationPage({
+  params,
+}: PageProps<"/admin/edition/[editionId]/round/[roundId]/penalization">) {
   await verifyAdmin();
 
   const { editionId, roundId } = await params;

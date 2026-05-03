@@ -7,11 +7,9 @@ import { listRoundsAdmin } from "~/lib/round";
 
 import { AdminRoundsTable } from "./rounds-table";
 
-type Props = {
-  params: Promise<{ editionId: string }>;
-};
-
-export default async function AdminEditionPage({ params }: Props) {
+export default async function AdminEditionPage({
+  params,
+}: PageProps<"/admin/edition/[editionId]">) {
   await verifyAdmin();
 
   const { editionId } = await params;

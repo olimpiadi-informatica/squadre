@@ -10,11 +10,9 @@ import { getRoundAdmin } from "~/lib/round";
 
 import { RoundActions } from "./round-actions";
 
-type Props = {
-  params: Promise<{ editionId: string; roundId: string }>;
-};
-
-export default async function AdminRoundPage({ params }: Props) {
+export default async function AdminRoundPage({
+  params,
+}: PageProps<"/admin/edition/[editionId]/round/[roundId]">) {
   await verifyAdmin();
 
   const { editionId, roundId } = await params;
