@@ -33,6 +33,7 @@
     "drizzle-orm": "^0.45.2",
     "es-toolkit": "^1.45.1",
     "lucide-react": "^1.8.0",
+    "monaco-editor": "^0.52.2",
     "next": "^16.2.4",
     "nodemailer": "^8.0.5",
     "papaparse": "^5.5.3",

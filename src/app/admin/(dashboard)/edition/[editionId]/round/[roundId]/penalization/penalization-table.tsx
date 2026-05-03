@@ -1,8 +1,7 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback } from "react";
-
-import { intlFormat } from "date-fns";
 
 import { Table } from "~/components/table";
 import type { RoundPenalization } from "~/lib/penalization";
@@ -28,11 +27,8 @@ const typeLabel = {
 function PenalizationRow({ item }: { item: RoundPenalization }) {
   return (
     <>
-      <div className="min-w-40">
-        <div className="font-mono text-xs opacity-70">{item.teamSlug}</div>
-        <div className="text-wrap break-words">{item.teamName}</div>
-      </div>
-      <div className="min-w-48 text-wrap break-words">
+      <div>{item.teams}</div>
+      <div className="text-wrap break-words">
         {item.instituteName}, {item.instituteCity}
       </div>
       <div>
@@ -41,14 +37,16 @@ function PenalizationRow({ item }: { item: RoundPenalization }) {
       <div>
         <span className="badge badge-sm badge-outline">{typeLabel[item.type]}</span>
       </div>
-      <div className="text-sm whitespace-nowrap">
-        {intlFormat(
-          item.createdAt,
-          { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Rome" },
-          { locale: "it-IT" },
-        )}
+      <div className="text-wrap break-words">{item.description}</div>
+      <div>
+        {item.type === "plagiarism" ? (
+          <Link
+            href={`/admin/edition/${item.editionId}/round/${item.roundSlug}/penalization/${item.id}`}
+            className="btn btn-primary btn-xs">
+            Dettaglio
+          </Link>
+        ) : null}
       </div>
-      <div className="min-w-96 text-wrap break-words">{item.description}</div>
     </>
   );
 }
@@ -56,10 +54,9 @@ function PenalizationRow({ item }: { item: RoundPenalization }) {
 export function PenalizationTable({ penalization }: { penalization: RoundPenalization[] }) {
   const itemMatch = useCallback(
     (search: string, item: RoundPenalization) =>
-      item.teamSlug.toLowerCase().includes(search) ||
-      item.teamName.toLowerCase().includes(search) ||
-      item.instituteName.toLowerCase().includes(search) ||
-      item.instituteCity.toLowerCase().includes(search) ||
+      item.teams.toLowerCase().includes(search) ||
+      item.instituteName?.toLowerCase().includes(search) ||
+      item.instituteCity?.toLowerCase().includes(search) ||
       item.description.toLowerCase().includes(search),
     [],
   );
@@ -70,7 +67,7 @@ export function PenalizationTable({ penalization }: { penalization: RoundPenaliz
       itemMatch={itemMatch}
       header={TableHeaders}
       row={PenalizationRow}
-      className="grid-cols-[auto_auto_auto_auto_auto_minmax(28rem,1fr)]"
+      className="grid-cols-[repeat(7,auto)]"
     />
   );
 }
@@ -82,8 +79,8 @@ function TableHeaders() {
       <div>Istituto</div>
       <div>Livello</div>
       <div>Tipo</div>
-      <div>Data</div>
       <div>Descrizione</div>
+      <div />
     </>
   );
 }
