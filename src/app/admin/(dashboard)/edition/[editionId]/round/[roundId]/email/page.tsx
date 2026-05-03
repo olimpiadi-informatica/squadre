@@ -13,11 +13,9 @@ import { BulkSendButton } from "./bulk-send";
 import { EmailTable } from "./email-table";
 import { PasswordTemplateModal } from "./password-template-modal";
 
-type Props = {
-  params: Promise<{ editionId: string; roundId: string }>;
-};
-
-export default async function AdminEmailPage({ params }: Props) {
+export default async function AdminEmailPage({
+  params,
+}: PageProps<"/admin/edition/[editionId]/round/[roundId]/email">) {
   await verifyAdmin();
 
   const { editionId, roundId } = await params;

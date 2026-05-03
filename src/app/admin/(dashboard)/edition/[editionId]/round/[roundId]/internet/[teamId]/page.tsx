@@ -15,11 +15,9 @@ import { getRoundEndForTeam, getRoundStartForTeam } from "~/lib/round-config";
 import { getTeamRoundSubmissions, type TeamRoundSubmission } from "~/lib/submission";
 import { getTeamAdmin } from "~/lib/team";
 
-type Props = {
-  params: Promise<{ editionId: string; roundId: string; teamId: string }>;
-};
-
-export default async function AdminRoundInternetTeamPage({ params }: Props) {
+export default async function AdminRoundInternetTeamPage({
+  params,
+}: PageProps<"/admin/edition/[editionId]/round/[roundId]/internet/[teamId]">) {
   await verifyAdmin();
 
   const { editionId, roundId, teamId } = await params;
