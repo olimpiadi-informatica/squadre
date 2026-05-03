@@ -217,20 +217,8 @@ export const penalization = pgTable(
   "penalization",
   {
     id: serial().primaryKey(),
-    teamRoundId: integer("team_round_id")
-      .notNull()
-      .references(() => teamRound.id, { onDelete: "cascade" }),
-    relatedTeamRoundId: integer("related_team_round_id").references(() => teamRound.id, {
-      onDelete: "cascade",
-    }),
     level: text().notNull().$type<PenalizationLevel>(),
     type: text().notNull().$type<PenalizationType>(),
-    submissionId: integer("submission_id").references(() => submission.id, {
-      onDelete: "set null",
-    }),
-    relatedSubmissionId: integer("related_submission_id").references(() => submission.id, {
-      onDelete: "set null",
-    }),
     description: text().notNull(),
     createdAt: timestamp("created_at").notNull(),
     sentAt: timestamp("sent_at"),
@@ -239,10 +227,29 @@ export const penalization = pgTable(
     appealedAt: timestamp("appealed_at"),
     confirmedAt: timestamp("confirmed_at"),
   },
+  (table) => [index("idx_penalization_type").on(table.type)],
+);
+
+export const teamRoundPenalization = pgTable(
+  "team_round_penalization",
+  {
+    id: serial().primaryKey(),
+    teamRoundId: integer("team_round_id")
+      .notNull()
+      .references(() => teamRound.id, { onDelete: "cascade" }),
+    submissionId: integer("submission_id").references(() => submission.id, {
+      onDelete: "set null",
+    }),
+    penalizationId: integer("penalization_id")
+      .notNull()
+      .references(() => penalization.id, { onDelete: "cascade" }),
+  },
   (table) => [
-    index("idx_penalization_team_round_type").on(table.teamRoundId, table.type),
-    index("idx_penalization_submission").on(table.submissionId),
-    index("idx_penalization_related_submission").on(table.relatedSubmissionId),
+    uniqueIndex("team_round_penalization_unique").on(
+      table.teamRoundId,
+      table.penalizationId,
+      table.submissionId,
+    ),
   ],
 );
 
