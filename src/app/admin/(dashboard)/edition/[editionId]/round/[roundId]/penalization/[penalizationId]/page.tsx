@@ -22,11 +22,9 @@ const levelBadge = {
   red: "badge-error",
 } as const;
 
-type Props = {
-  params: Promise<{ editionId: string; roundId: string; penalizationId: string }>;
-};
-
-export default async function AdminRoundPenalizationDetailPage({ params }: Props) {
+export default async function AdminRoundPenalizationDetailPage({
+  params,
+}: PageProps<"/admin/edition/[editionId]/round/[roundId]/penalization/[penalizationId]">) {
   await verifyAdmin();
 
   const { editionId, roundId, penalizationId } = await params;

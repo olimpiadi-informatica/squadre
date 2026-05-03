@@ -10,11 +10,9 @@ import { getRoundAdmin } from "~/lib/round";
 
 import { InternetTable } from "./internet-table";
 
-type Props = {
-  params: Promise<{ editionId: string; roundId: string }>;
-};
-
-export default async function AdminRoundInternetPage({ params }: Props) {
+export default async function AdminRoundInternetPage({
+  params,
+}: PageProps<"/admin/edition/[editionId]/round/[roundId]/internet">) {
   await verifyAdmin();
 
   const { editionId, roundId } = await params;
