@@ -27,6 +27,7 @@ export default async function AdminRoundPenalizationPage({
   const stats = {
     total: penalization.length,
     plagiarism: penalization.filter((penalization) => penalization.type === "plagiarism").length,
+    internet: penalization.filter((penalization) => penalization.type === "internet-check").length,
     red: penalization.filter((penalization) => penalization.level === "red").length,
     yellow: penalization.filter((penalization) => penalization.level === "yellow").length,
   };
@@ -50,10 +51,11 @@ export default async function AdminRoundPenalizationPage({
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="md:col-span-2">
-          <CardBody title="Copiature">
-            <div className="grid gap-4 mt-5 md:grid-cols-4">
+          <CardBody title="Penalizzazioni">
+            <div className="grid gap-4 mt-5 md:grid-cols-5">
               <Stat label="Penalizzazioni totali" value={stats.total} />
               <Stat label="Copiature" value={stats.plagiarism} />
+              <Stat label="Internet" value={stats.internet} />
               <Stat label="Livello giallo" value={stats.yellow} />
               <Stat label="Livello rosso" value={stats.red} />
             </div>

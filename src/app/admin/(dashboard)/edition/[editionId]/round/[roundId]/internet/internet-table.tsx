@@ -5,11 +5,21 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo } from "react";
 
-import { CheckboxField, Form, NumberField } from "@olinfo/react-components";
+import {
+  Card,
+  CardActions,
+  CardBody,
+  CheckboxField,
+  Form,
+  NumberField,
+  SubmitButton,
+} from "@olinfo/react-components";
 import clsx from "clsx";
 
 import { Table } from "~/components/table";
 import type { TeamRoundInternetCheck } from "~/lib/internet-check";
+
+import { createInternetPenalization } from "./actions";
 
 const DEFAULT_ONLY_ISSUES = true;
 const DEFAULT_MISSING_THRESHOLD = 5;
@@ -91,8 +101,17 @@ function InternetTeamRoundRow({
   );
 }
 
-export function InternetTable({ teams }: { teams: TeamRoundInternetCheck[] }) {
+export function InternetTable({
+  editionId,
+  roundId,
+  teams,
+}: {
+  editionId: string;
+  roundId: string;
+  teams: TeamRoundInternetCheck[];
+}) {
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const defaultValue = useMemo(
     () => ({
@@ -118,27 +137,42 @@ export function InternetTable({ teams }: { teams: TeamRoundInternetCheck[] }) {
     [],
   );
 
+  async function handleSubmit(filters: Partial<InternetFilterState>) {
+    await createInternetPenalization(editionId, roundId, {
+      missingThreshold: filters.missingThreshold ?? DEFAULT_MISSING_THRESHOLD,
+      failedThreshold: filters.failedThreshold ?? DEFAULT_FAILED_THRESHOLD,
+    });
+    router.refresh();
+  }
+
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <Form
         defaultValue={defaultValue}
-        onSubmit={() => {}}
+        onSubmit={handleSubmit}
         className="!max-w-none !w-full ![align-items:unset] gap-4">
-        <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
-          <NumberField
-            field="missingThreshold"
-            label="Missing threshold"
-            placeholder="Missing threshold"
-            min={1}
-          />
-          <NumberField
-            field="failedThreshold"
-            label="Failed threshold"
-            placeholder="Failed threshold"
-            min={1}
-          />
-          <CheckboxField field="onlyIssues" label="Solo team sospetti" />
-        </div>
+        <Card>
+          <CardBody title="Filtri">
+            <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
+              <NumberField
+                field="failedThreshold"
+                label="Failed threshold"
+                placeholder="Failed threshold"
+                min={1}
+              />
+              <NumberField
+                field="missingThreshold"
+                label="Missing threshold"
+                placeholder="Missing threshold"
+                min={1}
+              />
+              <CheckboxField field="onlyIssues" label="Solo team sospetti" />
+            </div>
+            <CardActions>
+              <SubmitButton className="btn-success">Crea penalizzazioni</SubmitButton>
+            </CardActions>
+          </CardBody>
+        </Card>
         {(filters) => (
           <InternetTableContent
             teams={teams}

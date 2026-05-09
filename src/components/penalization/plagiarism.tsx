@@ -1,15 +1,16 @@
 import { Card, CardBody } from "@olinfo/react-components";
 import { intlFormat } from "date-fns";
 
-import { DiffViewer } from "~/components/diff-viewer";
-import type { TeamRoundPenalizationDetail } from "~/lib/penalization";
+import type { TeamPenalizationDetail } from "~/lib/penalization";
 
-export function PlagiarismDetail({ teams }: { teams: TeamRoundPenalizationDetail[] }) {
+import { DiffViewer } from "./diff-viewer";
+
+export function PlagiarismDetails({ teams }: { teams: TeamPenalizationDetail[] }) {
   return (
     <>
       <div className="grid gap-4 xl:grid-cols-2">
-        <SubmissionCard label="Sottoposizione 1" submission={teams[0]} />
-        <SubmissionCard label="Sottoposizione 2" submission={teams[1]} />
+        <SubmissionCard label="Sottoposizione 1" teamPenalization={teams[0]} />
+        <SubmissionCard label="Sottoposizione 2" teamPenalization={teams[1]} />
       </div>
 
       <CodeDiffCard submissionLeft={teams[0]} submissionRight={teams[1]} />
@@ -19,10 +20,10 @@ export function PlagiarismDetail({ teams }: { teams: TeamRoundPenalizationDetail
 
 function SubmissionCard({
   label,
-  submission,
+  teamPenalization,
 }: {
   label: string;
-  submission: TeamRoundPenalizationDetail;
+  teamPenalization: TeamPenalizationDetail;
 }) {
   return (
     <Card>
@@ -31,18 +32,18 @@ function SubmissionCard({
           <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
             <p className="font-semibold">Team:</p>
             <div>
-              {submission.teamSlug} ({submission.teamName})
+              {teamPenalization.slug} ({teamPenalization.name})
             </div>
             <p className="font-semibold">Submission:</p>
-            <p>{submission.submissionSlug}</p>
+            <p>{teamPenalization.submissionSlug}</p>
             <p className="font-semibold">Task:</p>
-            <p>{submission.taskSlug}</p>
+            <p>{teamPenalization.taskSlug}</p>
             <p className="font-semibold">Linguaggio:</p>
-            <p>{submission.submissionLanguage}</p>
+            <p>{teamPenalization.submissionLanguage}</p>
             <p className="font-semibold">Punteggio:</p>
-            <p>{submission.submissionScore}</p>
+            <p>{teamPenalization.submissionScore}</p>
             <p className="font-semibold">Orario:</p>
-            <p>{formatDateTime(submission.submissionTimestamp)}</p>
+            <p>{formatDateTime(teamPenalization.submissionTimestamp)}</p>
           </div>
         </div>
       </CardBody>
@@ -54,8 +55,8 @@ function CodeDiffCard({
   submissionLeft,
   submissionRight,
 }: {
-  submissionLeft: TeamRoundPenalizationDetail;
-  submissionRight: TeamRoundPenalizationDetail;
+  submissionLeft: TeamPenalizationDetail;
+  submissionRight: TeamPenalizationDetail;
 }) {
   return (
     <Card>

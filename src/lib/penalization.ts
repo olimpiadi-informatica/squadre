@@ -2,7 +2,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import type { ReadableStream } from "node:stream/web";
 
-import { and, eq, inArray, min, sql } from "drizzle-orm";
+import { and, countDistinct, eq, exists, gt, inArray, min, notExists, sql } from "drizzle-orm";
 import { flatMapAsync } from "es-toolkit";
 import { isString } from "es-toolkit/compat";
 import Papa from "papaparse";
@@ -10,6 +10,7 @@ import Papa from "papaparse";
 import { db } from "./db";
 import {
   institute,
+  internetCheck,
   type PenalizationLevel,
   type PenalizationType,
   penalization,
@@ -19,7 +20,13 @@ import {
   team,
   teamRound,
   teamRoundPenalization,
+  teamTaskScore,
 } from "./db/schema";
+
+type InternetPenalizationFilters = {
+  missingThreshold: number;
+  failedThreshold: number;
+};
 
 export type RoundPenalization = {
   id: number;
@@ -84,8 +91,7 @@ export type RoundPenalizationDetail = {
 };
 
 export async function getRoundPenalization(
-  editionId: string,
-  roundSlug: string,
+  roundId: number,
   penalizationId: number,
 ): Promise<RoundPenalizationDetail | undefined> {
   const [item] = await db
@@ -101,14 +107,7 @@ export async function getRoundPenalization(
     .from(penalization)
     .innerJoin(teamRoundPenalization, eq(teamRoundPenalization.penalizationId, penalization.id))
     .innerJoin(teamRound, eq(teamRound.id, teamRoundPenalization.teamRoundId))
-    .innerJoin(round, eq(round.id, teamRound.roundId))
-    .where(
-      and(
-        eq(round.editionId, editionId),
-        eq(round.slug, roundSlug),
-        eq(penalization.id, penalizationId),
-      ),
-    )
+    .where(and(eq(teamRound.roundId, roundId), eq(penalization.id, penalizationId)))
     .groupBy(
       penalization.id,
       penalization.level,
@@ -120,8 +119,13 @@ export async function getRoundPenalization(
   return item;
 }
 
-export type TeamRoundPenalizationDetail = {
-  teamRoundPenalizationId: number;
+export type TeamPenalizationDetail = {
+  id: number;
+  slug: string;
+  name: string;
+  instituteName: string;
+  instituteCity: string;
+  delay: number;
   submissionId: number | null;
   submissionSlug: string | null;
   submissionScore: number | null;
@@ -130,20 +134,19 @@ export type TeamRoundPenalizationDetail = {
   submissionCode: string | null;
   taskSlug: string | null;
   taskTitle: string | null;
-  teamRoundId: number;
-  teamSlug: string;
-  teamName: string;
-  instituteName: string;
-  instituteCity: string;
 };
 
-export function getTeamRoundPenalization(
+export function getTeamPenalization(
   teamRoundPenalizationIds: number[],
-): Promise<TeamRoundPenalizationDetail[]> {
+): Promise<TeamPenalizationDetail[]> {
   return db
     .select({
-      teamRoundPenalizationId: teamRoundPenalization.id,
-      teamRoundId: teamRound.id,
+      id: team.id,
+      slug: team.slug,
+      name: team.name,
+      instituteName: institute.name,
+      instituteCity: institute.city,
+      delay: teamRound.delay,
       submissionId: submission.id,
       submissionSlug: submission.slug,
       submissionScore: submission.score,
@@ -152,17 +155,13 @@ export function getTeamRoundPenalization(
       submissionCode: submission.code,
       taskSlug: task.slug,
       taskTitle: task.title,
-      teamSlug: team.slug,
-      teamName: team.name,
-      instituteName: institute.name,
-      instituteCity: institute.city,
     })
     .from(teamRoundPenalization)
-    .leftJoin(submission, eq(submission.id, teamRoundPenalization.submissionId))
-    .leftJoin(task, eq(task.id, submission.taskId))
     .innerJoin(teamRound, eq(teamRound.id, teamRoundPenalization.teamRoundId))
     .innerJoin(team, eq(team.id, teamRound.teamId))
     .innerJoin(institute, eq(institute.id, team.instituteId))
+    .leftJoin(submission, eq(submission.id, teamRoundPenalization.submissionId))
+    .leftJoin(task, eq(task.id, submission.taskId))
     .where(inArray(teamRoundPenalization.id, teamRoundPenalizationIds))
     .orderBy(teamRoundPenalization.id);
 }
@@ -248,6 +247,94 @@ export async function importRoundPlagiarismPenalization(
           submissionId: secondTeam.submissionId,
         },
       ]);
+    }
+  });
+}
+
+export async function createRoundInternetPenalization(
+  editionId: string,
+  roundSlug: string,
+  { missingThreshold, failedThreshold }: InternetPenalizationFilters,
+) {
+  await db.transaction(async (tx) => {
+    const teamRounds = await tx
+      .select({
+        teamRoundId: teamRound.id,
+        numPc: countDistinct(internetCheck.pcHash),
+        numFailedChecks: sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "failed")})`,
+        numMissingChecks: sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "missing")})`,
+      })
+      .from(teamRound)
+      .innerJoin(team, eq(team.id, teamRound.teamId))
+      .innerJoin(round, eq(round.id, teamRound.roundId))
+      .leftJoin(internetCheck, eq(internetCheck.teamRoundId, teamRound.id))
+      .where(
+        and(
+          eq(round.editionId, editionId),
+          eq(round.slug, roundSlug),
+          exists(
+            tx
+              .select()
+              .from(teamTaskScore)
+              .innerJoin(task, eq(task.id, teamTaskScore.taskId))
+              .where(
+                and(
+                  eq(teamTaskScore.teamId, teamRound.teamId),
+                  eq(task.roundId, teamRound.roundId),
+                  gt(teamTaskScore.score, 0),
+                ),
+              ),
+          ),
+          notExists(
+            tx
+              .select()
+              .from(teamRoundPenalization)
+              .innerJoin(penalization, eq(penalization.id, teamRoundPenalization.penalizationId))
+              .where(
+                and(
+                  eq(teamRoundPenalization.teamRoundId, teamRound.id),
+                  eq(penalization.type, "internet-check"),
+                ),
+              ),
+          ),
+        ),
+      )
+      .groupBy(teamRound.id)
+      .having(
+        ({ numPc, numFailedChecks, numMissingChecks }) => sql`
+          ${numPc} > 2
+          OR ${numFailedChecks} >= ${failedThreshold}
+          OR ${numMissingChecks} >= ${missingThreshold}
+        `,
+      );
+
+    for (const item of teamRounds) {
+      const reasons = [];
+      if (item.numPc > 2) {
+        reasons.push("troppi pc");
+      }
+      if (item.numFailedChecks >= failedThreshold) {
+        reasons.push("controlli internet falliti");
+      }
+      if (item.numMissingChecks >= missingThreshold) {
+        reasons.push("controlli internet mancanti");
+      }
+
+      const [{ penalizationId }] = await tx
+        .insert(penalization)
+        .values({
+          level: "yellow",
+          type: "internet-check",
+          description: reasons.join(", "),
+          createdAt: new Date(),
+          appealAllowed: true,
+        })
+        .returning({ penalizationId: penalization.id });
+
+      await tx.insert(teamRoundPenalization).values({
+        penalizationId,
+        teamRoundId: item.teamRoundId,
+      });
     }
   });
 }

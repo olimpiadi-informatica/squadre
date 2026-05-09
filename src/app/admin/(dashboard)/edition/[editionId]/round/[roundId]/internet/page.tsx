@@ -61,7 +61,7 @@ export default async function AdminRoundInternetPage({
         </Card>
       </div>
 
-      <InternetTable teams={teams} />
+      <InternetTable editionId={editionId} roundId={roundId} teams={teams} />
     </div>
   );
 }
