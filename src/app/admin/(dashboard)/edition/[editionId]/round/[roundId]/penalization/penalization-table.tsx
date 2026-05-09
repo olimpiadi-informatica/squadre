@@ -18,7 +18,7 @@ const levelBadge = {
 
 const typeLabel = {
   "screen-recording": "Screen recording",
-  "internet-check": "Controllo internet",
+  "internet-check": "Internet",
   plagiarism: "Copiatura",
   ai: "Uso di strumenti AI",
   other: "Violazione del codice d'onore",
@@ -39,13 +39,11 @@ function PenalizationRow({ item }: { item: RoundPenalization }) {
       </div>
       <div className="text-wrap break-words">{item.description}</div>
       <div>
-        {item.type === "plagiarism" ? (
-          <Link
-            href={`/admin/edition/${item.editionId}/round/${item.roundSlug}/penalization/${item.id}`}
-            className="btn btn-primary btn-xs">
-            Dettaglio
-          </Link>
-        ) : null}
+        <Link
+          href={`/admin/edition/${item.editionId}/round/${item.roundSlug}/penalization/${item.id}`}
+          className="btn btn-primary btn-xs">
+          Dettaglio
+        </Link>
       </div>
     </>
   );
