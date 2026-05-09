@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 
 import {
   Button,
@@ -25,23 +25,16 @@ export function UploadPlagiarismButton({
 }) {
   const modalRef = useRef<HTMLDialogElement>(null);
   const router = useRouter();
-  const [isUploading, setIsUploading] = useState(false);
 
   async function handleUpload({ files }: { files: Record<string, File> }) {
-    setIsUploading(true);
-
-    try {
-      const formData = new FormData();
-      for (const file of Object.values(files)) {
-        formData.append("files", file);
-      }
-
-      await uploadRoundPlagiarismPenalization(editionId, roundId, formData);
-      modalRef.current?.close();
-      router.refresh();
-    } finally {
-      setIsUploading(false);
+    const formData = new FormData();
+    for (const file of Object.values(files)) {
+      formData.append("files", file);
     }
+
+    await uploadRoundPlagiarismPenalization(editionId, roundId, formData);
+    modalRef.current?.close();
+    router.refresh();
   }
 
   return (
@@ -62,15 +55,10 @@ export function UploadPlagiarismButton({
           />
 
           <div className="flex justify-end gap-2">
-            <FormButton
-              className="btn-info"
-              disabled={isUploading}
-              onClick={() => modalRef.current?.close()}>
+            <FormButton className="btn-info" onClick={() => modalRef.current?.close()}>
               Annulla
             </FormButton>
-            <SubmitButton className="btn-success" disabled={isUploading}>
-              {isUploading ? "Caricamento..." : "Carica"}
-            </SubmitButton>
+            <SubmitButton className="btn-success">Carica</SubmitButton>
           </div>
         </Form>
       </Modal>
