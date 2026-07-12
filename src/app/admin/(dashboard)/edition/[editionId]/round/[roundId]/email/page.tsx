@@ -1,17 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Card, CardActions, CardBody } from "@olinfo/react-components";
-
+import { EmailCard } from "~/components/email/email-card";
 import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
 import { listRoundEmailStatuses } from "~/lib/email";
 import { getEmailTemplateContent, PASSWORD_EMAIL_TEMPLATE_ID } from "~/lib/email-template";
 import { getRoundAdmin } from "~/lib/round";
 
-import { BulkSendButton } from "./bulk-send";
+import { savePasswordEmailTemplate, sendEmail } from "./actions";
 import { EmailTable } from "./email-table";
-import { PasswordTemplateModal } from "./password-template-modal";
 
 export default async function AdminEmailPage({
   params,
@@ -27,6 +25,16 @@ export default async function AdminEmailPage({
     listRoundEmailStatuses(editionId, roundId),
     getEmailTemplateContent(PASSWORD_EMAIL_TEMPLATE_ID),
   ]);
+
+  async function onSendAll(instituteId: string) {
+    "use server";
+    await sendEmail(editionId, roundId, instituteId, false);
+  }
+
+  async function onSaveTemplate(content: string) {
+    "use server";
+    await savePasswordEmailTemplate(editionId, roundId, content);
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -45,33 +53,13 @@ export default async function AdminEmailPage({
         </ul>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardBody title="Invia email">
-            <p>{statuses.length} scuole partecipano a questo round:</p>
-            <ul className="list-disc ml-4">
-              <li>email non inviate: {statuses.filter((s) => s.status === "not-sent").length}</li>
-              <li>email inviate: {statuses.filter((s) => s.status === "sent").length}</li>
-              <li>
-                email in errore: {statuses.filter((s) => s.status === "sending-failed").length}
-              </li>
-            </ul>
-            <CardActions>
-              <BulkSendButton editionId={editionId} roundId={roundId} statuses={statuses} />
-            </CardActions>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardBody title="Template password">
-            <p>Apri il modal per modificare il template delle email con le password.</p>
-            <CardActions>
-              <PasswordTemplateModal
-                editionId={editionId}
-                roundId={roundId}
-                content={passwordTemplate ?? ""}
-              />
-            </CardActions>
-          </CardBody>
-        </Card>
+        <EmailCard
+          statuses={statuses}
+          onSendAll={onSendAll}
+          templateLabel="Template password"
+          templateContent={passwordTemplate ?? ""}
+          onSaveTemplate={onSaveTemplate}
+        />
       </div>
       <div className="w-full">
         <EmailTable statuses={statuses} editionId={editionId} roundId={roundId} />

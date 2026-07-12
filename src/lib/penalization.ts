@@ -31,6 +31,7 @@ type InternetPenalizationFilters = {
 export type RoundPenalization = {
   id: number;
   teams: string;
+  instituteId: string | null;
   instituteName: string | null;
   instituteCity: string | null;
   roundSlug: string;
@@ -50,6 +51,7 @@ export function listRoundPenalization(
     .select({
       id: penalization.id,
       teams: sql<string>`STRING_AGG(${team.slug}, ', ' ORDER BY ${team.slug})`,
+      instituteId: min(institute.id),
       instituteName: min(institute.name),
       instituteCity: min(institute.city),
       roundSlug: round.slug,
@@ -77,7 +79,7 @@ export function listRoundPenalization(
       round.slug,
       round.editionId,
     )
-    .orderBy((t) => [t.instituteName, t.instituteCity, t.teams]);
+    .orderBy((t) => [t.instituteName, t.instituteCity, t.type, t.teams]);
 }
 
 export type RoundPenalizationDetail = {
