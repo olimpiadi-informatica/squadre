@@ -43,7 +43,7 @@ export default async function AdminRoundInternetPage({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="md:col-span-2">
+        <Card>
           <CardBody title="Controlli internet">
             <div className="grid gap-5">
               <div className="grid gap-4 md:grid-cols-3">

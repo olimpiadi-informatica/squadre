@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-import { Body, Container, Head, Html, Link, Markdown, Text } from "@react-email/components";
+import { Body, Container, Head, Html, Link, Markdown, Text } from "react-email";
 
 import type { TeamCredential } from "~/lib/team";
 

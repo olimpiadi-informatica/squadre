@@ -1,12 +1,15 @@
-import { render } from "@react-email/components";
 import { eq } from "drizzle-orm";
+import { render } from "react-email";
 
 import PasswordEmail from "~/emails/password-email";
+import type { PenalizationEmailRow } from "~/emails/penalization-email";
+import PenalizationEmail from "~/emails/penalization-email";
 import { db } from "~/lib/db";
 import { emailTemplate } from "~/lib/db/schema";
 import type { TeamCredential } from "~/lib/team";
 
 export const PASSWORD_EMAIL_TEMPLATE_ID = "password";
+export const PENALIZATION_EMAIL_TEMPLATE_ID = "penalization";
 
 export function renderPasswordEmail(
   coach: string,
@@ -25,6 +28,22 @@ export function renderPasswordEmail(
       teams={teams}
       startTime={startTime}
       credentialsPdfUrl={credentialsPdfUrl}
+      template={template}
+    />,
+  );
+}
+
+export function renderPenalizationEmail(
+  coach: string,
+  penalizations: PenalizationEmailRow[],
+  detailsUrl: string,
+  template: string,
+) {
+  return render(
+    <PenalizationEmail
+      coach={coach}
+      penalizations={penalizations}
+      detailsUrl={detailsUrl}
       template={template}
     />,
   );

@@ -213,6 +213,20 @@ export const penalizationTypeValues = [
 ] as const;
 export type PenalizationType = (typeof penalizationTypeValues)[number];
 
+export const penalizationEmail = pgTable("penalization_email", {
+  id: serial().primaryKey(),
+  token: uuid().defaultRandom().notNull(),
+  roundId: integer("round_id")
+    .notNull()
+    .references(() => round.id, { onDelete: "cascade" }),
+  instituteId: text("institute_id")
+    .notNull()
+    .references(() => institute.id),
+  emailId: integer("email_id")
+    .notNull()
+    .references(() => email.id, { onDelete: "cascade" }),
+});
+
 export const penalization = pgTable(
   "penalization",
   {
@@ -226,6 +240,9 @@ export const penalization = pgTable(
     allowAppealUntil: timestamp("allow_appeal_until"),
     appealedAt: timestamp("appealed_at"),
     confirmedAt: timestamp("confirmed_at"),
+    penalizationEmailId: integer("penalization_email_id").references(() => penalizationEmail.id, {
+      onDelete: "set null",
+    }),
   },
   (table) => [index("idx_penalization_type").on(table.type)],
 );

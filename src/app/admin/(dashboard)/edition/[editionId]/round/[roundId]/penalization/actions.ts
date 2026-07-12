@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { verifyAdmin } from "~/lib/admin";
+import { sendInstitutePenalizationEmail } from "~/lib/email";
+import { PENALIZATION_EMAIL_TEMPLATE_ID, upsertEmailTemplateContent } from "~/lib/email-template";
 import { importRoundPlagiarismPenalization } from "~/lib/penalization";
 import { getRoundAdmin } from "~/lib/round";
 
@@ -24,5 +26,33 @@ export async function uploadRoundPlagiarismPenalization(
   }
 
   await importRoundPlagiarismPenalization(editionId, roundSlug, files);
+  revalidatePath(`/admin/edition/${editionId}/round/${roundSlug}/penalization`);
+}
+
+export async function sendPenalizationEmail(
+  editionId: string,
+  roundSlug: string,
+  instituteId: string,
+  revalidate = true,
+) {
+  await verifyAdmin();
+
+  const round = await getRoundAdmin(editionId, roundSlug);
+  if (!round) throw new Error(`Round ${roundSlug} not found`);
+
+  await sendInstitutePenalizationEmail(round, instituteId);
+  if (revalidate) {
+    revalidatePath(`/admin/edition/${editionId}/round/${roundSlug}/penalization`);
+  }
+}
+
+export async function savePenalizationEmailTemplate(
+  editionId: string,
+  roundSlug: string,
+  content: string,
+) {
+  await verifyAdmin();
+
+  await upsertEmailTemplateContent(PENALIZATION_EMAIL_TEMPLATE_ID, content);
   revalidatePath(`/admin/edition/${editionId}/round/${roundSlug}/penalization`);
 }

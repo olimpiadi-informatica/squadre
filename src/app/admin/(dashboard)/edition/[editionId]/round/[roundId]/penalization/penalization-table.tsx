@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useRef } from "react";
 
+import { Button } from "@olinfo/react-components";
+
+import { Modal } from "~/components/modal";
 import { Table } from "~/components/table";
+import type { RoundPenalizationEmail } from "~/lib/email";
 import type { RoundPenalization } from "~/lib/penalization";
+
+import { sendPenalizationEmail } from "./actions";
 
 const levelLabel = {
   yellow: "Giallo",
@@ -24,7 +31,65 @@ const typeLabel = {
   other: "Violazione del codice d'onore",
 } as const;
 
-function PenalizationRow({ item }: { item: RoundPenalization }) {
+function EmailPreviewModal({ emailId }: { emailId: number | null }) {
+  const modalRef = useRef<HTMLDialogElement>(null);
+
+  const src = emailId ? `/admin/api/email/${emailId}` : null;
+
+  return (
+    <>
+      <Button
+        className="btn-xs btn-outline"
+        onClick={() => modalRef.current?.showModal()}
+        disabled={!src}>
+        Visualizza
+      </Button>
+      <Modal ref={modalRef} title="Anteprima email">
+        {src && <iframe src={src} className="w-full h-96 border rounded" title="Anteprima email" />}
+      </Modal>
+    </>
+  );
+}
+
+function SendEmailButton({
+  editionId,
+  roundId,
+  instituteId,
+  status,
+}: {
+  editionId: string;
+  roundId: string;
+  instituteId: string;
+  status: string;
+}) {
+  const router = useRouter();
+  const disabled = status === "sent" || status === "sending";
+
+  async function handleSend() {
+    await sendPenalizationEmail(editionId, roundId, instituteId);
+    router.refresh();
+  }
+
+  return (
+    <Button className="btn-xs btn-primary" onClick={handleSend} disabled={disabled}>
+      Invia email
+    </Button>
+  );
+}
+
+function PenalizationRow({
+  item,
+  emailStatuses,
+  editionId,
+  roundId,
+}: {
+  item: RoundPenalization;
+  emailStatuses: RoundPenalizationEmail[];
+  editionId: string;
+  roundId: string;
+}) {
+  const emailStatus = emailStatuses.find((e) => e.instituteId === item.instituteId);
+
   return (
     <>
       <div>{item.teams}</div>
@@ -38,7 +103,18 @@ function PenalizationRow({ item }: { item: RoundPenalization }) {
         <span className="badge badge-sm badge-outline">{typeLabel[item.type]}</span>
       </div>
       <div className="text-wrap break-words">{item.description}</div>
-      <div>
+      <div className="flex flex-wrap gap-1 justify-center">
+        {emailStatus && (
+          <>
+            <SendEmailButton
+              editionId={editionId}
+              roundId={roundId}
+              instituteId={emailStatus.instituteId}
+              status={emailStatus.status}
+            />
+            <EmailPreviewModal emailId={emailStatus.emailId} />
+          </>
+        )}
         <Link
           href={`/admin/edition/${item.editionId}/round/${item.roundSlug}/penalization/${item.id}`}
           className="btn btn-primary btn-xs">
@@ -49,7 +125,17 @@ function PenalizationRow({ item }: { item: RoundPenalization }) {
   );
 }
 
-export function PenalizationTable({ penalization }: { penalization: RoundPenalization[] }) {
+export function PenalizationTable({
+  penalization,
+  emailStatuses,
+  editionId,
+  roundId,
+}: {
+  penalization: RoundPenalization[];
+  emailStatuses: RoundPenalizationEmail[];
+  editionId: string;
+  roundId: string;
+}) {
   const itemMatch = useCallback(
     (search: string, item: RoundPenalization) =>
       item.teams.toLowerCase().includes(search) ||
@@ -59,12 +145,24 @@ export function PenalizationTable({ penalization }: { penalization: RoundPenaliz
     [],
   );
 
+  const Row = useCallback(
+    ({ item }: { item: RoundPenalization }) => (
+      <PenalizationRow
+        item={item}
+        emailStatuses={emailStatuses}
+        editionId={editionId}
+        roundId={roundId}
+      />
+    ),
+    [emailStatuses, editionId, roundId],
+  );
+
   return (
     <Table
       data={penalization}
       itemMatch={itemMatch}
       header={TableHeaders}
-      row={PenalizationRow}
+      row={Row}
       className="grid-cols-[repeat(7,auto)]"
     />
   );
@@ -78,7 +176,7 @@ function TableHeaders() {
       <div>Livello</div>
       <div>Tipo</div>
       <div>Descrizione</div>
-      <div />
+      <div>Azioni</div>
     </>
   );
 }
