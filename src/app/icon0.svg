@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <svg version="1.1" id="Layer_1" x="0px" y="0px" width="100%" viewBox="0 0 600 500" enable-background="new 0 0 640 640" style="" xmlns="http://www.w3.org/2000/svg" xmlns:bx="https://boxy-svg.com">
+  <title>OII Stats</title>
   <g transform="matrix(1, 0, 0, 1, -626.589478, -39.976475)">
     <title>O</title>
     <path d="M 804.964 338.624 m -159.99 0 a 159.99 178.814 0 1 0 319.98 0 a 159.99 178.814 0 1 0 -319.98 0 Z M 804.964 338.624 m -88.963 0 a 88.963 103.701 0 0 1 177.926 0 a 88.963 103.701 0 0 1 -177.926 0 Z" style="stroke: rgb(0, 0, 0); fill: rgb(50, 101, 31); stroke-width: 4px;" bx:shape="ring 804.964 338.624 88.963 103.701 159.99 178.814 1@23975c2f"/>
