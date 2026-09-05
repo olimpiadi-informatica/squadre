@@ -3,7 +3,19 @@ import path from "node:path";
 
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
-import { and, eq, exists, inArray, min, sql } from "drizzle-orm";
+import {
+  and,
+  eq,
+  exists,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  min,
+  notExists,
+  or,
+  sql,
+} from "drizzle-orm";
 import nodemailer from "nodemailer";
 import type StreamTransport from "nodemailer/lib/stream-transport";
 
@@ -15,8 +27,11 @@ import {
   credentialEmail,
   email as emailTable,
   institute,
+  institutePenalization,
   penalization,
   penalizationEmail,
+  penalizedRound,
+  penalizedTeamRound,
   round,
   team,
   teamRound,
@@ -26,8 +41,10 @@ import type { EditionAdminItem } from "./edition";
 import {
   getEmailTemplateContent,
   PASSWORD_EMAIL_TEMPLATE_ID,
+  PENALIZATION_APPEAL_RESULT_EMAIL_TEMPLATE_ID,
   PENALIZATION_EMAIL_TEMPLATE_ID,
   renderPasswordEmail,
+  renderPenalizationAppealResultEmail,
   renderPenalizationEmail,
 } from "./email-template";
 import type { RoundAdminItem } from "./round";
@@ -78,7 +95,39 @@ export function listRoundEmailStatuses(
           db
             .select({ id: team.id })
             .from(team)
-            .where(and(eq(team.instituteId, institute.id), eq(team.editionId, round.editionId))),
+            .where(
+              and(
+                eq(team.instituteId, institute.id),
+                eq(team.editionId, round.editionId),
+                eq(team.finalist, true).if(roundSlug === "final"),
+                notExists(
+                  db
+                    .select({ id: penalizedTeamRound.id })
+                    .from(penalizedTeamRound)
+                    .innerJoin(penalizedRound, eq(penalizedRound.id, penalizedTeamRound.roundId))
+                    .innerJoin(
+                      teamRoundPenalization,
+                      eq(teamRoundPenalization.teamRoundId, penalizedTeamRound.id),
+                    )
+                    .innerJoin(
+                      penalization,
+                      eq(penalization.id, teamRoundPenalization.penalizationId),
+                    )
+                    .where(
+                      and(
+                        eq(penalizedTeamRound.teamId, team.id),
+                        eq(penalization.level, "red"),
+                        isNotNull(penalization.sentAt),
+                        or(
+                          isNull(penalization.appealApproved),
+                          eq(penalization.appealApproved, false),
+                        ),
+                        lte(penalizedRound.startsAt, round.startsAt),
+                      ),
+                    ),
+                ),
+              ),
+            ),
         ),
         eq(round.editionId, editionId),
         eq(round.slug, roundSlug),
@@ -90,6 +139,15 @@ export function listRoundPenalizationEmailStatuses(
   editionId: string,
   roundSlug: string,
 ): Promise<RoundPenalizationEmail[]> {
+  const latestEmail = db
+    .select({
+      institutePenalizationId: penalizationEmail.institutePenalizationId,
+      emailId: sql<number>`MAX(${penalizationEmail.emailId})`.as("email_id"),
+    })
+    .from(penalizationEmail)
+    .groupBy(penalizationEmail.institutePenalizationId)
+    .as("latest_penalization_email");
+
   return db
     .select({
       instituteId: institute.id,
@@ -106,10 +164,14 @@ export function listRoundPenalizationEmailStatuses(
     .innerJoin(teamRoundPenalization, eq(teamRoundPenalization.teamRoundId, teamRound.id))
     .innerJoin(penalization, eq(penalization.id, teamRoundPenalization.penalizationId))
     .leftJoin(
-      penalizationEmail,
-      and(eq(penalizationEmail.instituteId, institute.id), eq(penalizationEmail.roundId, round.id)),
+      institutePenalization,
+      and(
+        eq(institutePenalization.instituteId, institute.id),
+        eq(institutePenalization.roundId, round.id),
+      ),
     )
-    .leftJoin(emailTable, eq(emailTable.id, penalizationEmail.emailId))
+    .leftJoin(latestEmail, eq(latestEmail.institutePenalizationId, institutePenalization.id))
+    .leftJoin(emailTable, eq(emailTable.id, latestEmail.emailId))
     .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug)))
     .groupBy(
       institute.id,
@@ -121,6 +183,9 @@ export function listRoundPenalizationEmailStatuses(
       emailTable.status,
     );
 }
+
+const EMAIL_FROM = "Olimpiadi di Informatica a Squadre <ois@olimpiadi-scientifiche.it>";
+const EMAIL_REPLY_TO = "info@olimpiadi-scientifiche.it";
 
 function createTransporter() {
   return nodemailer.createTransport({
@@ -194,9 +259,9 @@ export async function sendInstituteEmail(
 
     const transporter = createTransporter();
     const messageInfo = await transporter.sendMail({
-      from: "Olimpiadi di Informatica a Squadre <ois@olimpiadi-scientifiche.it>",
+      from: EMAIL_FROM,
       to: address,
-      replyTo: "ois@aldini.istruzioneer.it",
+      replyTo: EMAIL_REPLY_TO,
       subject: `Password OIS ${round.title} - Edizione ${edition.year}`,
       html,
     });
@@ -225,7 +290,7 @@ export async function sendInstitutePenalizationEmail(
 ) {
   // Get institute info
   const [instituteRow] = await db
-    .select({ name: institute.name, email: institute.email })
+    .select({ name: institute.name, email: institute.email, schoolEmail: institute.schoolEmail })
     .from(institute)
     .where(eq(institute.id, instituteId));
   if (!instituteRow) throw new Error(`Institute ${instituteId} not found`);
@@ -264,42 +329,46 @@ export async function sendInstitutePenalizationEmail(
     description: p.description,
   }));
 
-  const emailId = await db.transaction(async (tx) => {
+  const { emailId, token } = await db.transaction(async (tx) => {
+    const [access] = await tx
+      .insert(institutePenalization)
+      .values({ instituteId, roundId: roundRecord.id })
+      .onConflictDoUpdate({
+        target: [institutePenalization.instituteId, institutePenalization.roundId],
+        set: { instituteId },
+      })
+      .returning({ id: institutePenalization.id, token: institutePenalization.token });
+
     const [emailRecord] = await tx
       .insert(emailTable)
       .values({ address, status: "sending" })
       .returning({ id: emailTable.id });
 
-    const [penEmailRecord] = await tx
-      .insert(penalizationEmail)
-      .values({
-        instituteId,
-        roundId: roundRecord.id,
-        emailId: emailRecord.id,
-      })
-      .returning({ id: penalizationEmail.id });
+    await tx.insert(penalizationEmail).values({
+      institutePenalizationId: access.id,
+      emailId: emailRecord.id,
+    });
 
-    // Update all penalizations of this institute in this round
-    const penalizationIds = penalizationsData.map((p) => p.penalizationId);
-    await tx
-      .update(penalization)
-      .set({ penalizationEmailId: penEmailRecord.id })
-      .where(inArray(penalization.id, penalizationIds));
-
-    return emailRecord.id;
+    return { emailId: emailRecord.id, token: access.token };
   });
 
   try {
-    const detailsUrl = `https://squadre.olinfo.it/admin/edition/${roundRecord.editionId}/round/${roundRecord.slug}/penalization`;
+    const detailsUrl = `https://squadre.olinfo.it/teacher/p/${encodeURIComponent(token)}`;
     const html = await renderPenalizationEmail(coach, penalizationRows, detailsUrl, template);
 
     await db.update(emailTable).set({ html }).where(eq(emailTable.id, emailId));
 
     const transporter = createTransporter();
     const messageInfo = await transporter.sendMail({
-      from: "Olimpiadi di Informatica a Squadre <ois@olimpiadi-scientifiche.it>",
+      from: EMAIL_FROM,
       to: address,
-      cc: "ois@aldini.istruzioneer.it",
+      replyTo: EMAIL_REPLY_TO,
+      cc: [
+        "ois@aldini.istruzioneer.it",
+        ...(instituteRow.schoolEmail && penalizationsData.some((item) => item.level === "red")
+          ? [instituteRow.schoolEmail]
+          : []),
+      ],
       subject: `Penalizzazioni OIS ${roundRecord.title}`,
       html,
     });
@@ -309,10 +378,97 @@ export async function sendInstitutePenalizationEmail(
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, `${Date.now()}.eml`), message);
 
-    await db.update(emailTable).set({ status: "sent" }).where(eq(emailTable.id, emailId));
+    const penalizationIds = penalizationsData.map((p) => p.penalizationId);
+    await db.transaction(async (tx) => {
+      await tx.update(emailTable).set({ status: "sent" }).where(eq(emailTable.id, emailId));
+      await tx
+        .update(penalization)
+        .set({
+          sentAt: sql`COALESCE(${penalization.sentAt}, NOW())`,
+          allowAppealUntil: sql`COALESCE(${penalization.allowAppealUntil}, NOW() + INTERVAL '5 days')`,
+        })
+        .where(inArray(penalization.id, penalizationIds));
+    });
   } catch (err) {
     console.error(err);
     await db.update(emailTable).set({ status: "sending-failed" }).where(eq(emailTable.id, emailId));
+  }
+}
+
+export async function sendPenalizationAppealResultEmail(
+  roundRecord: RoundAdminItem,
+  penalizationId: number,
+  approved: boolean,
+) {
+  const recipients = await db
+    .select({
+      instituteId: institute.id,
+      address: institute.email,
+      schoolEmail: institute.schoolEmail,
+      coach: min(team.coach),
+      teams: sql<string>`STRING_AGG(${team.slug}, ', ' ORDER BY ${team.slug})`,
+      token: institutePenalization.token,
+    })
+    .from(penalization)
+    .innerJoin(teamRoundPenalization, eq(teamRoundPenalization.penalizationId, penalization.id))
+    .innerJoin(teamRound, eq(teamRound.id, teamRoundPenalization.teamRoundId))
+    .innerJoin(team, eq(team.id, teamRound.teamId))
+    .innerJoin(institute, eq(institute.id, team.instituteId))
+    .innerJoin(
+      institutePenalization,
+      and(
+        eq(institutePenalization.instituteId, institute.id),
+        eq(institutePenalization.roundId, roundRecord.id),
+      ),
+    )
+    .where(and(eq(penalization.id, penalizationId), eq(teamRound.roundId, roundRecord.id)))
+    .groupBy(institute.id, institute.email, institute.schoolEmail, institutePenalization.token);
+
+  if (recipients.length === 0) throw new Error("Nessun destinatario trovato per il ricorso.");
+
+  const template =
+    (await getEmailTemplateContent(PENALIZATION_APPEAL_RESULT_EMAIL_TEMPLATE_ID)) ?? "";
+
+  for (const recipient of recipients) {
+    if (!recipient.address) {
+      throw new Error(`L'istituto ${recipient.instituteId} non ha un indirizzo email.`);
+    }
+
+    const detailsUrl = `https://squadre.olinfo.it/teacher/p/${encodeURIComponent(recipient.token)}`;
+    const html = await renderPenalizationAppealResultEmail(
+      recipient.coach ?? recipient.instituteId,
+      recipient.teams,
+      approved,
+      detailsUrl,
+      template,
+    );
+    const [emailRecord] = await db
+      .insert(emailTable)
+      .values({ address: recipient.address, status: "sending", html })
+      .returning({ id: emailTable.id });
+
+    try {
+      const transporter = createTransporter();
+      const messageInfo = await transporter.sendMail({
+        from: EMAIL_FROM,
+        to: recipient.address,
+        replyTo: EMAIL_REPLY_TO,
+        cc: !approved && recipient.schoolEmail ? recipient.schoolEmail : undefined,
+        subject: `Esito ricorso OIS ${roundRecord.title}`,
+        html,
+      });
+      const message = (messageInfo as StreamTransport.SentMessageInfo).message;
+      const dir = path.join("emails", recipient.address);
+      await mkdir(dir, { recursive: true });
+      await writeFile(path.join(dir, `${Date.now()}.eml`), message);
+      await db.update(emailTable).set({ status: "sent" }).where(eq(emailTable.id, emailRecord.id));
+    } catch (err) {
+      await db
+        .update(emailTable)
+        .set({ status: "sending-failed" })
+        .where(eq(emailTable.id, emailRecord.id));
+      throw err;
+    }
   }
 }
 

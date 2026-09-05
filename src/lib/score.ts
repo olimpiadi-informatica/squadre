@@ -1,16 +1,19 @@
 import { cache } from "react";
 
-import { and, desc, eq, gt } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, isNull, notExists, or } from "drizzle-orm";
 
 import { db } from "./db";
 import {
   edition,
   institute,
+  penalization,
+  penalizedTeamRound,
   region,
   round,
   task,
   team,
   teamRound,
+  teamRoundPenalization,
   teamTaskScore,
   v01a_teamTaskScoreStats,
   v02b_teamRoundStats,
@@ -45,6 +48,24 @@ export const listScores = cache(
           eq(round.slug, roundSlug ?? "").if(roundSlug),
           eq(team.slug, teamSlug ?? "").if(teamSlug),
           eq(team.junior, false),
+          notExists(
+            db
+              .select({ id: penalizedTeamRound.id })
+              .from(penalizedTeamRound)
+              .innerJoin(
+                teamRoundPenalization,
+                eq(teamRoundPenalization.teamRoundId, penalizedTeamRound.id),
+              )
+              .innerJoin(penalization, eq(penalization.id, teamRoundPenalization.penalizationId))
+              .where(
+                and(
+                  eq(penalizedTeamRound.teamId, team.id),
+                  eq(penalization.level, "red"),
+                  isNotNull(penalization.sentAt),
+                  or(isNull(penalization.appealApproved), eq(penalization.appealApproved, false)),
+                ),
+              ),
+          ),
         ),
       )
       .orderBy(task.slug);

@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { render } from "react-email";
 
+import PenalizationAppealResultEmail from "~/components/email/penalization-appeal-result-email";
 import PasswordEmail from "~/emails/password-email";
 import type { PenalizationEmailRow } from "~/emails/penalization-email";
 import PenalizationEmail from "~/emails/penalization-email";
@@ -10,6 +11,7 @@ import type { TeamCredential } from "~/lib/team";
 
 export const PASSWORD_EMAIL_TEMPLATE_ID = "password";
 export const PENALIZATION_EMAIL_TEMPLATE_ID = "penalization";
+export const PENALIZATION_APPEAL_RESULT_EMAIL_TEMPLATE_ID = "penalization-appeal-result";
 
 export function renderPasswordEmail(
   coach: string,
@@ -43,6 +45,24 @@ export function renderPenalizationEmail(
     <PenalizationEmail
       coach={coach}
       penalizations={penalizations}
+      detailsUrl={detailsUrl}
+      template={template}
+    />,
+  );
+}
+
+export function renderPenalizationAppealResultEmail(
+  coach: string,
+  teams: string,
+  approved: boolean,
+  detailsUrl: string,
+  template: string,
+) {
+  return render(
+    <PenalizationAppealResultEmail
+      coach={coach}
+      teams={teams}
+      approved={approved}
       detailsUrl={detailsUrl}
       template={template}
     />,

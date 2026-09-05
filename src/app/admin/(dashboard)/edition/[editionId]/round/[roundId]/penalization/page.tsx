@@ -4,14 +4,23 @@ import { notFound } from "next/navigation";
 import { Card, CardActions, CardBody } from "@olinfo/react-components";
 
 import { EmailCard } from "~/components/email/email-card";
+import { TemplateModal } from "~/components/email/template-modal";
 import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
 import { listRoundPenalizationEmailStatuses } from "~/lib/email";
-import { getEmailTemplateContent, PENALIZATION_EMAIL_TEMPLATE_ID } from "~/lib/email-template";
+import {
+  getEmailTemplateContent,
+  PENALIZATION_APPEAL_RESULT_EMAIL_TEMPLATE_ID,
+  PENALIZATION_EMAIL_TEMPLATE_ID,
+} from "~/lib/email-template";
 import { listRoundPenalization } from "~/lib/penalization";
 import { getRoundAdmin } from "~/lib/round";
 
-import { savePenalizationEmailTemplate, sendPenalizationEmail } from "./actions";
+import {
+  savePenalizationAppealResultEmailTemplate,
+  savePenalizationEmailTemplate,
+  sendPenalizationEmail,
+} from "./actions";
 import { PenalizationTable } from "./penalization-table";
 import { UploadPlagiarismButton } from "./upload-plagiarism-button";
 
@@ -21,13 +30,15 @@ export default async function AdminRoundPenalizationPage({
   await verifyAdmin();
 
   const { editionId, roundId } = await params;
-  const [edition, round, penalization, emailStatuses, penalizationTemplate] = await Promise.all([
-    getEditionAdmin(editionId),
-    getRoundAdmin(editionId, roundId),
-    listRoundPenalization(editionId, roundId),
-    listRoundPenalizationEmailStatuses(editionId, roundId),
-    getEmailTemplateContent(PENALIZATION_EMAIL_TEMPLATE_ID),
-  ]);
+  const [edition, round, penalization, emailStatuses, penalizationTemplate, appealResultTemplate] =
+    await Promise.all([
+      getEditionAdmin(editionId),
+      getRoundAdmin(editionId, roundId),
+      listRoundPenalization(editionId, roundId),
+      listRoundPenalizationEmailStatuses(editionId, roundId),
+      getEmailTemplateContent(PENALIZATION_EMAIL_TEMPLATE_ID),
+      getEmailTemplateContent(PENALIZATION_APPEAL_RESULT_EMAIL_TEMPLATE_ID),
+    ]);
   if (!edition || !round) notFound();
 
   const stats = {
@@ -40,12 +51,17 @@ export default async function AdminRoundPenalizationPage({
 
   async function onSendAll(instituteId: string) {
     "use server";
-    await sendPenalizationEmail(editionId, roundId, instituteId, false);
+    await sendPenalizationEmail(editionId, roundId, instituteId);
   }
 
   async function onSaveTemplate(content: string) {
     "use server";
     await savePenalizationEmailTemplate(editionId, roundId, content);
+  }
+
+  async function onSaveAppealResultTemplate(content: string) {
+    "use server";
+    await savePenalizationAppealResultEmailTemplate(editionId, roundId, content);
   }
 
   return (
@@ -69,7 +85,7 @@ export default async function AdminRoundPenalizationPage({
         <Card>
           <CardBody title="Penalizzazioni">
             <div className="grid gap-4 mt-5 md:grid-cols-5">
-              <Stat label="Penalizzazioni totali" value={stats.total} />
+              <Stat label="Totale" value={stats.total} />
               <Stat label="Copiature" value={stats.plagiarism} />
               <Stat label="Internet" value={stats.internet} />
               <Stat label="Livello giallo" value={stats.yellow} />
@@ -78,6 +94,11 @@ export default async function AdminRoundPenalizationPage({
 
             <CardActions>
               <UploadPlagiarismButton editionId={editionId} roundId={roundId} />
+              <TemplateModal
+                label="Template email esito ricorso"
+                content={appealResultTemplate ?? ""}
+                onSave={onSaveAppealResultTemplate}
+              />
             </CardActions>
           </CardBody>
         </Card>

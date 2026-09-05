@@ -20,6 +20,5 @@ export async function createInternetPenalization(
 
   await createRoundInternetPenalization(editionId, roundSlug, filters);
 
-  revalidatePath(`/admin/edition/${editionId}/round/${roundSlug}/internet`);
-  revalidatePath(`/admin/edition/${editionId}/round/${roundSlug}/penalization`);
+  revalidatePath("/admin", "layout");
 }

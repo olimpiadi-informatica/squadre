@@ -1,5 +1,21 @@
-import { and, avg, countDistinct, eq, gt, max, min, ne, or, sql, sum } from "drizzle-orm";
 import {
+  and,
+  avg,
+  countDistinct,
+  eq,
+  gt,
+  isNotNull,
+  isNull,
+  max,
+  min,
+  ne,
+  notExists,
+  or,
+  sql,
+  sum,
+} from "drizzle-orm";
+import {
+  alias,
   boolean,
   index,
   integer,
@@ -66,6 +82,7 @@ export const institute = pgTable("institute", {
     .notNull()
     .references(() => region.id),
   email: text(),
+  schoolEmail: text("school_email"),
 });
 
 export const team = pgTable(
@@ -213,15 +230,31 @@ export const penalizationTypeValues = [
 ] as const;
 export type PenalizationType = (typeof penalizationTypeValues)[number];
 
+export const institutePenalization = pgTable(
+  "institute_penalization",
+  {
+    id: serial().primaryKey(),
+    token: uuid().defaultRandom().notNull().unique(),
+    roundId: integer("round_id")
+      .notNull()
+      .references(() => round.id, { onDelete: "cascade" }),
+    instituteId: text("institute_id")
+      .notNull()
+      .references(() => institute.id),
+  },
+  (table) => [
+    uniqueIndex("institute_penalization_institute_id_round_id_unique").on(
+      table.instituteId,
+      table.roundId,
+    ),
+  ],
+);
+
 export const penalizationEmail = pgTable("penalization_email", {
   id: serial().primaryKey(),
-  token: uuid().defaultRandom().notNull(),
-  roundId: integer("round_id")
+  institutePenalizationId: integer("institute_penalization_id")
     .notNull()
-    .references(() => round.id, { onDelete: "cascade" }),
-  instituteId: text("institute_id")
-    .notNull()
-    .references(() => institute.id),
+    .references(() => institutePenalization.id, { onDelete: "cascade" }),
   emailId: integer("email_id")
     .notNull()
     .references(() => email.id, { onDelete: "cascade" }),
@@ -238,11 +271,7 @@ export const penalization = pgTable(
     sentAt: timestamp("sent_at"),
     appealAllowed: boolean().notNull(),
     allowAppealUntil: timestamp("allow_appeal_until"),
-    appealedAt: timestamp("appealed_at"),
-    confirmedAt: timestamp("confirmed_at"),
-    penalizationEmailId: integer("penalization_email_id").references(() => penalizationEmail.id, {
-      onDelete: "set null",
-    }),
+    appealApproved: boolean("appeal_approved"),
   },
   (table) => [index("idx_penalization_type").on(table.type)],
 );
@@ -269,6 +298,9 @@ export const teamRoundPenalization = pgTable(
     ),
   ],
 );
+
+export const penalizedTeamRound = alias(teamRound, "penalized_team_round");
+export const penalizedRound = alias(round, "penalized_round");
 
 export const emailTemplate = pgTable("email_templates", {
   id: text().primaryKey().notNull(),
@@ -349,7 +381,29 @@ export const v00a_taskStats = pgMaterializedView("v00a_task_stats").as((qb) =>
     .innerJoin(task, eq(task.id, teamTaskScore.taskId))
     .innerJoin(round, and(eq(round.id, task.roundId), eq(round.public, true)))
     .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
-    .where(gt(teamTaskScore.score, 0))
+    .where(
+      and(
+        gt(teamTaskScore.score, 0),
+        notExists(
+          qb
+            .select({ id: penalizedTeamRound.id })
+            .from(penalizedTeamRound)
+            .innerJoin(
+              teamRoundPenalization,
+              eq(teamRoundPenalization.teamRoundId, penalizedTeamRound.id),
+            )
+            .innerJoin(penalization, eq(penalization.id, teamRoundPenalization.penalizationId))
+            .where(
+              and(
+                eq(penalizedTeamRound.teamId, team.id),
+                eq(penalization.level, "red"),
+                isNotNull(penalization.sentAt),
+                or(isNull(penalization.appealApproved), eq(penalization.appealApproved, false)),
+              ),
+            ),
+        ),
+      ),
+    )
     .groupBy(teamTaskScore.taskId),
 );
 
@@ -366,7 +420,27 @@ export const v01a_teamTaskScoreStats = pgMaterializedView("v01a_team_task_score_
     .innerJoin(team, and(eq(team.id, teamTaskScore.teamId), eq(team.junior, false)))
     .innerJoin(task, eq(task.id, teamTaskScore.taskId))
     .innerJoin(round, and(eq(round.id, task.roundId), eq(round.public, true)))
-    .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true))),
+    .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
+    .where(
+      notExists(
+        qb
+          .select({ id: penalizedTeamRound.id })
+          .from(penalizedTeamRound)
+          .innerJoin(
+            teamRoundPenalization,
+            eq(teamRoundPenalization.teamRoundId, penalizedTeamRound.id),
+          )
+          .innerJoin(penalization, eq(penalization.id, teamRoundPenalization.penalizationId))
+          .where(
+            and(
+              eq(penalizedTeamRound.teamId, team.id),
+              eq(penalization.level, "red"),
+              isNotNull(penalization.sentAt),
+              or(isNull(penalization.appealApproved), eq(penalization.appealApproved, false)),
+            ),
+          ),
+      ),
+    ),
 );
 
 export const v02b_teamRoundStats = pgMaterializedView("v02b_team_round_stats").as((qb) =>
@@ -407,7 +481,43 @@ export const v02b_teamRoundStats = pgMaterializedView("v02b_team_round_stats").a
       and(eq(teamTaskScore.teamId, team.id), eq(teamTaskScore.taskId, task.id)),
     )
     .innerJoin(institute, eq(institute.id, team.instituteId))
-    .where(eq(team.junior, false))
+    .where(
+      and(
+        eq(team.junior, false),
+        notExists(
+          qb
+            .select({ id: teamRoundPenalization.id })
+            .from(teamRoundPenalization)
+            .innerJoin(penalization, eq(penalization.id, teamRoundPenalization.penalizationId))
+            .where(
+              and(
+                eq(teamRoundPenalization.teamRoundId, teamRound.id),
+                eq(penalization.level, "yellow"),
+                isNotNull(penalization.sentAt),
+                or(isNull(penalization.appealApproved), eq(penalization.appealApproved, false)),
+              ),
+            ),
+        ),
+        notExists(
+          qb
+            .select({ id: penalizedTeamRound.id })
+            .from(penalizedTeamRound)
+            .innerJoin(
+              teamRoundPenalization,
+              eq(teamRoundPenalization.teamRoundId, penalizedTeamRound.id),
+            )
+            .innerJoin(penalization, eq(penalization.id, teamRoundPenalization.penalizationId))
+            .where(
+              and(
+                eq(penalizedTeamRound.teamId, team.id),
+                eq(penalization.level, "red"),
+                isNotNull(penalization.sentAt),
+                or(isNull(penalization.appealApproved), eq(penalization.appealApproved, false)),
+              ),
+            ),
+        ),
+      ),
+    )
     .groupBy(teamRound.id, institute.region),
 );
 
@@ -464,7 +574,29 @@ export const v04a_teamStats = pgMaterializedView("v04a_team_stats").as((qb) =>
     .leftJoin(teamRound, and(eq(teamRound.teamId, team.id), eq(teamRound.roundId, round.id)))
     .leftJoin(v02b_teamRoundStats, eq(v02b_teamRoundStats.teamRoundId, teamRound.id))
     .innerJoin(institute, eq(institute.id, team.instituteId))
-    .where(eq(team.junior, false))
+    .where(
+      and(
+        eq(team.junior, false),
+        notExists(
+          qb
+            .select({ id: penalizedTeamRound.id })
+            .from(penalizedTeamRound)
+            .innerJoin(
+              teamRoundPenalization,
+              eq(teamRoundPenalization.teamRoundId, penalizedTeamRound.id),
+            )
+            .innerJoin(penalization, eq(penalization.id, teamRoundPenalization.penalizationId))
+            .where(
+              and(
+                eq(penalizedTeamRound.teamId, team.id),
+                eq(penalization.level, "red"),
+                isNotNull(penalization.sentAt),
+                or(isNull(penalization.appealApproved), eq(penalization.appealApproved, false)),
+              ),
+            ),
+        ),
+      ),
+    )
     .groupBy(team.id, team.editionId, institute.region),
 );
 

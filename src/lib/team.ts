@@ -1,15 +1,19 @@
 import { cache } from "react";
 
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, lte, notExists, or } from "drizzle-orm";
 
 import { db } from "./db";
 import {
   edition,
   institute,
+  penalization,
+  penalizedRound,
+  penalizedTeamRound,
   region,
   round,
   team,
   teamRound,
+  teamRoundPenalization,
   v02b_teamRoundStats,
   v04a_teamStats,
 } from "./db/schema";
@@ -259,6 +263,26 @@ export const listRoundTeamsCredentials = (
         eq(team.junior, junior ?? false).if(junior != null),
         eq(team.instituteId, instituteId ?? "").if(instituteId),
         eq(team.finalist, true).if(roundSlug === "final"),
+        notExists(
+          db
+            .select({ id: penalizedTeamRound.id })
+            .from(penalizedTeamRound)
+            .innerJoin(penalizedRound, eq(penalizedRound.id, penalizedTeamRound.roundId))
+            .innerJoin(
+              teamRoundPenalization,
+              eq(teamRoundPenalization.teamRoundId, penalizedTeamRound.id),
+            )
+            .innerJoin(penalization, eq(penalization.id, teamRoundPenalization.penalizationId))
+            .where(
+              and(
+                eq(penalizedTeamRound.teamId, team.id),
+                eq(penalization.level, "red"),
+                isNotNull(penalization.sentAt),
+                or(isNull(penalization.appealApproved), eq(penalization.appealApproved, false)),
+                lte(penalizedRound.startsAt, round.startsAt),
+              ),
+            ),
+        ),
       ),
     )
     .orderBy(region.id, institute.name, institute.city, team.name);
