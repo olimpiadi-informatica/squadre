@@ -115,6 +115,7 @@ export async function createNewEdition(
             city: sql.raw(`EXCLUDED.${institute.city.name}`),
             region: sql.raw(`EXCLUDED.${institute.region.name}`),
             email: sql.raw(`EXCLUDED.${institute.email.name}`),
+            schoolEmail: sql.raw(`EXCLUDED.${institute.schoolEmail.name}`),
           },
         });
     }

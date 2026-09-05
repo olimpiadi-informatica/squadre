@@ -2,7 +2,20 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import type { ReadableStream } from "node:stream/web";
 
-import { and, countDistinct, eq, exists, gt, inArray, min, notExists, sql } from "drizzle-orm";
+import { cache } from "react";
+
+import {
+  and,
+  countDistinct,
+  eq,
+  exists,
+  gt,
+  inArray,
+  isNotNull,
+  min,
+  notExists,
+  sql,
+} from "drizzle-orm";
 import { flatMapAsync } from "es-toolkit";
 import { isString } from "es-toolkit/compat";
 import Papa from "papaparse";
@@ -10,6 +23,7 @@ import Papa from "papaparse";
 import { db } from "./db";
 import {
   institute,
+  institutePenalization,
   internetCheck,
   type PenalizationLevel,
   type PenalizationType,
@@ -28,6 +42,18 @@ type InternetPenalizationFilters = {
   failedThreshold: number;
 };
 
+const yellowAppealPolicy: Record<PenalizationType, boolean> = {
+  "screen-recording": false,
+  "internet-check": true,
+  plagiarism: true,
+  ai: true,
+  other: false,
+};
+
+export function isPenalizationAppealable(level: PenalizationLevel, type: PenalizationType) {
+  return level === "yellow" && yellowAppealPolicy[type];
+}
+
 export type RoundPenalization = {
   id: number;
   teams: string;
@@ -41,6 +67,9 @@ export type RoundPenalization = {
   description: string;
   createdAt: Date;
   appealAllowed: boolean;
+  sentAt: Date | null;
+  allowAppealUntil: Date | null;
+  appealApproved: boolean | null;
 };
 
 export function listRoundPenalization(
@@ -61,6 +90,9 @@ export function listRoundPenalization(
       description: penalization.description,
       createdAt: penalization.createdAt,
       appealAllowed: penalization.appealAllowed,
+      sentAt: penalization.sentAt,
+      allowAppealUntil: penalization.allowAppealUntil,
+      appealApproved: penalization.appealApproved,
     })
     .from(penalization)
     .innerJoin(teamRoundPenalization, eq(teamRoundPenalization.penalizationId, penalization.id))
@@ -76,6 +108,7 @@ export function listRoundPenalization(
       penalization.description,
       penalization.createdAt,
       penalization.appealAllowed,
+      penalization.allowAppealUntil,
       round.slug,
       round.editionId,
     )
@@ -89,6 +122,9 @@ export type RoundPenalizationDetail = {
   description: string;
   createdAt: Date;
   appealAllowed: boolean;
+  sentAt: Date | null;
+  allowAppealUntil: Date | null;
+  appealApproved: boolean | null;
   teamRoundPenalizationIds: number[];
 };
 
@@ -104,6 +140,9 @@ export async function getRoundPenalization(
       description: penalization.description,
       createdAt: penalization.createdAt,
       appealAllowed: penalization.appealAllowed,
+      sentAt: penalization.sentAt,
+      allowAppealUntil: penalization.allowAppealUntil,
+      appealApproved: penalization.appealApproved,
       teamRoundPenalizationIds: sql<number[]>`ARRAY_AGG(${teamRoundPenalization.id})`,
     })
     .from(penalization)
@@ -117,9 +156,141 @@ export async function getRoundPenalization(
       penalization.description,
       penalization.createdAt,
       penalization.appealAllowed,
+      penalization.allowAppealUntil,
     );
   return item;
 }
+
+export type InstitutePenalizationAccess = {
+  token: string;
+  instituteId: string;
+  instituteName: string;
+  instituteCity: string;
+  roundId: number;
+  roundSlug: string;
+  roundTitle: string;
+  editionId: string;
+};
+
+export const getInstitutePenalizationAccess = cache(
+  async (token: string): Promise<InstitutePenalizationAccess | undefined> => {
+    const [access] = await db
+      .select({
+        token: institutePenalization.token,
+        instituteId: institute.id,
+        instituteName: institute.name,
+        instituteCity: institute.city,
+        roundId: round.id,
+        roundSlug: round.slug,
+        roundTitle: round.title,
+        editionId: round.editionId,
+      })
+      .from(institutePenalization)
+      .innerJoin(institute, eq(institute.id, institutePenalization.instituteId))
+      .innerJoin(round, eq(round.id, institutePenalization.roundId))
+      .where(eq(institutePenalization.token, token));
+    return access;
+  },
+);
+
+export function listInstitutePenalizations(token: string): Promise<RoundPenalization[]> {
+  return db
+    .select({
+      id: penalization.id,
+      teams: sql<string>`STRING_AGG(${team.slug}, ', ' ORDER BY ${team.slug})`,
+      instituteId: min(institute.id),
+      instituteName: min(institute.name),
+      instituteCity: min(institute.city),
+      roundSlug: round.slug,
+      editionId: round.editionId,
+      level: penalization.level,
+      type: penalization.type,
+      description: penalization.description,
+      createdAt: penalization.createdAt,
+      appealAllowed: penalization.appealAllowed,
+      sentAt: penalization.sentAt,
+      allowAppealUntil: penalization.allowAppealUntil,
+      appealApproved: penalization.appealApproved,
+    })
+    .from(institutePenalization)
+    .innerJoin(round, eq(round.id, institutePenalization.roundId))
+    .innerJoin(teamRound, eq(teamRound.roundId, round.id))
+    .innerJoin(team, eq(team.id, teamRound.teamId))
+    .innerJoin(institute, eq(institute.id, team.instituteId))
+    .innerJoin(teamRoundPenalization, eq(teamRoundPenalization.teamRoundId, teamRound.id))
+    .innerJoin(penalization, eq(penalization.id, teamRoundPenalization.penalizationId))
+    .where(
+      and(
+        eq(institutePenalization.token, token),
+        eq(team.instituteId, institutePenalization.instituteId),
+        isNotNull(penalization.sentAt),
+      ),
+    )
+    .groupBy(penalization.id, round.slug, round.editionId)
+    .orderBy(penalization.id);
+}
+
+export async function getInstitutePenalization(
+  token: string,
+  penalizationId: number,
+): Promise<RoundPenalizationDetail | undefined> {
+  const access = await getInstitutePenalizationAccess(token);
+  if (!access) return undefined;
+
+  const item = await getRoundPenalization(access.roundId, penalizationId);
+  if (!item?.sentAt) return undefined;
+
+  const [owned] = await db
+    .select({ id: penalization.id })
+    .from(penalization)
+    .innerJoin(teamRoundPenalization, eq(teamRoundPenalization.penalizationId, penalization.id))
+    .innerJoin(teamRound, eq(teamRound.id, teamRoundPenalization.teamRoundId))
+    .innerJoin(team, eq(team.id, teamRound.teamId))
+    .where(
+      and(
+        eq(penalization.id, penalizationId),
+        eq(teamRound.roundId, access.roundId),
+        eq(team.instituteId, access.instituteId),
+      ),
+    );
+  return owned ? item : undefined;
+}
+
+export async function reviewPenalizationAppeal(
+  roundId: number,
+  penalizationId: number,
+  approved: boolean,
+) {
+  const [updated] = await db
+    .update(penalization)
+    .set({
+      appealApproved: approved,
+      ...(approved
+        ? { level: "yellow" as const, appealAllowed: true }
+        : { level: "red" as const, appealAllowed: false }),
+    })
+    .where(
+      and(
+        eq(penalization.id, penalizationId),
+        exists(
+          db
+            .select({ id: teamRoundPenalization.id })
+            .from(teamRoundPenalization)
+            .innerJoin(teamRound, eq(teamRound.id, teamRoundPenalization.teamRoundId))
+            .where(
+              and(
+                eq(teamRoundPenalization.penalizationId, penalization.id),
+                eq(teamRound.roundId, roundId),
+              ),
+            ),
+        ),
+      ),
+    )
+    .returning({ id: penalization.id });
+  if (!updated) throw new Error("Penalizzazione non trovata.");
+}
+
+export * from "./penalization-status";
 
 export type TeamPenalizationDetail = {
   id: number;
@@ -220,11 +391,13 @@ export async function importRoundPlagiarismPenalization(
     for (const row of rows) {
       const firstTeam = ownerBySubmissionSlug.get(row.firstSubmissionSlug);
       if (!firstTeam) {
-        throw new Error(`Submission ${row.firstSubmissionSlug} non trovata.`);
+        continue;
+        // throw new Error(`Submission ${row.firstSubmissionSlug} non trovata.`);
       }
       const secondTeam = ownerBySubmissionSlug.get(row.secondSubmissionSlug);
       if (!secondTeam) {
-        throw new Error(`Submission ${row.secondSubmissionSlug} non trovata.`);
+        continue;
+        // throw new Error(`Submission ${row.secondSubmissionSlug} non trovata.`);
       }
 
       const [{ penalizationId }] = await tx
@@ -234,7 +407,7 @@ export async function importRoundPlagiarismPenalization(
           type: "plagiarism",
           description: row.details,
           createdAt: new Date(),
-          appealAllowed: true,
+          appealAllowed: isPenalizationAppealable("yellow", "plagiarism"),
         })
         .returning({ penalizationId: penalization.id });
       await tx.insert(teamRoundPenalization).values([
@@ -329,7 +502,7 @@ export async function createRoundInternetPenalization(
           type: "internet-check",
           description: reasons.join(", "),
           createdAt: new Date(),
-          appealAllowed: true,
+          appealAllowed: isPenalizationAppealable("yellow", "internet-check"),
         })
         .returning({ penalizationId: penalization.id });
 

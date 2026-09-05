@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Card, CardBody } from "@olinfo/react-components";
+
 import { PenalizationDetail } from "~/components/penalization";
 import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
+import { getRoundPenalization } from "~/lib/penalization";
 import { getRoundAdmin } from "~/lib/round";
 
 export default async function AdminRoundPenalizationDetailPage({
@@ -21,6 +24,8 @@ export default async function AdminRoundPenalizationDetailPage({
   ]);
 
   if (!edition || !round) notFound();
+  const penalization = await getRoundPenalization(round.id, numericPenalizationId);
+  if (!penalization) notFound();
 
   return (
     <div className="flex flex-col gap-4">
@@ -45,6 +50,17 @@ export default async function AdminRoundPenalizationDetailPage({
       </div>
 
       <PenalizationDetail round={round} penalizationId={numericPenalizationId} />
+      {penalization.appealApproved !== null && (
+        <Card>
+          <CardBody title="Ricorso">
+            <div className="grid gap-4">
+              <p className="font-semibold">
+                Ricorso {penalization.appealApproved ? "approvato" : "rigettato"}
+              </p>
+            </div>
+          </CardBody>
+        </Card>
+      )}
     </div>
   );
 }

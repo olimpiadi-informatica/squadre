@@ -1,16 +1,31 @@
 import { cache } from "react";
 
-import { and, count, countDistinct, eq, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  countDistinct,
+  eq,
+  isNotNull,
+  isNull,
+  lte,
+  notExists,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import { db } from "./db";
 import {
   credentialEmail,
   edition,
   email as emailTable,
+  penalization,
+  penalizedRound,
+  penalizedTeamRound,
   round,
   task,
   team,
   teamRound,
+  teamRoundPenalization,
   v03b_roundStats,
 } from "./db/schema";
 
@@ -43,8 +58,72 @@ export const listRoundsAdmin = cache(
           .select({ value: countDistinct(team.instituteId) })
           .from(teamRound)
           .innerJoin(team, eq(team.id, teamRound.teamId))
-          .where(eq(teamRound.roundId, round.id))}`,
-        teamCount: db.$count(teamRound, eq(teamRound.roundId, round.id)),
+          .where(
+            and(
+              eq(teamRound.roundId, round.id),
+              notExists(
+                db
+                  .select({ id: penalizedTeamRound.id })
+                  .from(penalizedTeamRound)
+                  .innerJoin(penalizedRound, eq(penalizedRound.id, penalizedTeamRound.roundId))
+                  .innerJoin(
+                    teamRoundPenalization,
+                    eq(teamRoundPenalization.teamRoundId, penalizedTeamRound.id),
+                  )
+                  .innerJoin(
+                    penalization,
+                    eq(penalization.id, teamRoundPenalization.penalizationId),
+                  )
+                  .where(
+                    and(
+                      eq(penalizedTeamRound.teamId, team.id),
+                      eq(penalization.level, "red"),
+                      isNotNull(penalization.sentAt),
+                      or(
+                        isNull(penalization.appealApproved),
+                        eq(penalization.appealApproved, false),
+                      ),
+                      lte(penalizedRound.startsAt, round.startsAt),
+                    ),
+                  ),
+              ),
+            ),
+          )}`,
+        teamCount: sql<number>`${db
+          .select({ value: count() })
+          .from(teamRound)
+          .innerJoin(team, eq(team.id, teamRound.teamId))
+          .where(
+            and(
+              eq(teamRound.roundId, round.id),
+              notExists(
+                db
+                  .select({ id: penalizedTeamRound.id })
+                  .from(penalizedTeamRound)
+                  .innerJoin(penalizedRound, eq(penalizedRound.id, penalizedTeamRound.roundId))
+                  .innerJoin(
+                    teamRoundPenalization,
+                    eq(teamRoundPenalization.teamRoundId, penalizedTeamRound.id),
+                  )
+                  .innerJoin(
+                    penalization,
+                    eq(penalization.id, teamRoundPenalization.penalizationId),
+                  )
+                  .where(
+                    and(
+                      eq(penalizedTeamRound.teamId, team.id),
+                      eq(penalization.level, "red"),
+                      isNotNull(penalization.sentAt),
+                      or(
+                        isNull(penalization.appealApproved),
+                        eq(penalization.appealApproved, false),
+                      ),
+                      lte(penalizedRound.startsAt, round.startsAt),
+                    ),
+                  ),
+              ),
+            ),
+          )}`,
         taskCount: db.$count(task, eq(task.roundId, round.id)),
         sentEmailCount: sql<number>`${db
           .select({ value: count() })

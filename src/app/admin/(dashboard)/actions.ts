@@ -36,6 +36,7 @@ const csvRowSchema = z.object({
   "Nome referente": z.string().min(1),
   "Cognome referente": z.string().min(1),
   "Email referente": z.string(),
+  "Email scuola": z.email(),
   "Scelta del campionato": z.enum(["Regolare", "Esordienti", ""]),
 });
 
@@ -67,6 +68,7 @@ export async function createEdition(files: FormData, data: EditionData) {
       city: row["Città scuola"],
       region: row["Regione scuola"],
       email: row["Email referente"],
+      schoolEmail: row["Email scuola"],
     })),
     ({ id }) => id,
   );

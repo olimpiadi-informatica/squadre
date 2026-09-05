@@ -181,15 +181,9 @@ export async function uploadRoundResults(
   });
 }
 
-export async function saveRoundTasks(
-  editionId: string,
-  roundId: number,
-  roundSlug: string,
-  inputTasks: RoundTaskItem[],
-): Promise<void> {
+export async function saveRoundTasks(roundId: number, inputTasks: RoundTaskItem[]): Promise<void> {
   await verifyAdmin();
   await saveRoundTasksForRound(roundId, inputTasks);
 
-  revalidatePath(`/admin/edition/${editionId}/round/${roundSlug}`);
-  revalidatePath(`/admin/edition/${editionId}`);
+  revalidatePath("/admin", "layout");
 }

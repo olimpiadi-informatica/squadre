@@ -97,7 +97,7 @@ export function TaskModalButton({ round }: { round: RoundAdminItem }) {
   async function handleSaveTasks() {
     if (!taskList) return;
 
-    await saveRoundTasks(round.editionId, round.id, round.slug, taskList);
+    await saveRoundTasks(round.id, taskList);
     modalRef.current?.close();
   }
 
