@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { TZDate } from "@date-fns/tz";
-import { format, getUnixTime, hoursToSeconds } from "date-fns";
+import { format, formatISO, hoursToSeconds } from "date-fns";
 import { delay } from "es-toolkit";
 import YAML from "yaml";
 
@@ -39,8 +39,8 @@ export async function getRoundCredentials(
       name: `round${round.slug}${junior ? "-debutant" : ""}`,
       description: `OIS${year} -- ${round.title} (${junior ? "debutant" : "regular"})`,
       date: dateStr,
-      start: getUnixTime(start),
-      stop: getUnixTime(contestStop),
+      start,
+      stop: contestStop,
       token_mode: "disabled",
       allow_registration: false,
       allow_user_tests: false,
@@ -56,7 +56,8 @@ export async function getRoundCredentials(
         team: t.regionId.toUpperCase(),
         username: t.slug,
         password: t.password,
-        hidden: false,
+        hidden: t.hidden,
+        unrestricted: t.unrestricted,
         delay: t.delay,
       })),
     },
@@ -80,8 +81,8 @@ export async function getMirrorCredentials(
       name: `round${round.slug}${junior ? "-debutant" : ""}`,
       description: `IIOT${year} -- ${round.title} (${junior ? "debutant" : "regular"})`,
       date: dateStr,
-      start: getUnixTime(start),
-      stop: getUnixTime(contestStop),
+      start,
+      stop: contestStop,
       token_mode: "disabled",
       allow_registration: true,
       allow_user_tests: false,
@@ -121,8 +122,12 @@ async function getCredentialData(editionId: string, roundSlug: string, junior: b
 
   const year = edition.year.replace(/\d{2}\//, "");
   const dateStr = format(new TZDate(round.startsAt, "Europe/Rome"), "MMMM do, yyyy");
-  const start = getRoundStartForTeam(round.startsAt, round.slug);
-  const contestStop = getRoundEndForTeam(round.startsAt, round.endsAt, round.slug);
+  const start = formatISO(
+    new TZDate(getRoundStartForTeam(round.startsAt, round.slug), "Europe/Rome"),
+  );
+  const contestStop = formatISO(
+    new TZDate(getRoundEndForTeam(round.startsAt, round.endsAt, round.slug), "Europe/Rome"),
+  );
 
   return {
     year,
