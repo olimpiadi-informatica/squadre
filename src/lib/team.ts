@@ -191,6 +191,8 @@ export type TeamCredential = {
   regionId: string;
   password: string;
   delay: number;
+  hidden: boolean;
+  unrestricted: boolean;
 };
 
 export type TeamAdminItem = {
@@ -242,6 +244,8 @@ export const listRoundTeamsCredentials = (
       name: team.name,
       junior: team.junior,
       coach: team.coach,
+      hidden: team.hidden,
+      unrestricted: team.unrestricted,
       instituteId: institute.id,
       instituteName: institute.name,
       instituteCity: institute.city,
