@@ -100,6 +100,8 @@ export const team = pgTable(
     coach: text().notNull(),
     junior: boolean().notNull().default(false),
     finalist: boolean(),
+    hidden: boolean().notNull().default(false),
+    unrestricted: boolean().notNull().default(false),
   },
   (table) => [uniqueIndex("team_slug_edition_id").on(table.slug, table.editionId)],
 );

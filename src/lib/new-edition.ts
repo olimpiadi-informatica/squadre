@@ -3,6 +3,7 @@ import { random } from "es-toolkit/compat";
 
 import { generateWord } from "~/lib/password";
 import { getDefaultRoundEndsAt, roundHasDelay } from "~/lib/round-config";
+import { seedTestUsers } from "~/lib/test-users";
 
 import { db } from "./db";
 import { edition, institute, round, team, teamRound } from "./db/schema";
@@ -143,4 +144,6 @@ export async function createNewEdition(
       );
     }
   });
+
+  await seedTestUsers(id);
 }
