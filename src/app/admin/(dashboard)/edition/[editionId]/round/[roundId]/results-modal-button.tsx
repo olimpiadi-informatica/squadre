@@ -17,9 +17,11 @@ const stepMessages = [
   "Estrazione archivio",
   "Lettura ranking",
   "Lettura submission",
+  "Lettura log CMS",
   "Lettura internet check",
   "Salvataggio ranking",
   "Salvataggio submission",
+  "Salvataggio partecipazione",
   "Salvataggio internet check",
   "Pubblicazione round",
 ] as const;
