@@ -11,12 +11,13 @@ import { maxBy } from "es-toolkit/compat";
 import { extract } from "tar";
 
 import { db } from "~/lib/db";
-import { internetCheck, round, submission, teamTaskScore } from "~/lib/db/schema";
+import { internetCheck, round, submission, teamRound, teamTaskScore } from "~/lib/db/schema";
 import { getRoundAdmin } from "~/lib/round";
 import { shouldPublishRound } from "~/lib/round-config";
 import { listRoundTeamsCredentials } from "~/lib/team";
 import { refreshViews } from "~/lib/view";
 
+import { parseCmsLog } from "./cms-log";
 import { processInternetChecks } from "./internet";
 import { processRanking } from "./ranking";
 import { processSubmissions } from "./submission";
@@ -26,9 +27,11 @@ export enum UploadResultStep {
   EXTRACT_ARCHIVE,
   PARSE_RANKIND,
   PARSE_SUBMISSIONS,
+  PARSE_LOGS,
   PARSE_INTERNET,
   SAVE_RANKIND,
   SAVE_SUBMISSIONS,
+  SAVE_PARTICIPATION,
   SAVE_INTERNET,
   PUBLISH_ROUND,
 }
@@ -62,6 +65,7 @@ export async function* parseResult(
   const rankingPath = getPath(roundPath, ["ranking.csv"]);
   const rankingJuniorPath = getPath(roundPath, ["ranking-debutant.csv", "ranking-esordienti.csv"]);
   const submissionsPath = getPath(roundPath, ["subs"]);
+  const cmsLogPath = getPath(roundPath, ["cms.log"]);
   const internetPath = getPath(roundPath, ["internet", "internet-check"]);
 
   yield UploadResultStep.PARSE_RANKIND;
@@ -94,6 +98,9 @@ export async function* parseResult(
       ),
   );
 
+  yield UploadResultStep.PARSE_LOGS;
+  const loggedUsers = await parseCmsLog(cmsLogPath);
+
   yield UploadResultStep.PARSE_INTERNET;
   const internetChecks = await processInternetChecks(
     internetPath,
@@ -119,6 +126,75 @@ export async function* parseResult(
   await db.delete(submission).where(inArray(submission.teamRoundId, Object.values(teamRoundIds)));
   for (const submissionChunk of chunk(submissions, 200)) {
     await db.insert(submission).values(submissionChunk);
+  }
+
+  yield UploadResultStep.SAVE_PARTICIPATION;
+  const scoredTeamIds = new Set<number>();
+  for (const s of [...scores, ...juniorScores]) {
+    if (s.score > 0) {
+      scoredTeamIds.add(s.teamId);
+    }
+  }
+  for (const sub of submissions) {
+    if (sub.score > 0) {
+      const t = Object.values(teams).find((tm) => tm.teamRoundId === sub.teamRoundId);
+      if (t) scoredTeamIds.add(t.teamId);
+    }
+  }
+
+  const submittedTeamRoundIds = new Set<number>();
+  for (const sub of submissions) {
+    submittedTeamRoundIds.add(sub.teamRoundId);
+  }
+
+  const scoredRoundIds: number[] = [];
+  const submittedRoundIds: number[] = [];
+  const loggedRoundIds: number[] = [];
+  const nullRoundIds: number[] = [];
+
+  for (const t of Object.values(teams)) {
+    if (scoredTeamIds.has(t.teamId)) {
+      scoredRoundIds.push(t.teamRoundId);
+    } else if (submittedTeamRoundIds.has(t.teamRoundId)) {
+      submittedRoundIds.push(t.teamRoundId);
+    } else if (loggedUsers.has(t.slug)) {
+      loggedRoundIds.push(t.teamRoundId);
+    } else {
+      nullRoundIds.push(t.teamRoundId);
+    }
+  }
+
+  if (scoredRoundIds.length > 0) {
+    for (const chunkIds of chunk(scoredRoundIds, 500)) {
+      await db
+        .update(teamRound)
+        .set({ participationStatus: "scored" })
+        .where(inArray(teamRound.id, chunkIds));
+    }
+  }
+  if (submittedRoundIds.length > 0) {
+    for (const chunkIds of chunk(submittedRoundIds, 500)) {
+      await db
+        .update(teamRound)
+        .set({ participationStatus: "submitted" })
+        .where(inArray(teamRound.id, chunkIds));
+    }
+  }
+  if (loggedRoundIds.length > 0) {
+    for (const chunkIds of chunk(loggedRoundIds, 500)) {
+      await db
+        .update(teamRound)
+        .set({ participationStatus: "logged" })
+        .where(inArray(teamRound.id, chunkIds));
+    }
+  }
+  if (nullRoundIds.length > 0) {
+    for (const chunkIds of chunk(nullRoundIds, 500)) {
+      await db
+        .update(teamRound)
+        .set({ participationStatus: null })
+        .where(inArray(teamRound.id, chunkIds));
+    }
   }
 
   yield UploadResultStep.SAVE_INTERNET;

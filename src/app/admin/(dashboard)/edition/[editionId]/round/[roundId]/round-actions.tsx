@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@olinfo/react-components";
 import clsx from "clsx";
-import { BookKey, FileKey, Mail, ShieldAlert, Wifi } from "lucide-react";
+import { BookKey, FileKey, FileText, Mail, ShieldAlert, Wifi } from "lucide-react";
 
 import type { RoundAdminItem } from "~/lib/round";
 
@@ -88,6 +88,18 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
           <div className="flex flex-col items-start gap-2 my-4">
             <div className="text-left text-xl font-semibold">Risultati</div>
             <ResultsModalButton round={round} />
+          </div>
+        </li>
+        <li className="step step-primary">
+          <div className="flex flex-col items-start gap-2 my-4">
+            <div className="text-left text-xl font-semibold">Resoconto</div>
+
+            <Link
+              href={`/admin/edition/${round.editionId}/round/${round.slug}/resoconto`}
+              className="btn btn-primary">
+              <FileText className="size-5" />
+              Visualizza resoconto
+            </Link>
           </div>
         </li>
         <li className="step step-primary">
