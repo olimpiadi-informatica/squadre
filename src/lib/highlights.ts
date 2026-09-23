@@ -24,3 +24,5 @@ export const getHighlights = cache((page: string): Promise<Highlight[]> => {
     .where(eq(highlight.page, page))
     .orderBy(highlight.id);
 });
+
+export { refreshHighlights } from "./highlight-generator";

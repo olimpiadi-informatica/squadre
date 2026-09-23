@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import Link from "next/link";
 
 import { Card, CardBody } from "@olinfo/react-components";
@@ -13,7 +14,7 @@ export async function Highlights({ page }: { page: string }) {
         <ol className="list-decimal pl-6">
           {highlights.map((highlight) => (
             <li key={highlight.id}>
-              <Link href={highlight.link as any} className="link">
+              <Link href={highlight.link as Route} className="link">
                 {highlight.name}
               </Link>{" "}
               {highlight.description}.
