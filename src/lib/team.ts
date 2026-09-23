@@ -3,12 +3,11 @@ import { cache } from "react";
 import { and, eq, gt, isNotNull, isNull, lte, notExists, or } from "drizzle-orm";
 
 import { db } from "./db";
+import { penalizedRound, penalizedTeamRound } from "./db/aliases";
 import {
   edition,
   institute,
   penalization,
-  penalizedRound,
-  penalizedTeamRound,
   region,
   round,
   team,
