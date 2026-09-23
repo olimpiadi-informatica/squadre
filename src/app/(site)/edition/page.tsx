@@ -7,6 +7,8 @@ import { getStats, listEditions } from "~/lib/edition";
 
 import { EditionsTable } from "./table";
 
+export const dynamic = "force-dynamic";
+
 export default async function Page() {
   const editions = await listEditions();
   const stats = await getStats();
