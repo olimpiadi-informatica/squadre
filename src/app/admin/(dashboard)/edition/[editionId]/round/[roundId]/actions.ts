@@ -16,6 +16,7 @@ import { getRoundAdmin } from "~/lib/round";
 import { getRoundEndForTeam, getRoundStartForTeam } from "~/lib/round-config";
 import { listRoundTasks, type RoundTaskItem, saveRoundTasksForRound } from "~/lib/task";
 import { listRoundTeamsCredentials } from "~/lib/team";
+import { refreshViews } from "~/lib/view";
 
 const languages = [
   "C++20 / g++",
@@ -176,7 +177,7 @@ export async function uploadRoundResults(
           controller.enqueue({ step: lastStep, error: err.message });
         }
 
-        revalidatePath(`/admin/edition/${editionId}`);
+        revalidatePath("/", "layout");
       } catch (err) {
         controller.error(err);
       } finally {
@@ -189,6 +190,7 @@ export async function uploadRoundResults(
 export async function saveRoundTasks(roundId: number, inputTasks: RoundTaskItem[]): Promise<void> {
   await verifyAdmin();
   await saveRoundTasksForRound(roundId, inputTasks);
+  await refreshViews();
 
-  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }

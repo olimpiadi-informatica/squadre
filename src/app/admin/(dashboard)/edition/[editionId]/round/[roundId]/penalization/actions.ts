@@ -31,7 +31,8 @@ export async function uploadRoundPlagiarismPenalization(
   }
 
   await importRoundPlagiarismPenalization(editionId, roundSlug, files);
-  revalidatePath(`/admin/edition/${editionId}/round/${roundSlug}/penalization`);
+  await refreshViews();
+  revalidatePath("/", "layout");
 }
 
 export async function sendPenalizationEmail(

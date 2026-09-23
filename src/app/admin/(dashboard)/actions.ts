@@ -13,6 +13,7 @@ import { z } from "zod";
 import { verifyAdmin } from "~/lib/admin";
 import { deleteEdition, updateEditionVisibility } from "~/lib/edition";
 import { createNewEdition, type EditionData } from "~/lib/new-edition";
+import { refreshViews } from "~/lib/view";
 
 const csvRowSchema = z
   .object({
@@ -49,13 +50,15 @@ const csvRowSchema = z
 export async function toggleEditionVisibility(id: string, currentPublic: boolean) {
   await verifyAdmin();
   await updateEditionVisibility(id, !currentPublic);
-  revalidatePath("/admin");
+  await refreshViews();
+  revalidatePath("/", "layout");
 }
 
 export async function deleteEditionAction(id: string) {
   await verifyAdmin();
   await deleteEdition(id);
-  revalidatePath("/admin");
+  await refreshViews();
+  revalidatePath("/", "layout");
 }
 
 export async function createEdition(files: FormData, data: EditionData) {
@@ -102,7 +105,8 @@ export async function createEdition(files: FormData, data: EditionData) {
   });
 
   await createNewEdition(data, institutes, teams);
-  revalidatePath("/admin");
+  await refreshViews();
+  revalidatePath("/", "layout");
   redirect(`/admin/edition/${data.id}`);
 }
 
