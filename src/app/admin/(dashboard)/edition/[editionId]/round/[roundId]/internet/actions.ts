@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { verifyAdmin } from "~/lib/admin";
 import { createRoundInternetPenalization } from "~/lib/penalization";
 import { getRoundAdmin } from "~/lib/round";
+import { refreshViews } from "~/lib/view";
 
 export async function createInternetPenalization(
   editionId: string,
@@ -19,6 +20,7 @@ export async function createInternetPenalization(
   }
 
   await createRoundInternetPenalization(editionId, roundSlug, filters);
+  await refreshViews();
 
-  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
