@@ -14,13 +14,12 @@ import {
 } from "drizzle-orm";
 
 import { db } from "./db";
+import { penalizedRound, penalizedTeamRound } from "./db/aliases";
 import {
   credentialEmail,
   edition,
   email as emailTable,
   penalization,
-  penalizedRound,
-  penalizedTeamRound,
   round,
   task,
   team,

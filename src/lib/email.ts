@@ -23,6 +23,7 @@ import { getRoundStartForTeam } from "~/lib/round-config";
 import { listRoundTeamsCredentials } from "~/lib/team";
 
 import { db } from "./db";
+import { penalizedRound, penalizedTeamRound } from "./db/aliases";
 import {
   credentialEmail,
   email as emailTable,
@@ -30,8 +31,6 @@ import {
   institutePenalization,
   penalization,
   penalizationEmail,
-  penalizedRound,
-  penalizedTeamRound,
   round,
   team,
   teamRound,
