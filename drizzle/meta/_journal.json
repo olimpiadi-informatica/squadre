@@ -8,6 +8,13 @@
       "when": 1790156316491,
       "tag": "0000_massive_rockslide",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790169194044,
+      "tag": "0001_fix_medals",
+      "breakpoints": true
     }
   ]
 }
