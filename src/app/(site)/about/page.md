@@ -2,7 +2,6 @@
 
 - **[Official website](http://oisquadre.it/)**
 - **[International website](https://iio.team/)**
-- **[Regulations](/about/rules)**
 - **[Syllabus](/about/syllabus)**
 
 The _Olimpiadi di Informatica a Squadre (OIS)_ aims to be a **team-oriented** version of the already-existing Italian
