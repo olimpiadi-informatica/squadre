@@ -22,6 +22,13 @@
       "when": 1790172511528,
       "tag": "0002_odd_bastion",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790176023720,
+      "tag": "0003_fix_hidden_and_public_views",
+      "breakpoints": true
     }
   ]
 }

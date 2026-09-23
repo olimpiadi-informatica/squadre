@@ -91,7 +91,13 @@ export const listTeams = cache((instituteId?: string): Promise<TeamItem[]> => {
     })
     .from(team)
     .innerJoin(v04a_teamStats, eq(v04a_teamStats.teamId, team.id))
-    .where(eq(team.instituteId, instituteId ?? "").if(instituteId))
+    .where(
+      and(
+        eq(team.instituteId, instituteId ?? "").if(instituteId),
+        eq(team.hidden, false),
+        eq(team.junior, false),
+      ),
+    )
     .orderBy(v04a_teamStats.rankTot, team.name);
 });
 
@@ -138,6 +144,8 @@ export const listRoundTeams = cache(
           gt(v02b_teamRoundStats.totalScores, 0),
           eq(round.editionId, editionId),
           eq(round.slug, roundSlug),
+          eq(team.hidden, false),
+          eq(team.junior, false),
         ),
       )
       .orderBy(
@@ -172,7 +180,7 @@ export const listEditionTeams = cache((editionId: string): Promise<TeamResultIte
     .innerJoin(v04a_teamStats, eq(v04a_teamStats.teamId, team.id))
     .innerJoin(institute, eq(institute.id, team.instituteId))
     .innerJoin(region, eq(region.id, institute.region))
-    .where(eq(team.editionId, editionId))
+    .where(and(eq(team.editionId, editionId), eq(team.hidden, false), eq(team.junior, false)))
     .orderBy(v04a_teamStats.rankTot, institute.region, institute.name, institute.city, team.name);
 });
 

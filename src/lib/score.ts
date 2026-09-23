@@ -48,6 +48,7 @@ export const listScores = cache(
           eq(round.slug, roundSlug ?? "").if(roundSlug),
           eq(team.slug, teamSlug ?? "").if(teamSlug),
           eq(team.junior, false),
+          eq(team.hidden, false),
           notExists(
             db
               .select({ id: penalizedTeamRound.id })
@@ -113,6 +114,7 @@ export const listTaskScores = cache((taskSlug?: string): Promise<TaskScoreItem[]
         eq(task.slug, taskSlug ?? "").if(taskSlug),
         gt(teamTaskScore.score, 0),
         eq(team.junior, false),
+        eq(team.hidden, false),
       ),
     )
     .orderBy(desc(teamTaskScore.score));
@@ -145,13 +147,14 @@ export const listRoundScores = cache(
       .from(team)
       .innerJoin(teamRound, eq(teamRound.teamId, team.id))
       .innerJoin(v02b_teamRoundStats, eq(v02b_teamRoundStats.teamRoundId, teamRound.id))
-      .innerJoin(round, eq(round.id, teamRound.roundId))
-      .innerJoin(edition, eq(edition.id, round.editionId))
+      .innerJoin(round, and(eq(round.id, teamRound.roundId), eq(round.public, true)))
+      .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
       .where(
         and(
           eq(edition.id, editionId),
           eq(team.slug, teamSlug ?? "").if(teamSlug),
           eq(team.junior, false),
+          eq(team.hidden, false),
         ),
       )
       .orderBy(round.startsAt, round.slug);

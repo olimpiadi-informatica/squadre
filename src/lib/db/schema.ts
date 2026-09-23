@@ -383,7 +383,10 @@ export const v00a_taskStats = pgMaterializedView("v00a_task_stats").as((qb) =>
       medianScore: coalesce(median(teamTaskScore.score), 0).as("median_score"),
     })
     .from(teamTaskScore)
-    .innerJoin(team, and(eq(team.id, teamTaskScore.teamId), eq(team.junior, false)))
+    .innerJoin(
+      team,
+      and(eq(team.id, teamTaskScore.teamId), eq(team.junior, false), eq(team.hidden, false)),
+    )
     .innerJoin(task, eq(task.id, teamTaskScore.taskId))
     .innerJoin(round, and(eq(round.id, task.roundId), eq(round.public, true)))
     .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
@@ -423,7 +426,10 @@ export const v01a_teamTaskScoreStats = pgMaterializedView("v01a_team_task_score_
         ),
     })
     .from(teamTaskScore)
-    .innerJoin(team, and(eq(team.id, teamTaskScore.teamId), eq(team.junior, false)))
+    .innerJoin(
+      team,
+      and(eq(team.id, teamTaskScore.teamId), eq(team.junior, false), eq(team.hidden, false)),
+    )
     .innerJoin(task, eq(task.id, teamTaskScore.taskId))
     .innerJoin(round, and(eq(round.id, task.roundId), eq(round.public, true)))
     .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
@@ -477,7 +483,7 @@ export const v02b_teamRoundStats = pgMaterializedView("v02b_team_round_stats").a
       and(
         eq(round.editionId, edition.id),
         eq(round.public, true),
-        or(team.finalist, ne(round.slug, "final")),
+        or(eq(team.finalist, true), ne(round.slug, "final")),
       ),
     )
     .leftJoin(teamRound, and(eq(teamRound.teamId, team.id), eq(teamRound.roundId, round.id)))
@@ -490,6 +496,7 @@ export const v02b_teamRoundStats = pgMaterializedView("v02b_team_round_stats").a
     .where(
       and(
         eq(team.junior, false),
+        eq(team.hidden, false),
         notExists(
           qb
             .select({ id: teamRoundPenalization.id })
@@ -541,7 +548,7 @@ export const v03b_roundStats = pgMaterializedView("v03b_round_stats").as((qb) =>
     .innerJoin(teamRound, eq(teamRound.roundId, round.id))
     .innerJoin(v02b_teamRoundStats, eq(v02b_teamRoundStats.teamRoundId, teamRound.id))
     .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
-    .where(gt(v02b_teamRoundStats.totalScores, 0))
+    .where(and(eq(round.public, true), gt(v02b_teamRoundStats.totalScores, 0)))
     .groupBy(round.id),
 );
 
@@ -583,6 +590,7 @@ export const v04a_teamStats = pgMaterializedView("v04a_team_stats").as((qb) =>
     .where(
       and(
         eq(team.junior, false),
+        eq(team.hidden, false),
         notExists(
           qb
             .select({ id: penalizedTeamRound.id })
@@ -615,7 +623,7 @@ export const v05a_editionStats = pgMaterializedView("v05a_edition_stats").as((qb
       highestScore: coalesce(max(v04a_teamStats.totalScores), 0).as("highest_score"),
     })
     .from(v04a_teamStats)
-    .innerJoin(team, eq(team.id, v04a_teamStats.teamId))
+    .innerJoin(team, and(eq(team.id, v04a_teamStats.teamId), eq(team.hidden, false)))
     .innerJoin(edition, and(eq(edition.id, team.editionId), eq(edition.public, true)))
     .groupBy(team.editionId),
 );
@@ -629,7 +637,7 @@ export const v06a_editionStats2 = pgMaterializedView("v06a_edition_stats2").as((
     })
     .from(v02b_teamRoundStats)
     .innerJoin(teamRound, eq(teamRound.id, v02b_teamRoundStats.teamRoundId))
-    .innerJoin(team, eq(team.id, teamRound.teamId))
+    .innerJoin(team, and(eq(team.id, teamRound.teamId), eq(team.hidden, false)))
     .innerJoin(task, eq(task.roundId, teamRound.roundId))
     .innerJoin(round, and(eq(round.id, teamRound.roundId), eq(round.public, true)))
     .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
@@ -657,7 +665,7 @@ export const v07a_instituteStats = pgMaterializedView("v07a_institute_stats").as
     })
     .from(v02b_teamRoundStats)
     .innerJoin(teamRound, eq(teamRound.id, v02b_teamRoundStats.teamRoundId))
-    .innerJoin(team, eq(team.id, teamRound.teamId))
+    .innerJoin(team, and(eq(team.id, teamRound.teamId), eq(team.hidden, false)))
     .innerJoin(v04a_teamStats, eq(v04a_teamStats.teamId, team.id))
     .innerJoin(round, and(eq(round.id, teamRound.roundId), eq(round.public, true)))
     .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
@@ -683,7 +691,7 @@ export const v08a_regionStats = pgMaterializedView("v08a_region_stats").as((qb) 
     })
     .from(v02b_teamRoundStats)
     .innerJoin(teamRound, eq(teamRound.id, v02b_teamRoundStats.teamRoundId))
-    .innerJoin(team, eq(team.id, teamRound.teamId))
+    .innerJoin(team, and(eq(team.id, teamRound.teamId), eq(team.hidden, false)))
     .innerJoin(v04a_teamStats, eq(v04a_teamStats.teamId, team.id))
     .innerJoin(round, and(eq(round.id, teamRound.roundId), eq(round.public, true)))
     .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
