@@ -44,4 +44,5 @@ next-env.d.ts
 # Others
 *.py
 venv/
+__pycache__/
 /emails/
