@@ -460,9 +460,9 @@ export const v02b_teamRoundStats = pgMaterializedView("v02b_team_round_stats").a
         ),
       medal: sql<number | null>`CASE
                                   WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) = 0    THEN 0
-                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) < 0.05 THEN 1
-                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) < 0.15 THEN 2
-                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) < 0.30 THEN 3
+                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) <= 0.05 THEN 1
+                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) <= 0.15 THEN 2
+                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) <= 0.30 THEN 3
                                   ELSE null
                                 END`.as("medal"),
     })
