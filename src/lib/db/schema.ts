@@ -301,8 +301,8 @@ export const teamRoundPenalization = pgTable(
   ],
 );
 
-export const penalizedTeamRound = alias(teamRound, "penalized_team_round");
-export const penalizedRound = alias(round, "penalized_round");
+// Non esportato per evitare che drizzle-kit lo consideri una tabella del database
+const penalizedTeamRound = alias(teamRound, "penalized_team_round");
 
 export const emailTemplate = pgTable("email_templates", {
   id: text().primaryKey().notNull(),
