@@ -1,10 +1,12 @@
-# squadre.olinfo.it
+# GIORGIO (Gestore Innovativo Omnicomprensivo Risultati Gare IIOT-OIS)
 
-## Gather the JSON data
+Piattaforma di gestione per le gare a squadre ([squadre.olinfo.it](https://squadre.olinfo.it)).
 
-1. Go to the OIS private task repository.
-1. `cd` into the `util/export_stats` folder.
-1. `./exporter.py ~/git/www.squadre.olinfo.it/data -a`.
+## Requisiti
+
+- [Node.js](https://nodejs.org/) (consigliato v20+)
+- [pnpm](https://pnpm.io/)
+- [Docker](https://www.docker.com/) e Docker Compose (per PostgreSQL)
 
 ## Project Setup
 
@@ -12,11 +14,21 @@
 pnpm install
 ```
 
+### Database
+
+Avvia il database PostgreSQL locale:
+
+```sh
+docker compose up -d
+```
+
 ### Compile and Hot-Reload for Development
 
 ```sh
 pnpm dev
 ```
+
+L'applicazione sarà disponibile su [http://localhost:3000](http://localhost:3000).
 
 ### Compile and Minify for Production
 
