@@ -188,20 +188,54 @@ const EMAIL_FROM = "Olimpiadi di Informatica a Squadre <ois@olimpiadi-scientific
 const EMAIL_REPLY_TO = "info@olimpiadi-scientifiche.it";
 
 function createTransporter() {
+  if (process.env.NODE_ENV === "production") {
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: Number(process.env.SMTP_PORT) === 465,
+      auth: process.env.SMTP_USER
+        ? {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          }
+        : undefined,
+    });
+  }
+
   return nodemailer.createTransport({
     streamTransport: true,
   });
-  /* return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "localhost",
-    port: Number(process.env.SMTP_PORT || 1025),
-    secure: Number(process.env.SMTP_PORT) === 465,
-    auth: process.env.SMTP_USER
-      ? {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        }
-      : undefined,
-  }); */
+}
+
+type SendMailOptions = {
+  to: string;
+  subject: string;
+  html: string;
+  cc?: string | string[];
+};
+
+async function sendMail({ to, subject, html, cc }: SendMailOptions) {
+  const transporter = createTransporter();
+
+  const messageInfo = await transporter.sendMail({
+    from: EMAIL_FROM,
+    to,
+    replyTo: EMAIL_REPLY_TO,
+    cc,
+    subject,
+    html,
+  });
+
+  if (process.env.NODE_ENV !== "production") {
+    const message = (messageInfo as StreamTransport.SentMessageInfo).message;
+    if (message) {
+      const dir = path.join("emails", to);
+      await mkdir(dir, { recursive: true });
+      await writeFile(path.join(dir, `${Date.now()}.eml`), message);
+    }
+  }
+
+  return messageInfo;
 }
 
 export async function sendInstituteEmail(
@@ -257,19 +291,11 @@ export async function sendInstituteEmail(
     );
     await db.update(emailTable).set({ html }).where(eq(emailTable.id, credential.emailId));
 
-    const transporter = createTransporter();
-    const messageInfo = await transporter.sendMail({
-      from: EMAIL_FROM,
+    await sendMail({
       to: address,
-      replyTo: EMAIL_REPLY_TO,
       subject: `Password OIS ${round.title} - Edizione ${edition.year}`,
       html,
     });
-    const message = (messageInfo as StreamTransport.SentMessageInfo).message;
-
-    const dir = path.join("emails", address);
-    await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, `${Date.now()}.eml`), message);
 
     await db
       .update(emailTable)
@@ -358,11 +384,8 @@ export async function sendInstitutePenalizationEmail(
 
     await db.update(emailTable).set({ html }).where(eq(emailTable.id, emailId));
 
-    const transporter = createTransporter();
-    const messageInfo = await transporter.sendMail({
-      from: EMAIL_FROM,
+    await sendMail({
       to: address,
-      replyTo: EMAIL_REPLY_TO,
       cc: [
         "ois@aldini.istruzioneer.it",
         ...(instituteRow.schoolEmail && penalizationsData.some((item) => item.level === "red")
@@ -372,11 +395,6 @@ export async function sendInstitutePenalizationEmail(
       subject: `Penalizzazioni OIS ${roundRecord.title}`,
       html,
     });
-    const message = (messageInfo as StreamTransport.SentMessageInfo).message;
-
-    const dir = path.join("emails", address);
-    await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, `${Date.now()}.eml`), message);
 
     const penalizationIds = penalizationsData.map((p) => p.penalizationId);
     await db.transaction(async (tx) => {
@@ -448,19 +466,12 @@ export async function sendPenalizationAppealResultEmail(
       .returning({ id: emailTable.id });
 
     try {
-      const transporter = createTransporter();
-      const messageInfo = await transporter.sendMail({
-        from: EMAIL_FROM,
+      await sendMail({
         to: recipient.address,
-        replyTo: EMAIL_REPLY_TO,
         cc: !approved && recipient.schoolEmail ? recipient.schoolEmail : undefined,
         subject: `Esito ricorso OIS ${roundRecord.title}`,
         html,
       });
-      const message = (messageInfo as StreamTransport.SentMessageInfo).message;
-      const dir = path.join("emails", recipient.address);
-      await mkdir(dir, { recursive: true });
-      await writeFile(path.join(dir, `${Date.now()}.eml`), message);
       await db.update(emailTable).set({ status: "sent" }).where(eq(emailTable.id, emailRecord.id));
     } catch (err) {
       await db
