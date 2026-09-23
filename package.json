@@ -5,7 +5,11 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "biome check --write --unsafe && tsc --noEmit",
-    "email:dev": "email dev -d src/emails -p 3025"
+    "email:dev": "email dev -d src/emails -p 3025",
+    "docker:dev": "docker compose -f docker/docker-compose.dev.yml up -d",
+    "docker:dev:down": "docker compose -f docker/docker-compose.dev.yml down",
+    "docker:prod": "docker compose -f docker/docker-compose.prod.yml up -d --build",
+    "docker:prod:down": "docker compose -f docker/docker-compose.prod.yml down"
   },
   "dependencies": {
     "@cantoo/pdf-lib": "^2.6.5",

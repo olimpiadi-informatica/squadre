@@ -14,12 +14,20 @@ Piattaforma di gestione per le gare a squadre ([squadre.olinfo.it](https://squad
 pnpm install
 ```
 
-### Database
+### Database (Development)
 
-Avvia il database PostgreSQL locale:
+Avvia il database PostgreSQL locale per lo sviluppo:
 
 ```sh
-docker compose up -d
+pnpm docker:dev
+# oppure: docker compose -f docker/docker-compose.dev.yml up -d
+```
+
+Per arrestarlo:
+
+```sh
+pnpm docker:dev:down
+# oppure: docker compose -f docker/docker-compose.dev.yml down
 ```
 
 ### Compile and Hot-Reload for Development
@@ -34,6 +42,22 @@ L'applicazione sarà disponibile su [http://localhost:3000](http://localhost:300
 
 ```sh
 pnpm build
+```
+
+### Production with Docker
+
+Avvia l'applicazione completa (App Next.js + PostgreSQL) in produzione:
+
+```sh
+pnpm docker:prod
+# oppure: docker compose -f docker/docker-compose.prod.yml up -d --build
+```
+
+Per arrestarlo:
+
+```sh
+pnpm docker:prod:down
+# oppure: docker compose -f docker/docker-compose.prod.yml down
 ```
 
 ### Lint
