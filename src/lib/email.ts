@@ -183,22 +183,9 @@ export function listRoundPenalizationEmailStatuses(
     );
 }
 
-const EMAIL_FROM = "Olimpiadi di Informatica a Squadre <ois@olimpiadi-scientifiche.it>";
-const EMAIL_REPLY_TO = "info@olimpiadi-scientifiche.it";
-
 function createTransporter() {
   if (process.env.NODE_ENV === "production") {
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT),
-      secure: Number(process.env.SMTP_PORT) === 465,
-      auth: process.env.SMTP_USER
-        ? {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-          }
-        : undefined,
-    });
+    return nodemailer.createTransport(process.env.SMTP_URL);
   }
 
   return nodemailer.createTransport({
@@ -217,9 +204,8 @@ async function sendMail({ to, subject, html, cc }: SendMailOptions) {
   const transporter = createTransporter();
 
   const messageInfo = await transporter.sendMail({
-    from: EMAIL_FROM,
+    from: process.env.MAIL_FROM,
     to,
-    replyTo: EMAIL_REPLY_TO,
     cc,
     subject,
     html,
