@@ -106,6 +106,9 @@ export const team = pgTable(
   (table) => [uniqueIndex("team_slug_edition_id").on(table.slug, table.editionId)],
 );
 
+export const participationStatusValues = ["logged", "submitted", "scored"] as const;
+export type ParticipationStatus = (typeof participationStatusValues)[number];
+
 export const teamRound = pgTable(
   "team_round",
   {
@@ -118,6 +121,7 @@ export const teamRound = pgTable(
       .references(() => team.id, { onDelete: "cascade" }),
     password: text().notNull().default(""),
     delay: integer().notNull().default(0),
+    participationStatus: text("participation_status").$type<ParticipationStatus>(),
   },
   (table) => [uniqueIndex("team_round_round_id_team_id_unique").on(table.roundId, table.teamId)],
 );
