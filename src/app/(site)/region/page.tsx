@@ -8,6 +8,8 @@ import { listRegions } from "~/lib/region";
 
 import { RegionsTable } from "./table";
 
+export const dynamic = "force-dynamic";
+
 export default async function Page() {
   const regions = await listRegions();
   const stats = await getStats();
