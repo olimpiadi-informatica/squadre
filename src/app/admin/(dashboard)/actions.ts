@@ -14,31 +14,37 @@ import { verifyAdmin } from "~/lib/admin";
 import { deleteEdition, updateEditionVisibility } from "~/lib/edition";
 import { createNewEdition, type EditionData } from "~/lib/new-edition";
 
-const csvRowSchema = z.object({
-  "ID concorrente": z.coerce.number().int(),
-  "Nome concorrente": z
-    .string()
-    .min(1)
-    .transform((s) => s.replaceAll(/\p{White_Space}+/gu, " ").trim()),
-  "Approvato/a": z.enum(["True", "False", ""]),
-  "Idoneo/a": z.enum(["True", "False"]),
-  "ID scuola": z.coerce.number().int(),
-  "Codice meccanografico": z
-    .string()
-    .min(1)
-    .transform((s) => s.toLowerCase()),
-  "Nome scuola": z.string().min(1),
-  "Città scuola": z.string().min(1),
-  "Regione scuola": z
-    .string()
-    .min(1)
-    .transform((s) => s.toLowerCase().slice(0, 3)),
-  "Nome referente": z.string().min(1),
-  "Cognome referente": z.string().min(1),
-  "Email referente": z.string(),
-  "Email scuola": z.email(),
-  "Scelta del campionato": z.enum(["Regolare", "Esordienti", ""]),
-});
+const csvRowSchema = z
+  .object({
+    "ID concorrente": z.coerce.number().int(),
+    "Nome concorrente": z
+      .string()
+      .min(1)
+      .transform((s) => s.replaceAll(/\p{White_Space}+/gu, " ").trim()),
+    "Approvato/a": z.enum(["True", "False", ""]),
+    "Idoneo/a": z.enum(["True", "False"]),
+    "ID scuola": z.coerce.number().int(),
+    "Codice meccanografico": z
+      .string()
+      .min(1)
+      .transform((s) => s.toLowerCase()),
+    "Nome scuola": z.string().min(1),
+    "Città scuola": z.string().min(1),
+    "Sigla provincia scuola": z.string().optional(),
+    "Regione scuola": z.string().min(1),
+    "Nome referente": z.string().min(1),
+    "Cognome referente": z.string().min(1),
+    "Email referente": z.string(),
+    "Email scuola": z.email(),
+    "Scelta del campionato": z.enum(["Regolare", "Esordienti", ""]),
+  })
+  .transform((row) => ({
+    ...row,
+    "Regione scuola":
+      row["Sigla provincia scuola"] === "BZ"
+        ? "alt"
+        : row["Regione scuola"].toLowerCase().slice(0, 3),
+  }));
 
 export async function toggleEditionVisibility(id: string, currentPublic: boolean) {
   await verifyAdmin();
