@@ -3,7 +3,7 @@ import { cache } from "react";
 import { and, eq, notInArray, sql } from "drizzle-orm";
 
 import { db } from "./db";
-import { edition, round, task, v00a_taskStats } from "./db/schema";
+import { edition, round, task, team, teamTaskScore, v00a_taskStats } from "./db/schema";
 
 export type Task = {
   slug: string;
@@ -74,13 +74,41 @@ export type RoundTaskItem = {
   title: string;
   junior: boolean;
   regular: boolean;
+  scoredTeams: number;
+  scoredJuniors: number;
+  scoredRegulars: number;
 };
+
+const scoredTeamsSql = sql<number>`(SELECT count(*)::int FROM ${teamTaskScore} WHERE ${teamTaskScore.taskId} = ${task.id})`;
+const scoredJuniorsSql = sql<number>`(SELECT count(*)::int FROM ${teamTaskScore} INNER JOIN ${team} ON ${team.id} = ${teamTaskScore.teamId} WHERE ${teamTaskScore.taskId} = ${task.id} AND ${team.junior})`;
+const scoredRegularsSql = sql<number>`(SELECT count(*)::int FROM ${teamTaskScore} INNER JOIN ${team} ON ${team.id} = ${teamTaskScore.teamId} WHERE ${teamTaskScore.taskId} = ${task.id} AND NOT ${team.junior})`;
+
+export const listAllRoundTasks = cache(
+  (editionId: string, roundSlug: string): Promise<RoundTaskItem[]> => {
+    return db
+      .select({
+        slug: task.slug,
+        title: task.title,
+        junior: task.junior,
+        regular: task.regular,
+        scoredTeams: scoredTeamsSql,
+        scoredJuniors: scoredJuniorsSql,
+        scoredRegulars: scoredRegularsSql,
+      })
+      .from(task)
+      .innerJoin(round, eq(round.id, task.roundId))
+      .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug)))
+      .orderBy(task.slug);
+  },
+);
 
 export function listRoundTasks(
   editionId: string,
   roundSlug: string,
   junior: boolean,
-): Promise<(RoundTaskItem & { id: number })[]> {
+): Promise<
+  (Omit<RoundTaskItem, "scoredTeams" | "scoredJuniors" | "scoredRegulars"> & { id: number })[]
+> {
   return db
     .select({
       id: task.id,
@@ -100,6 +128,41 @@ export function listRoundTasks(
       ),
     )
     .orderBy(task.slug);
+}
+
+export async function validateRoundTaskUpdate(
+  roundId: number,
+  tasks: RoundTaskItem[],
+): Promise<void> {
+  const existing = await db
+    .select({
+      slug: task.slug,
+      junior: task.junior,
+      regular: task.regular,
+      scoredTeams: scoredTeamsSql,
+      scoredJuniors: scoredJuniorsSql,
+      scoredRegulars: scoredRegularsSql,
+    })
+    .from(task)
+    .innerJoin(round, eq(round.id, task.roundId))
+    .where(eq(task.roundId, roundId));
+
+  const inputBySlug = new Map(tasks.map((t) => [t.slug, t]));
+  for (const task of existing) {
+    const next = inputBySlug.get(task.slug);
+    if (!next) {
+      if (task.scoredTeams > 0) {
+        throw new Error(`Il task ${task.slug} ha già risultati e non può essere eliminato.`);
+      }
+      continue;
+    }
+    if (next.junior !== task.junior && task.scoredJuniors > 0) {
+      throw new Error(`Il task ${task.slug} ha già risultati nella categoria junior.`);
+    }
+    if (next.regular !== task.regular && task.scoredRegulars > 0) {
+      throw new Error(`Il task ${task.slug} ha già risultati nella categoria regular.`);
+    }
+  }
 }
 
 export async function saveRoundTasksForRound(
