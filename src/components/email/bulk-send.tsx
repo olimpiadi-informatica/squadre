@@ -13,9 +13,11 @@ type StatusItem = { status: RoundEmailStatus; instituteId: string };
 export function BulkSendButton({
   statuses,
   onSend,
+  disabled,
 }: {
   statuses: StatusItem[];
   onSend: (instituteId: string) => Promise<void>;
+  disabled?: boolean;
 }) {
   const router = useRouter();
   const sendModalRef = useRef<HTMLDialogElement>(null);
@@ -42,7 +44,10 @@ export function BulkSendButton({
 
   return (
     <>
-      <Button className="btn-primary" onClick={() => sendModalRef.current?.showModal()}>
+      <Button
+        className="btn-primary"
+        onClick={() => sendModalRef.current?.showModal()}
+        disabled={disabled}>
         Invia a tutti
       </Button>
       <Modal ref={sendModalRef} title="Invia email a tutti">
