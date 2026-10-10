@@ -5,13 +5,12 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@olinfo/react-components";
 import clsx from "clsx";
-import { BookKey, FileKey, FileText, Mail, ShieldAlert, Wifi } from "lucide-react";
+import { BookKey, FileKey, FileText, ListChecks, Mail, ShieldAlert, Wifi } from "lucide-react";
 
 import type { RoundAdminItem } from "~/lib/round";
 
 import { getMirrorCredentials, getRoundCredentials } from "./actions";
 import { ResultsModalButton } from "./results-modal-button";
-import { TaskModalButton } from "./task-modal-button";
 
 export function RoundActions({ round }: { round: RoundAdminItem }) {
   const [supportsDirectoryPicker, setSupportsDirectoryPicker] = useState<boolean | null>(null);
@@ -37,7 +36,12 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
         <li className="step step-primary">
           <div className="flex flex-col items-start gap-2 my-4">
             <div className="text-left text-xl font-semibold">Task</div>
-            <TaskModalButton round={round} />
+            <Link
+              href={`/admin/edition/${round.editionId}/round/${round.slug}/task`}
+              className="btn btn-primary">
+              <ListChecks className="size-5" />
+              Gestisci task
+            </Link>
           </div>
         </li>
         <li className="step step-primary">
