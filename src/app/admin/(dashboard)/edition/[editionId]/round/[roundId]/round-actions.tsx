@@ -96,13 +96,13 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
         </li>
         <li className="step step-primary">
           <div className="flex flex-col items-start gap-2 my-4">
-            <div className="text-left text-xl font-semibold">Resoconto</div>
+            <div className="text-left text-xl font-semibold">Statistiche</div>
 
             <Link
-              href={`/admin/edition/${round.editionId}/round/${round.slug}/resoconto`}
+              href={`/admin/edition/${round.editionId}/round/${round.slug}/statistiche`}
               className="btn btn-primary">
               <FileText className="size-5" />
-              Visualizza resoconto
+              Visualizza statistiche
             </Link>
           </div>
         </li>
