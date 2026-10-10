@@ -14,6 +14,7 @@ type Props = {
   statuses: RoundEmail[];
   editionId: string;
   roundId: string;
+  sendingClosed?: boolean;
 };
 
 const statusLabel: Record<RoundEmailStatus, string> = {
@@ -71,10 +72,12 @@ function EmailRow({
   item,
   editionId,
   roundId,
+  sendingClosed,
 }: {
   item: RoundEmail;
   editionId: string;
   roundId: string;
+  sendingClosed?: boolean;
 }) {
   return (
     <>
@@ -93,7 +96,9 @@ function EmailRow({
         <Button
           className="btn-primary btn-xs"
           onClick={() => sendEmail(editionId, roundId, item.instituteId)}
-          disabled={item.status !== "not-sent" && item.status !== "sending-failed"}>
+          disabled={
+            sendingClosed || (item.status !== "not-sent" && item.status !== "sending-failed")
+          }>
           Invia
         </Button>
         <PreviewModalButton
@@ -107,7 +112,7 @@ function EmailRow({
   );
 }
 
-export function EmailTable({ statuses, editionId, roundId }: Props) {
+export function EmailTable({ statuses, editionId, roundId, sendingClosed }: Props) {
   const itemMatch = useCallback(
     (search: string, status: RoundEmail) =>
       status.instituteName.toLowerCase().includes(search) ||
@@ -120,7 +125,14 @@ export function EmailTable({ statuses, editionId, roundId }: Props) {
       data={statuses}
       itemMatch={itemMatch}
       header={TableHeaders}
-      row={(props) => <EmailRow {...props} editionId={editionId} roundId={roundId} />}
+      row={(props) => (
+        <EmailRow
+          {...props}
+          editionId={editionId}
+          roundId={roundId}
+          sendingClosed={sendingClosed}
+        />
+      )}
       className="grid-cols-[repeat(4,auto)]"
     />
   );

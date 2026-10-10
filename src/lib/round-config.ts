@@ -1,6 +1,22 @@
-import { addHours, addMinutes, addSeconds, differenceInMinutes, subMinutes } from "date-fns";
+import {
+  addDays,
+  addHours,
+  addMinutes,
+  addMonths,
+  addSeconds,
+  differenceInMinutes,
+  subMinutes,
+} from "date-fns";
 
 const DEFAULT_ROUND_DURATION_HOURS = 3;
+
+export function isCredentialsEmailClosed(endsAt: Date, now = new Date()): boolean {
+  return now > addDays(endsAt, 1);
+}
+
+export function isPenalizationEmailClosed(endsAt: Date, now = new Date()): boolean {
+  return now > addMonths(endsAt, 3);
+}
 
 export function isPracticeRound(slug: string): boolean {
   return slug === "practice";
