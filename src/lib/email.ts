@@ -19,7 +19,11 @@ import {
 import nodemailer from "nodemailer";
 import type StreamTransport from "nodemailer/lib/stream-transport";
 
-import { getRoundStartForTeam } from "~/lib/round-config";
+import {
+  getRoundStartForTeam,
+  isCredentialsEmailClosed,
+  isPenalizationEmailClosed,
+} from "~/lib/round-config";
 import { listRoundTeamsCredentials } from "~/lib/team";
 
 import { db } from "./db";
@@ -193,6 +197,11 @@ function createTransporter() {
   });
 }
 
+export const CREDENTIALS_EMAIL_CLOSED_MESSAGE =
+  "L'invio delle email con le credenziali è chiuso: sono trascorsi più di 1 giorno dalla fine del round.";
+export const PENALIZATION_EMAIL_CLOSED_MESSAGE =
+  "L'invio delle email di penalizzazione è chiuso: sono trascorsi più di 3 mesi dalla fine del round.";
+
 type SendMailOptions = {
   to: string;
   subject: string;
@@ -228,6 +237,10 @@ export async function sendInstituteEmail(
   round: RoundAdminItem,
   instituteId: string,
 ) {
+  if (isCredentialsEmailClosed(round.endsAt)) {
+    throw new Error(CREDENTIALS_EMAIL_CLOSED_MESSAGE);
+  }
+
   const teamsData = await listRoundTeamsCredentials(edition.id, round.slug, undefined, instituteId);
   if (teamsData.length === 0) throw new Error(`No teams found for institute ${instituteId}`);
 
@@ -299,6 +312,10 @@ export async function sendInstitutePenalizationEmail(
   roundRecord: RoundAdminItem,
   instituteId: string,
 ) {
+  if (isPenalizationEmailClosed(roundRecord.endsAt)) {
+    throw new Error(PENALIZATION_EMAIL_CLOSED_MESSAGE);
+  }
+
   // Get institute info
   const [instituteRow] = await db
     .select({ name: institute.name, email: institute.email, schoolEmail: institute.schoolEmail })

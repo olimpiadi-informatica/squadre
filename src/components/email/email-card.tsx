@@ -14,6 +14,7 @@ type EmailCardProps = {
   templateLabel: string;
   templateContent: string;
   onSaveTemplate: (content: string) => Promise<void>;
+  sendingClosed?: boolean;
 };
 
 export function EmailCard({
@@ -22,6 +23,7 @@ export function EmailCard({
   templateLabel,
   templateContent,
   onSaveTemplate,
+  sendingClosed,
 }: EmailCardProps) {
   const notSent = statuses.filter((s) => s.status === "not-sent").length;
   const sending = statuses.filter((s) => s.status === "sending").length;
@@ -39,7 +41,7 @@ export function EmailCard({
           <li>email in errore: {failed}</li>
         </ul>
         <CardActions>
-          <BulkSendButton statuses={statuses} onSend={onSendAll} />
+          <BulkSendButton statuses={statuses} onSend={onSendAll} disabled={sendingClosed} />
           <TemplateModal label={templateLabel} content={templateContent} onSave={onSaveTemplate} />
         </CardActions>
       </CardBody>

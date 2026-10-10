@@ -15,6 +15,7 @@ import {
 } from "~/lib/email-template";
 import { listRoundPenalization } from "~/lib/penalization";
 import { getRoundAdmin } from "~/lib/round";
+import { isPenalizationEmailClosed } from "~/lib/round-config";
 
 import {
   savePenalizationAppealResultEmailTemplate,
@@ -40,6 +41,7 @@ export default async function AdminRoundPenalizationPage({
       getEmailTemplateContent(PENALIZATION_APPEAL_RESULT_EMAIL_TEMPLATE_ID),
     ]);
   if (!edition || !round) notFound();
+  const sendingClosed = isPenalizationEmailClosed(round.endsAt);
 
   const stats = {
     total: penalization.length,
@@ -108,6 +110,7 @@ export default async function AdminRoundPenalizationPage({
           templateLabel="Template email penalizzazioni"
           templateContent={penalizationTemplate ?? ""}
           onSaveTemplate={onSaveTemplate}
+          sendingClosed={sendingClosed}
         />
       </div>
 
@@ -123,6 +126,7 @@ export default async function AdminRoundPenalizationPage({
           emailStatuses={emailStatuses}
           editionId={editionId}
           roundId={roundId}
+          sendingClosed={sendingClosed}
         />
       )}
     </div>

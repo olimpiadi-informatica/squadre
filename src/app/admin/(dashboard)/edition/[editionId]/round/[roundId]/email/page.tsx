@@ -7,6 +7,7 @@ import { getEditionAdmin } from "~/lib/edition";
 import { listRoundEmailStatuses } from "~/lib/email";
 import { getEmailTemplateContent, PASSWORD_EMAIL_TEMPLATE_ID } from "~/lib/email-template";
 import { getRoundAdmin } from "~/lib/round";
+import { isCredentialsEmailClosed } from "~/lib/round-config";
 
 import { savePasswordEmailTemplate, sendEmail } from "./actions";
 import { EmailTable } from "./email-table";
@@ -20,6 +21,7 @@ export default async function AdminEmailPage({
   const edition = await getEditionAdmin(editionId);
   const round = await getRoundAdmin(editionId, roundId);
   if (!edition || !round) notFound();
+  const sendingClosed = isCredentialsEmailClosed(round.endsAt);
 
   const [statuses, passwordTemplate] = await Promise.all([
     listRoundEmailStatuses(editionId, roundId),
@@ -59,10 +61,16 @@ export default async function AdminEmailPage({
           templateLabel="Template password"
           templateContent={passwordTemplate ?? ""}
           onSaveTemplate={onSaveTemplate}
+          sendingClosed={sendingClosed}
         />
       </div>
       <div className="w-full">
-        <EmailTable statuses={statuses} editionId={editionId} roundId={roundId} />
+        <EmailTable
+          statuses={statuses}
+          editionId={editionId}
+          roundId={roundId}
+          sendingClosed={sendingClosed}
+        />
       </div>
     </div>
   );

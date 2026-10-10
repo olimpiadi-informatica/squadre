@@ -58,14 +58,16 @@ function SendEmailButton({
   roundId,
   instituteId,
   status,
+  sendingClosed,
 }: {
   editionId: string;
   roundId: string;
   instituteId: string;
   status: string;
+  sendingClosed?: boolean;
 }) {
   const router = useRouter();
-  const disabled = status === "sending";
+  const disabled = sendingClosed || status === "sending";
 
   async function handleSend() {
     await sendPenalizationEmail(editionId, roundId, instituteId);
@@ -200,11 +202,13 @@ function PenalizationRow({
   emailStatuses,
   editionId,
   roundId,
+  sendingClosed,
 }: {
   item: RoundPenalization;
   emailStatuses: RoundPenalizationEmail[];
   editionId: string;
   roundId: string;
+  sendingClosed?: boolean;
 }) {
   const emailStatus = emailStatuses.find((e) => e.instituteId === item.instituteId);
   const isEmailSent = emailStatus?.status === "sent" || item.sentAt !== null;
@@ -230,6 +234,7 @@ function PenalizationRow({
               roundId={roundId}
               instituteId={emailStatus.instituteId}
               status={emailStatus.status}
+              sendingClosed={sendingClosed}
             />
             <EmailPreviewModal emailId={emailStatus.emailId} />
           </>
@@ -262,11 +267,13 @@ export function PenalizationTable({
   emailStatuses,
   editionId,
   roundId,
+  sendingClosed,
 }: {
   penalization: RoundPenalization[];
   emailStatuses: RoundPenalizationEmail[];
   editionId: string;
   roundId: string;
+  sendingClosed?: boolean;
 }) {
   const itemMatch = useCallback(
     (search: string, item: RoundPenalization) =>
@@ -284,9 +291,10 @@ export function PenalizationTable({
         emailStatuses={emailStatuses}
         editionId={editionId}
         roundId={roundId}
+        sendingClosed={sendingClosed}
       />
     ),
-    [emailStatuses, editionId, roundId],
+    [emailStatuses, editionId, roundId, sendingClosed],
   );
 
   return (
