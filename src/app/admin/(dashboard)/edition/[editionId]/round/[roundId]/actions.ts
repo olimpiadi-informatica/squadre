@@ -14,7 +14,12 @@ import { listRegions } from "~/lib/region";
 import { parseResult, UploadResultStep } from "~/lib/result";
 import { getRoundAdmin } from "~/lib/round";
 import { getRoundEndForTeam, getRoundStartForTeam } from "~/lib/round-config";
-import { listRoundTasks, type RoundTaskItem, saveRoundTasksForRound } from "~/lib/task";
+import {
+  listRoundTasks,
+  type RoundTaskItem,
+  saveRoundTasksForRound,
+  validateRoundTaskUpdate,
+} from "~/lib/task";
 import { listRoundTeamsCredentials } from "~/lib/team";
 import { refreshViews } from "~/lib/view";
 
@@ -189,6 +194,7 @@ export async function uploadRoundResults(
 
 export async function saveRoundTasks(roundId: number, inputTasks: RoundTaskItem[]): Promise<void> {
   await verifyAdmin();
+  await validateRoundTaskUpdate(roundId, inputTasks);
   await saveRoundTasksForRound(roundId, inputTasks);
   await refreshViews();
 
