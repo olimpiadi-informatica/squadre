@@ -5,6 +5,7 @@ import { useCallback } from "react";
 
 import { Table } from "~/components/table";
 import type { Edition } from "~/lib/edition";
+import { formatTableScore } from "~/lib/format";
 
 export function EditionsTable({ editions }: { editions: Edition[] }) {
   const itemMatch = useCallback((search: string, edition: Edition) => {
@@ -50,8 +51,8 @@ function TableRow({ item: edition }: { item: Edition }) {
       <div>{edition.totalInstitutes}</div>
       <div>{edition.totalTeams}</div>
       <div>{edition.totalTasks}</div>
-      <div>{edition.highestPoints}</div>
-      <div>{edition.totalScores}</div>
+      <div>{formatTableScore(edition.highestPoints)}</div>
+      <div>{formatTableScore(edition.totalScores)}</div>
     </>
   );
 }

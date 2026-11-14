@@ -51,7 +51,7 @@ function TableRow({ item: region }: { item: RegionItem }) {
       <div>{region.totalInstitutes}</div>
       <div>{region.totalTeams}</div>
       <Medals medals={region.totalMedals} />
-      <div>{region.totalScores}</div>
+      <div>{Math.round(region.totalScores)}</div>
     </>
   );
 }

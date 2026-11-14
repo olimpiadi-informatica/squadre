@@ -1,12 +1,13 @@
 import { sql } from "drizzle-orm";
 import { random } from "es-toolkit/compat";
 
+import { REGOLARI } from "~/lib/championship";
 import { generateWord } from "~/lib/password";
 import { getDefaultRoundEndsAt, roundHasDelay } from "~/lib/round-config";
 import { seedTestUsers } from "~/lib/test-users";
 
 import { db } from "./db";
-import { edition, institute, round, team, teamRound } from "./db/schema";
+import { edition, institute, round, team, teamChampionship, teamRound } from "./db/schema";
 
 export type EditionData = {
   id: string;
@@ -22,7 +23,8 @@ export type EditionData = {
 };
 
 type InstituteInsert = typeof institute.$inferInsert;
-type TeamInsert = typeof team.$inferInsert;
+/** Le squadre nascono già iscritte al loro campionato. */
+type TeamInsert = Omit<typeof team.$inferInsert, "id"> & { championship: string };
 
 export async function createNewEdition(
   data: EditionData,
@@ -124,8 +126,16 @@ export async function createNewEdition(
     if (teams.length > 0) {
       const teamRows = await tx
         .insert(team)
-        .values(teams)
-        .returning({ id: team.id, instituteId: team.instituteId });
+        .values(teams.map(({ championship: _championship, ...teamRow }) => teamRow))
+        .returning({ id: team.id, slug: team.slug, instituteId: team.instituteId });
+
+      await tx.insert(teamChampionship).values(
+        teamRows.map((teamRow) => ({
+          teamId: teamRow.id,
+          championship:
+            teams.find((candidate) => candidate.slug === teamRow.slug)?.championship ?? REGOLARI,
+        })),
+      );
 
       const delays = Object.fromEntries(teams.map((t) => [t.instituteId, random(0, 600)]));
 

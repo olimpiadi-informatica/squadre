@@ -4,7 +4,7 @@
 
 # IMPORTANT: Node.js Version Maintenance
 # This Dockerfile uses Node.js 24.13.0-slim, which is the latest LTS version recommended by Next.js.
-ARG NODE_VERSION=24.13.0-slim
+ARG NODE_VERSION=24-slim
 
 FROM node:${NODE_VERSION} AS dependencies
 

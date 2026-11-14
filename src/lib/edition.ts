@@ -1,10 +1,11 @@
 import { cache } from "react";
 
-import { countDistinct, desc, eq, sum } from "drizzle-orm";
+import { and, countDistinct, desc, eq, sum } from "drizzle-orm";
 
 import { db } from "./db";
 import { edition, institute, round, v05a_editionStats, v06a_editionStats2 } from "./db/schema";
 import { coalesce } from "./db/utils";
+import { regularRoundsOnly } from "./round";
 
 export async function updateEditionVisibility(id: string, isPublic: boolean): Promise<void> {
   await db.update(edition).set({ public: isPublic }).where(eq(edition.id, id));
@@ -38,7 +39,7 @@ export const getLatestSchedule = cache(async (): Promise<ScheduleEdition> => {
       startsAt: round.startsAt,
     })
     .from(round)
-    .where(eq(round.editionId, latestEdition.id))
+    .where(and(eq(round.editionId, latestEdition.id), regularRoundsOnly))
     .orderBy(round.startsAt, round.slug);
 
   return {

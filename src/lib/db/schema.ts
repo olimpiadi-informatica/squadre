@@ -8,9 +8,10 @@ import {
   isNull,
   max,
   min,
-  ne,
   notExists,
   or,
+  type SQL,
+  type SQLWrapper,
   sql,
   sum,
 } from "drizzle-orm";
@@ -19,8 +20,10 @@ import {
   boolean,
   index,
   integer,
+  numeric,
   pgMaterializedView,
   pgTable,
+  primaryKey,
   serial,
   text,
   timestamp,
@@ -98,12 +101,38 @@ export const team = pgTable(
       .notNull()
       .references(() => institute.id),
     coach: text().notNull(),
-    junior: boolean().notNull().default(false),
     finalist: boolean(),
     hidden: boolean().notNull().default(false),
     unrestricted: boolean().notNull().default(false),
   },
   (table) => [uniqueIndex("team_slug_edition_id").on(table.slug, table.editionId)],
+);
+
+/**
+ * Appartenenza di una squadra a uno o più campionati.
+ *
+ * Il regolamento è cambiato nel tempo, quindi il campionato è un dato e non un
+ * booleano: 'regolari' (triennio, fino alle OIS 15; regolari, da OIS 16),
+ * 'biennio' (OIS 11-15) e 'esordienti' (da OIS 16). La maggioranza delle
+ * squadre ha una sola riga, ma nelle OIS 14/15 le squadre 'bt-' erano iscritte
+ * sia al triennio sia al biennio: gareggiano in entrambe le classifiche con gli
+ * stessi punteggi.
+ *
+ * Tutte le classifiche sono partizionate per campionato, così round e task
+ * possono ospitare classifiche parallele senza mischiare i campionati.
+ */
+export const teamChampionship = pgTable(
+  "team_championship",
+  {
+    teamId: integer("team_id")
+      .notNull()
+      .references(() => team.id, { onDelete: "cascade" }),
+    championship: text().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.teamId, table.championship] }),
+    index("team_championship_championship_idx").on(table.championship),
+  ],
 );
 
 export const participationStatusValues = ["logged", "submitted", "scored"] as const;
@@ -136,7 +165,8 @@ export const teamTaskScore = pgTable(
     teamId: integer("team_id")
       .notNull()
       .references(() => team.id, { onDelete: "cascade" }),
-    score: integer().notNull(),
+    // I punteggi delle finali storiche hanno al più 2 decimali
+    score: numeric("score", { precision: 8, scale: 2, mode: "number" }).notNull(),
   },
   (table) => [uniqueIndex("task_score_task_id_team_id_unique").on(table.taskId, table.teamId)],
 );
@@ -371,11 +401,54 @@ export const verification = pgTable("verification", {
 });
 
 // ─── Materialized Views ───────────────────────────────────────────────────────
+//
+// Ogni vista di classifica espone la colonna `championship` e calcola rank (e
+// medaglie) partizionando per campionato: round e task possono così ospitare
+// classifiche parallele. Le viste aggregate (v05a-v08a) restano dei soli
+// regolari, perché sono i totali di edizione/istituto/regione.
+
+/**
+ * Solo il campionato regolare gareggia in finale: per tutti gli altri il round
+ * `final` è sempre escluso.
+ */
+function finalOnlyRegular(championship: SQLWrapper): SQL {
+  return sql`(${championship} = 'regolari' OR ${round.slug} <> 'final')`;
+}
+
+/**
+ * Come `finalOnlyRegular`, per le viste che costruiscono la lista dei round di
+ * un'edizione: ai regolari basta essere finalisti per comparire in finale.
+ */
+function finalOnlyRegularFinalists(championship: SQLWrapper): SQL {
+  return sql`((${championship} = 'regolari' AND ${team.finalist} = true) OR ${round.slug} <> 'final')`;
+}
+
+/**
+ * Un round conta per un campionato solo se quel campionato ci ha effettivamente
+ * segnato. Senza questo filtro le squadre esordienti, che nelle OIS 16/17 hanno
+ * comunque `team_round` nei round regolari senza avervi segnato, riceverebbero
+ * rank 1 e medaglie da partizioni composte solo da zeri.
+ *
+ * Gli alias interni (`s`, `t`, `tm`, `tc`) nascondono le tabelle esterne: i
+ * riferimenti con il nome pieno (`round.id`, `team_championship.championship`)
+ * restano quelli della riga corrente.
+ */
+const championshipScoredInRound = sql`exists (
+  select 1
+  from team_task_score s
+  join task t on t.id = s.task_id
+  join team tm on tm.id = s.team_id
+  join team_championship tc on tc.team_id = tm.id
+  where t.round_id = ${round.id}
+    and tc.championship = ${teamChampionship.championship}
+    and tm.hidden = false
+)`;
 
 export const v00a_taskStats = pgMaterializedView("v00a_task_stats").as((qb) =>
   qb
     .select({
       taskId: teamTaskScore.taskId,
+      championship: sql<string>`${teamChampionship.championship}`.as("championship"),
       teamScored: countDistinct(teamTaskScore.teamId).as("team_scored"),
       totalScores: coalesce(sum(teamTaskScore.score), 0).as("total_scores"),
       maxScore: coalesce(max(teamTaskScore.score), 0).as("max_score"),
@@ -383,16 +456,15 @@ export const v00a_taskStats = pgMaterializedView("v00a_task_stats").as((qb) =>
       medianScore: coalesce(median(teamTaskScore.score), 0).as("median_score"),
     })
     .from(teamTaskScore)
-    .innerJoin(
-      team,
-      and(eq(team.id, teamTaskScore.teamId), eq(team.junior, false), eq(team.hidden, false)),
-    )
+    .innerJoin(team, and(eq(team.id, teamTaskScore.teamId), eq(team.hidden, false)))
+    .innerJoin(teamChampionship, eq(teamChampionship.teamId, team.id))
     .innerJoin(task, eq(task.id, teamTaskScore.taskId))
     .innerJoin(round, and(eq(round.id, task.roundId), eq(round.public, true)))
     .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
     .where(
       and(
         gt(teamTaskScore.score, 0),
+        finalOnlyRegular(teamChampionship.championship),
         notExists(
           qb
             .select({ id: penalizedTeamRound.id })
@@ -413,44 +485,46 @@ export const v00a_taskStats = pgMaterializedView("v00a_task_stats").as((qb) =>
         ),
       ),
     )
-    .groupBy(teamTaskScore.taskId),
+    .groupBy(teamTaskScore.taskId, teamChampionship.championship),
 );
 
 export const v01a_teamTaskScoreStats = pgMaterializedView("v01a_team_task_score_stats").as((qb) =>
   qb
     .select({
       teamTaskScoreId: teamTaskScore.id,
-      rankTot:
-        sql<number>`RANK() OVER (PARTITION BY ${teamTaskScore.taskId} ORDER BY ${teamTaskScore.score} DESC)`.as(
-          "rank_tot",
-        ),
+      championship: sql<string>`${teamChampionship.championship}`.as("championship"),
+      rankTot: sql<number>`(RANK() OVER (
+          PARTITION BY ${teamTaskScore.taskId}, ${teamChampionship.championship}
+          ORDER BY ${teamTaskScore.score} DESC
+        ))::int`.as("rank_tot"),
     })
     .from(teamTaskScore)
-    .innerJoin(
-      team,
-      and(eq(team.id, teamTaskScore.teamId), eq(team.junior, false), eq(team.hidden, false)),
-    )
+    .innerJoin(team, and(eq(team.id, teamTaskScore.teamId), eq(team.hidden, false)))
+    .innerJoin(teamChampionship, eq(teamChampionship.teamId, team.id))
     .innerJoin(task, eq(task.id, teamTaskScore.taskId))
     .innerJoin(round, and(eq(round.id, task.roundId), eq(round.public, true)))
     .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
     .where(
-      notExists(
-        qb
-          .select({ id: penalizedTeamRound.id })
-          .from(penalizedTeamRound)
-          .innerJoin(
-            teamRoundPenalization,
-            eq(teamRoundPenalization.teamRoundId, penalizedTeamRound.id),
-          )
-          .innerJoin(penalization, eq(penalization.id, teamRoundPenalization.penalizationId))
-          .where(
-            and(
-              eq(penalizedTeamRound.teamId, team.id),
-              eq(penalization.level, "red"),
-              isNotNull(penalization.sentAt),
-              or(isNull(penalization.appealApproved), eq(penalization.appealApproved, false)),
+      and(
+        finalOnlyRegular(teamChampionship.championship),
+        notExists(
+          qb
+            .select({ id: penalizedTeamRound.id })
+            .from(penalizedTeamRound)
+            .innerJoin(
+              teamRoundPenalization,
+              eq(teamRoundPenalization.teamRoundId, penalizedTeamRound.id),
+            )
+            .innerJoin(penalization, eq(penalization.id, teamRoundPenalization.penalizationId))
+            .where(
+              and(
+                eq(penalizedTeamRound.teamId, team.id),
+                eq(penalization.level, "red"),
+                isNotNull(penalization.sentAt),
+                or(isNull(penalization.appealApproved), eq(penalization.appealApproved, false)),
+              ),
             ),
-          ),
+        ),
       ),
     ),
 );
@@ -459,31 +533,36 @@ export const v02b_teamRoundStats = pgMaterializedView("v02b_team_round_stats").a
   qb
     .select({
       teamRoundId: teamRound.id,
+      championship: sql<string>`${teamChampionship.championship}`.as("championship"),
       totalScores: coalesce(sum(teamTaskScore.score), 0).as("total_scores"),
-      rankTot:
-        sql<number>`RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC)`.as(
-          "rank_tot",
-        ),
-      rankReg:
-        sql<number>`RANK() OVER (PARTITION BY ${teamRound.roundId}, ${institute.region} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC)`.as(
-          "rank_reg",
-        ),
+      rankTot: sql<number>`(RANK() OVER (
+          PARTITION BY ${teamRound.roundId}, ${teamChampionship.championship}
+          ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC
+        ))::int`.as("rank_tot"),
+      rankReg: sql<number>`(RANK() OVER (
+          PARTITION BY ${teamRound.roundId}, ${teamChampionship.championship}, ${institute.region}
+          ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC
+        ))::int`.as("rank_reg"),
+      // Le coccarde sono un riconoscimento del campionato regolare: gli altri
+      // campionati non le ricevono (restano null, quindi mai visualizzate).
       medal: sql<number | null>`CASE
-                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) = 0    THEN 0
-                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) <= 0.05 THEN 1
-                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) <= 0.15 THEN 2
-                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) <= 0.30 THEN 3
+                                  WHEN ${teamChampionship.championship} <> 'regolari' THEN null
+                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId}, ${teamChampionship.championship} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) = 0    THEN 0
+                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId}, ${teamChampionship.championship} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) <= 0.05 THEN 1
+                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId}, ${teamChampionship.championship} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) <= 0.15 THEN 2
+                                  WHEN PERCENT_RANK() OVER (PARTITION BY ${teamRound.roundId}, ${teamChampionship.championship} ORDER BY ${coalesce(sum(teamTaskScore.score), 0)} DESC) <= 0.30 THEN 3
                                   ELSE null
                                 END`.as("medal"),
     })
     .from(team)
+    .innerJoin(teamChampionship, eq(teamChampionship.teamId, team.id))
     .innerJoin(edition, and(eq(edition.id, team.editionId), eq(edition.public, true)))
     .innerJoin(
       round,
       and(
         eq(round.editionId, edition.id),
         eq(round.public, true),
-        or(eq(team.finalist, true), ne(round.slug, "final")),
+        finalOnlyRegularFinalists(teamChampionship.championship),
       ),
     )
     .leftJoin(teamRound, and(eq(teamRound.teamId, team.id), eq(teamRound.roundId, round.id)))
@@ -495,8 +574,8 @@ export const v02b_teamRoundStats = pgMaterializedView("v02b_team_round_stats").a
     .innerJoin(institute, eq(institute.id, team.instituteId))
     .where(
       and(
-        eq(team.junior, false),
         eq(team.hidden, false),
+        championshipScoredInRound,
         notExists(
           qb
             .select({ id: teamRoundPenalization.id })
@@ -531,13 +610,14 @@ export const v02b_teamRoundStats = pgMaterializedView("v02b_team_round_stats").a
         ),
       ),
     )
-    .groupBy(teamRound.id, institute.region),
+    .groupBy(teamRound.id, teamChampionship.championship, institute.region),
 );
 
 export const v03b_roundStats = pgMaterializedView("v03b_round_stats").as((qb) =>
   qb
     .select({
       roundId: round.id,
+      championship: sql<string>`v02b_team_round_stats.championship`.as("championship"),
       teamScored: countDistinct(teamRound.teamId).as("team_scored"),
       totalScores: coalesce(sum(v02b_teamRoundStats.totalScores), 0).as("total_scores"),
       maxScore: coalesce(max(v02b_teamRoundStats.totalScores), 0).as("max_score"),
@@ -549,22 +629,23 @@ export const v03b_roundStats = pgMaterializedView("v03b_round_stats").as((qb) =>
     .innerJoin(v02b_teamRoundStats, eq(v02b_teamRoundStats.teamRoundId, teamRound.id))
     .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
     .where(and(eq(round.public, true), gt(v02b_teamRoundStats.totalScores, 0)))
-    .groupBy(round.id),
+    .groupBy(round.id, sql`v02b_team_round_stats.championship`),
 );
 
 export const v04a_teamStats = pgMaterializedView("v04a_team_stats").as((qb) =>
   qb
     .select({
       teamId: team.id,
+      championship: sql<string>`${teamChampionship.championship}`.as("championship"),
       totalScores: coalesce(sum(v02b_teamRoundStats.totalScores), 0).as("total_scores"),
-      rankTot:
-        sql<number>`RANK() OVER (PARTITION BY ${team.editionId} ORDER BY ${coalesce(sum(v02b_teamRoundStats.totalScores), 0)} DESC)`.as(
-          "rank_tot",
-        ),
-      rankReg:
-        sql<number>`RANK() OVER (PARTITION BY ${team.editionId}, ${institute.region} ORDER BY ${coalesce(sum(v02b_teamRoundStats.totalScores), 0)} DESC)`.as(
-          "rank_reg",
-        ),
+      rankTot: sql<number>`(RANK() OVER (
+          PARTITION BY ${team.editionId}, ${teamChampionship.championship}
+          ORDER BY ${coalesce(sum(v02b_teamRoundStats.totalScores), 0)} DESC
+        ))::int`.as("rank_tot"),
+      rankReg: sql<number>`(RANK() OVER (
+          PARTITION BY ${team.editionId}, ${teamChampionship.championship}, ${institute.region}
+          ORDER BY ${coalesce(sum(v02b_teamRoundStats.totalScores), 0)} DESC
+        ))::int`.as("rank_reg"),
       avgRoundRank: coalesce(avg(v02b_teamRoundStats.rankTot), 0).as("avg_round_rank"),
       bestRoundRank: coalesce(min(v02b_teamRoundStats.rankTot), 0).as("best_round_rank"),
       totalMedals: sql<Record<number, number>>`JSON_BUILD_OBJECT(
@@ -575,21 +656,27 @@ export const v04a_teamStats = pgMaterializedView("v04a_team_stats").as((qb) =>
       )`.as("total_medals"),
     })
     .from(team)
+    .innerJoin(teamChampionship, eq(teamChampionship.teamId, team.id))
     .innerJoin(edition, and(eq(edition.id, team.editionId), eq(edition.public, true)))
     .innerJoin(
       round,
       and(
         eq(round.editionId, edition.id),
         eq(round.public, true),
-        or(eq(team.finalist, true), ne(round.slug, "final")),
+        finalOnlyRegularFinalists(teamChampionship.championship),
       ),
     )
     .leftJoin(teamRound, and(eq(teamRound.teamId, team.id), eq(teamRound.roundId, round.id)))
-    .leftJoin(v02b_teamRoundStats, eq(v02b_teamRoundStats.teamRoundId, teamRound.id))
+    .leftJoin(
+      v02b_teamRoundStats,
+      and(
+        eq(v02b_teamRoundStats.teamRoundId, teamRound.id),
+        sql`v02b_team_round_stats.championship = team_championship.championship`,
+      ),
+    )
     .innerJoin(institute, eq(institute.id, team.instituteId))
     .where(
       and(
-        eq(team.junior, false),
         eq(team.hidden, false),
         notExists(
           qb
@@ -611,7 +698,7 @@ export const v04a_teamStats = pgMaterializedView("v04a_team_stats").as((qb) =>
         ),
       ),
     )
-    .groupBy(team.id, team.editionId, institute.region),
+    .groupBy(team.id, teamChampionship.championship, team.editionId, institute.region),
 );
 
 export const v05a_editionStats = pgMaterializedView("v05a_edition_stats").as((qb) =>
@@ -625,6 +712,8 @@ export const v05a_editionStats = pgMaterializedView("v05a_edition_stats").as((qb
     .from(v04a_teamStats)
     .innerJoin(team, and(eq(team.id, v04a_teamStats.teamId), eq(team.hidden, false)))
     .innerJoin(edition, and(eq(edition.id, team.editionId), eq(edition.public, true)))
+    // i totali di edizione sono quelli del campionato regolare
+    .where(sql`v04a_team_stats.championship = 'regolari'`)
     .groupBy(team.editionId),
 );
 
@@ -641,6 +730,8 @@ export const v06a_editionStats2 = pgMaterializedView("v06a_edition_stats2").as((
     .innerJoin(task, eq(task.roundId, teamRound.roundId))
     .innerJoin(round, and(eq(round.id, teamRound.roundId), eq(round.public, true)))
     .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
+    // istituti e task contati sui soli regolari, come le classifiche
+    .where(sql`v02b_team_round_stats.championship = 'regolari'`)
     .groupBy(round.editionId),
 );
 
@@ -669,6 +760,14 @@ export const v07a_instituteStats = pgMaterializedView("v07a_institute_stats").as
     .innerJoin(v04a_teamStats, eq(v04a_teamStats.teamId, team.id))
     .innerJoin(round, and(eq(round.id, teamRound.roundId), eq(round.public, true)))
     .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
+    // medaglie e rank dei soli regolari: i totali di istituto/regione non
+    // devono mai mischiare i campionati
+    .where(
+      and(
+        sql`v02b_team_round_stats.championship = 'regolari'`,
+        sql`v04a_team_stats.championship = 'regolari'`,
+      ),
+    )
     .groupBy(team.instituteId),
 );
 
@@ -696,5 +795,11 @@ export const v08a_regionStats = pgMaterializedView("v08a_region_stats").as((qb) 
     .innerJoin(round, and(eq(round.id, teamRound.roundId), eq(round.public, true)))
     .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
     .innerJoin(institute, eq(institute.id, team.instituteId))
+    .where(
+      and(
+        sql`v02b_team_round_stats.championship = 'regolari'`,
+        sql`v04a_team_stats.championship = 'regolari'`,
+      ),
+    )
     .groupBy(institute.region),
 );

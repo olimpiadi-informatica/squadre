@@ -14,10 +14,12 @@ export function TableSearch<T>({
   data,
   itemMatch,
   highlightRow,
+  onQueryChange,
 }: {
   data: T[];
   itemMatch: (search: string, item: T) => boolean;
   highlightRow: (index: number) => void;
+  onQueryChange: (query: string) => void;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const currentValue = useCallback(() => ref.current!.value.trim().toLowerCase(), []);
@@ -29,7 +31,8 @@ export function TableSearch<T>({
     setIsOpen(false);
     setCurrentRow(-1);
     highlightRow(-1);
-  }, [highlightRow]);
+    onQueryChange("");
+  }, [highlightRow, onQueryChange]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -68,6 +71,7 @@ export function TableSearch<T>({
   const onInput = useCallback(
     (event: InputEvent<HTMLInputElement>) => {
       const value = event.currentTarget.value.trim().toLowerCase();
+      onQueryChange(value);
       if (!value) {
         setCurrentRow(-1);
         highlightRow(-1);
@@ -78,7 +82,7 @@ export function TableSearch<T>({
       setCurrentRow(index);
       highlightRow(index);
     },
-    [findNext, highlightRow],
+    [findNext, highlightRow, onQueryChange],
   );
 
   const prev = () => {

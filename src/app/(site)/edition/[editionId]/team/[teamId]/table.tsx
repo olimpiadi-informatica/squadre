@@ -6,19 +6,30 @@ import { createContext, use, useCallback } from "react";
 import { Medal } from "~/components/medal";
 import { Score } from "~/components/score";
 import { Table } from "~/components/table";
+import { championshipPath } from "~/lib/championship-path";
+import { formatTableScore } from "~/lib/format";
 import type { RoundScoreItem, ScoreItem } from "~/lib/score";
 
-const TeamContext = createContext<{ scores: ScoreItem[] }>({
+const TeamContext = createContext<{ category: string; scores: ScoreItem[] }>({
+  category: "",
   scores: [],
 });
 
-export function TeamTable({ rounds, scores }: { rounds: RoundScoreItem[]; scores: ScoreItem[] }) {
+export function TeamTable({
+  rounds,
+  scores,
+  category,
+}: {
+  rounds: RoundScoreItem[];
+  scores: ScoreItem[];
+  category: string;
+}) {
   const itemMatch = useCallback((search: string, round: RoundScoreItem) => {
     return round.roundName.toLowerCase().includes(search);
   }, []);
 
   return (
-    <TeamContext.Provider value={{ scores }}>
+    <TeamContext.Provider value={{ category, scores }}>
       <Table
         data={rounds}
         itemMatch={itemMatch}
@@ -43,23 +54,29 @@ function TableHeaders() {
 }
 
 function TableRow({ item: round }: { item: RoundScoreItem }) {
-  const { scores } = use(TeamContext);
+  const { category, scores } = use(TeamContext);
 
   const roundScores = scores.filter((score) => score.roundSlug === round.roundSlug);
   return (
     <>
-      <Link href={`/edition/${round.editionId}/round/${round.roundSlug}`} className="link">
+      <Link
+        href={championshipPath(round.editionId, category, `/round/${round.roundSlug}`)}
+        className="link">
         {round.roundName}
       </Link>
       <div>
         <Medal rank={round.rank} medal={round.medal} />
       </div>
       <div>{round.regionalRank}</div>
-      <div>{round.totalScores}</div>
+      <div>{formatTableScore(round.totalScores)}</div>
       {roundScores.map((score) => (
         <Link
           key={score.taskSlug}
-          href={`/edition/${round.editionId}/round/${score.roundSlug}/${score.taskSlug}`}>
+          href={championshipPath(
+            round.editionId,
+            category,
+            `/round/${score.roundSlug}/${score.taskSlug}`,
+          )}>
           <abbr title={`${score.taskTitle} (${score.taskSlug})`} className="text-black">
             <Score score={score.score} maxScore={100} />
           </abbr>

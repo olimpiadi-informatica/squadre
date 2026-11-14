@@ -57,7 +57,7 @@ export default async function Page({ params }: PageProps<"/region/[regionId]">) 
             <p>
               {region.totalTeams} teams from {region.totalInstitutes} schools participated in{" "}
               {region.totalEditions} OIS editions from {region.name}, scoring a total of{" "}
-              {region.totalScores} points.
+              {Math.round(region.totalScores)} points.
             </p>
             <p>
               The best rank ever achieved by a team in {region.name} is{" "}

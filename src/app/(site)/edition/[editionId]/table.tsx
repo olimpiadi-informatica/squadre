@@ -8,15 +8,19 @@ import { Check } from "lucide-react";
 import { RegionImage } from "~/components/region";
 import { Score } from "~/components/score";
 import { Table } from "~/components/table";
+import { championshipPath } from "~/lib/championship-path";
+import { formatTableScore } from "~/lib/format";
 import type { RoundItem } from "~/lib/round";
 import type { RoundScoreItem } from "~/lib/score";
 import type { TeamResultItem } from "~/lib/team";
 
 const EditionContext = createContext<{
+  category: string;
   finalRound: RoundItem | undefined;
   nonFinalRounds: RoundItem[];
   scores: Record<string, RoundScoreItem[]>;
 }>({
+  category: "",
   finalRound: undefined,
   nonFinalRounds: [],
   scores: {},
@@ -26,10 +30,12 @@ export function EditionTable({
   teams,
   rounds,
   scores,
+  category,
 }: {
   teams: TeamResultItem[];
   rounds: RoundItem[];
   scores: Record<string, RoundScoreItem[]>;
+  category: string;
 }) {
   const finalRound = useMemo(() => rounds.find((r) => r.id === "final"), [rounds]);
   const nonFinalRounds = useMemo(() => rounds.filter((r) => r.id !== "final"), [rounds]);
@@ -43,14 +49,14 @@ export function EditionTable({
   }, []);
 
   return (
-    <EditionContext.Provider value={{ finalRound, nonFinalRounds, scores }}>
+    <EditionContext.Provider value={{ category, finalRound, nonFinalRounds, scores }}>
       <div className="w-full" style={{ "--cols": rounds.length - 1 } as CSSProperties}>
         <Table
           data={teams}
           itemMatch={itemMatch}
           header={TableHeaders}
           row={TableRow}
-          className="grid-cols-[auto_auto_1fr_1fr_3rem_3rem_repeat(var(--cols),4rem)_4.5rem]"
+          className="grid-cols-[auto_auto_1fr_1fr_3rem_3rem_repeat(var(--cols),5rem)_5rem]"
         />
       </div>
     </EditionContext.Provider>
@@ -58,12 +64,12 @@ export function EditionTable({
 }
 
 function TableHeaders() {
-  const { finalRound, nonFinalRounds } = use(EditionContext)!;
+  const { category, finalRound, nonFinalRounds } = use(EditionContext);
 
   return (
     <>
       <div>Rank</div>
-      <div>Reg. rank</div>
+      <div className="whitespace-nowrap">Reg. rank</div>
       <div>Teams</div>
       <div>Institute</div>
       <div>Region</div>
@@ -74,7 +80,9 @@ function TableHeaders() {
           return (
             <div key={round.id}>
               {round.public ? (
-                <Link href={`/edition/${round.editionId}/round/${round.id}`} className="link">
+                <Link
+                  href={championshipPath(round.editionId, category, `/round/${round.id}`)}
+                  className="link">
                   {round.name}
                 </Link>
               ) : (
@@ -88,14 +96,16 @@ function TableHeaders() {
 }
 
 function TableRow({ item: team }: { item: TeamResultItem }) {
-  const { finalRound, nonFinalRounds } = use(EditionContext)!;
+  const { category, finalRound, nonFinalRounds } = use(EditionContext);
 
   return (
     <>
       <div>{team.rank}</div>
       <div>{team.regionalRank}</div>
       <div className="min-w-48 text-wrap text-sm">
-        <Link href={`/edition/${team.editionId}/team/${team.slug}`} className="link">
+        <Link
+          href={championshipPath(team.editionId, category, `/team/${team.slug}`)}
+          className="link">
           {team.name}
         </Link>
       </div>
@@ -109,7 +119,7 @@ function TableRow({ item: team }: { item: TeamResultItem }) {
           <RegionImage id={team.regionId} name={team.regionName} className="inline-block" />
         </Link>
       </div>
-      <div>{team.totalScores}</div>
+      <div>{formatTableScore(team.totalScores)}</div>
       {finalRound && (
         <div>{team.finalist && <Check className="inline-block stroke-success" />}</div>
       )}

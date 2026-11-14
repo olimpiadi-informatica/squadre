@@ -1,6 +1,13 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne, notExists } from "drizzle-orm";
 import { chunk, groupBy, keyBy, meanBy, orderBy, sum, sumBy, take } from "es-toolkit";
 
+import {
+  championshipScoredInRound,
+  finalOnlyRegular,
+  membership,
+  REGOLARI,
+} from "~/lib/championship";
+import { championshipPath } from "~/lib/championship-path";
 import { db } from "~/lib/db";
 import {
   edition,
@@ -10,11 +17,13 @@ import {
   round,
   task,
   team,
+  teamChampionship,
   teamRound,
   teamTaskScore,
   v02b_teamRoundStats,
   v04a_teamStats,
 } from "~/lib/db/schema";
+import { exclusiveRounds, regularRoundsOnly } from "~/lib/round";
 
 export type HighlightInsert = {
   page: string;
@@ -216,7 +225,6 @@ type RawData = {
     instituteId: string;
     coach: string;
     finalist: boolean | null;
-    junior: boolean;
   }[];
   institutes: { id: string; name: string; city: string; region: string }[];
   regions: { id: string; name: string }[];
@@ -239,7 +247,25 @@ type RawData = {
   scores: { taskId: number; teamId: number; score: number }[];
 };
 
-export function computeAllHighlights(data: RawData): HighlightInsert[] {
+export type HighlightOptions = {
+  /**
+   * Pagine "di sito": /edition, /region e le pagine di edizione, regione e
+   * istituto. Sono pagine miste: i campionati non-regolari non devono
+   * scriverci (l'unica eccezione sono le pagine interamente loro).
+   */
+  site?: boolean;
+  /**
+   * Se presente, le pagine di round e task vengono emesse solo per i round
+   * indicati: serve per non toccare i round con classifiche parallele.
+   */
+  roundPages?: ReadonlySet<number>;
+};
+
+export function computeAllHighlights(
+  data: RawData,
+  options: HighlightOptions = {},
+): HighlightInsert[] {
+  const { site = true, roundPages } = options;
   type InstObj = (typeof data.institutes)[number] & {
     fullName: string;
     editions: Map<string, TeamObj[]>;
@@ -487,7 +513,7 @@ export function computeAllHighlights(data: RawData): HighlightInsert[] {
     (t) => t.name,
     "is the team with the highest average rank",
   );
-  if (h1) allHighlights.push({ page: "/edition", ...h1 });
+  if (site && h1) allHighlights.push({ page: "/edition", ...h1 });
 
   const h2 = bestofNumber(
     allTeamsList,
@@ -496,7 +522,7 @@ export function computeAllHighlights(data: RawData): HighlightInsert[] {
     (t) => t.name,
     "is the team with the highest total score",
   );
-  if (h2) allHighlights.push({ page: "/edition", ...h2 });
+  if (site && h2) allHighlights.push({ page: "/edition", ...h2 });
 
   const h3 = bestofNumber(
     allTasksList,
@@ -508,7 +534,7 @@ export function computeAllHighlights(data: RawData): HighlightInsert[] {
     (t) => t.title,
     "is the most difficult task",
   );
-  if (h3) allHighlights.push({ page: "/edition", ...h3 });
+  if (site && h3) allHighlights.push({ page: "/edition", ...h3 });
 
   const h4 = bestofNumber(
     allInstitutesList,
@@ -517,55 +543,57 @@ export function computeAllHighlights(data: RawData): HighlightInsert[] {
     (i) => i.name,
     "is the institute with the most points %",
   );
-  if (h4) allHighlights.push({ page: "/edition", ...h4 });
+  if (site && h4) allHighlights.push({ page: "/edition", ...h4 });
 
   // 2. /region (Italy view)
-  const italyStats: Stat<RegObj>[] = [
-    numberStat("schools", 1.9, (r) => r.institutes.size),
-    numberStat("teams", 1.8, (r) => r.teamsCount),
-    numberStat("points per team", 1.7, (r) => (r.teamsCount > 0 ? r.points / r.teamsCount : 0)),
-    numberStat("total points", 1.6, (r) => r.points),
-    medalsStat("awards", 1.4, (r) => r.medals),
-    numberStat("average rank", 1.5, (r) => r.bestavgrank),
-  ];
+  if (site) {
+    const italyStats: Stat<RegObj>[] = [
+      numberStat("schools", 1.9, (r) => r.institutes.size),
+      numberStat("teams", 1.8, (r) => r.teamsCount),
+      numberStat("points per team", 1.7, (r) => (r.teamsCount > 0 ? r.points / r.teamsCount : 0)),
+      numberStat("total points", 1.6, (r) => r.points),
+      medalsStat("awards", 1.4, (r) => r.medals),
+      numberStat("average rank", 1.5, (r) => r.bestavgrank),
+    ];
 
-  const regionScores = new Map<
-    string,
-    { score: number; achievements: { weight: number; text: string }[] }
-  >();
-  for (const r of regionsMap.values()) {
-    regionScores.set(r.id, { score: 0, achievements: [] });
-  }
-
-  const allRegionsList = Array.from(regionsMap.values());
-  for (const st of italyStats) {
-    const winner = st.evaluate(allRegionsList);
-    if (winner) {
-      recordAchievement(regionScores, winner.item.id, winner);
+    const regionScores = new Map<
+      string,
+      { score: number; achievements: { weight: number; text: string }[] }
+    >();
+    for (const r of regionsMap.values()) {
+      regionScores.set(r.id, { score: 0, achievements: [] });
     }
-  }
 
-  const topRegions = take(
-    orderBy(
-      Array.from(regionsMap.values())
-        .map((r) => ({ region: r, ...regionScores.get(r.id)! }))
-        .filter((r) => r.score > 0),
-      [(r) => r.score],
-      ["desc"],
-    ),
-    3,
-  );
+    const allRegionsList = Array.from(regionsMap.values());
+    for (const st of italyStats) {
+      const winner = st.evaluate(allRegionsList);
+      if (winner) {
+        recordAchievement(regionScores, winner.item.id, winner);
+      }
+    }
 
-  for (const tr of topRegions) {
-    const sortedAchievements = orderBy(tr.achievements, [(a) => a.weight], ["desc"]).map(
-      (a) => a.text,
+    const topRegions = take(
+      orderBy(
+        Array.from(regionsMap.values())
+          .map((r) => ({ region: r, ...regionScores.get(r.id)! }))
+          .filter((r) => r.score > 0),
+        [(r) => r.score],
+        ["desc"],
+      ),
+      3,
     );
-    allHighlights.push({
-      page: "/region",
-      link: `/region/${tr.region.id}`,
-      name: tr.region.name,
-      description: `is the region with the ${joiner(sortedAchievements)}`,
-    });
+
+    for (const tr of topRegions) {
+      const sortedAchievements = orderBy(tr.achievements, [(a) => a.weight], ["desc"]).map(
+        (a) => a.text,
+      );
+      allHighlights.push({
+        page: "/region",
+        link: `/region/${tr.region.id}`,
+        name: tr.region.name,
+        description: `is the region with the ${joiner(sortedAchievements)}`,
+      });
+    }
   }
 
   // 3. /edition/:editionId
@@ -573,52 +601,56 @@ export function computeAllHighlights(data: RawData): HighlightInsert[] {
     const edPage = `/edition/${ed.id}`;
     const edTasks = ed.rounds.flatMap((r) => r.tasks);
 
-    // Task più difficile dell'edizione
-    const edH1 = bestofNumber(
-      edTasks,
-      (t) => -t.average,
-      (t) => {
-        const r = roundsMap.get(t.roundId)!;
-        return ["edition", ed.id, "round", r.slug, t.slug];
-      },
-      (t) => t.title,
-      "is the most difficult task of this edition",
-    );
-    if (edH1) allHighlights.push({ page: edPage, ...edH1 });
+    if (site) {
+      // Task più difficile dell'edizione
+      const edH1 = bestofNumber(
+        edTasks,
+        (t) => -t.average,
+        (t) => {
+          const r = roundsMap.get(t.roundId)!;
+          return ["edition", ed.id, "round", r.slug, t.slug];
+        },
+        (t) => t.title,
+        "is the most difficult task of this edition",
+      );
+      if (edH1) allHighlights.push({ page: edPage, ...edH1 });
 
-    // Istituto con più punti nell'edizione
-    const edH2 = bestofNumber(
-      ed.teams,
-      (t) => t.points,
-      (t) => ["region", t.institute!.region, t.institute!.id],
-      (t) => t.institute!.fullName,
-      "is the institute with the most points %",
-    );
-    if (edH2) allHighlights.push({ page: edPage, ...edH2 });
+      // Istituto con più punti nell'edizione
+      const edH2 = bestofNumber(
+        ed.teams,
+        (t) => t.points,
+        (t) => ["region", t.institute!.region, t.institute!.id],
+        (t) => t.institute!.fullName,
+        "is the institute with the most points %",
+      );
+      if (edH2) allHighlights.push({ page: edPage, ...edH2 });
 
-    // Regione con più punti nell'edizione
-    const edH3 = bestofNumber(
-      ed.teams,
-      (t) => t.points,
-      (t) => ["region", t.region!.id],
-      (t) => t.region!.name,
-      "is the region with the most points %",
-    );
-    if (edH3) allHighlights.push({ page: edPage, ...edH3 });
+      // Regione con più punti nell'edizione
+      const edH3 = bestofNumber(
+        ed.teams,
+        (t) => t.points,
+        (t) => ["region", t.region!.id],
+        (t) => t.region!.name,
+        "is the region with the most points %",
+      );
+      if (edH3) allHighlights.push({ page: edPage, ...edH3 });
 
-    // Squadra con i migliori premi nell'edizione
-    const edH4 = bestof(
-      ed.teams,
-      (t) => t.medals,
-      (t) => ["edition", ed.id, "team", t.slug],
-      (t) => t.name,
-      "is the team with the best awards",
-      compareMedals,
-    );
-    if (edH4) allHighlights.push({ page: edPage, ...edH4 });
+      // Squadra con i migliori premi nell'edizione
+      const edH4 = bestof(
+        ed.teams,
+        (t) => t.medals,
+        (t) => ["edition", ed.id, "team", t.slug],
+        (t) => t.name,
+        "is the team with the best awards",
+        compareMedals,
+      );
+      if (edH4) allHighlights.push({ page: edPage, ...edH4 });
+    }
 
     // 4. /edition/:editionId/round/:roundSlug
     for (const r of ed.rounds) {
+      if (roundPages && !roundPages.has(r.id)) continue;
+
       const roundPage = `/edition/${ed.id}/round/${r.slug}`;
       const rTeams = ed.teams.filter((t) => t.rounds.has(r.id));
 
@@ -808,6 +840,7 @@ export function computeAllHighlights(data: RawData): HighlightInsert[] {
   ];
 
   for (const reg of regionsMap.values()) {
+    if (!site) continue;
     const regPage = `/region/${reg.id}`;
     const regInstitutes = Array.from(reg.institutes).filter((i) => i.teamsCount > 0);
     const regTeams = reg.teams;
@@ -906,6 +939,7 @@ export function computeAllHighlights(data: RawData): HighlightInsert[] {
   ];
 
   for (const inst of institutesMap.values()) {
+    if (!site) continue;
     if (inst.teamsCount === 0) continue;
     const instPage = `/region/${inst.region}/${inst.id}`;
 
@@ -998,121 +1032,274 @@ export function computeAllHighlights(data: RawData): HighlightInsert[] {
   return allHighlights;
 }
 
-export async function refreshHighlights(): Promise<void> {
-  const [editions, rounds, tasks, teams, institutes, regions, teamRounds, teamStats, scores] =
-    await Promise.all([
-      db
-        .select({
-          id: edition.id,
-          title: edition.title,
-          year: edition.year,
-          public: edition.public,
-        })
-        .from(edition)
-        .where(eq(edition.public, true))
-        .orderBy(edition.id),
+/**
+ * Round e task di un campionato.
+ *
+ * Con `championship = null` sono quelli dei regolari (round con almeno un task
+ * regolare), altrimenti i round in cui quel campionato ha segnato. `roundPages`
+ * contiene i round riservati a quel campionato: sono gli unici su cui sia
+ * lecito scrivere le pagine di round/task del campionato, perché gli altri
+ * hanno anche le classifiche regolari.
+ */
+async function loadRoundsAndTasks(championship: string | null): Promise<{
+  rounds: {
+    id: number;
+    slug: string;
+    editionId: string;
+    title: string;
+    fullscore: number;
+    public: boolean;
+  }[];
+  tasks: { id: number; slug: string; roundId: number; title: string }[];
+  roundPages: Set<number>;
+}> {
+  const where =
+    championship == null
+      ? and(eq(round.public, true), eq(edition.public, true), regularRoundsOnly)
+      : and(
+          eq(round.public, true),
+          eq(edition.public, true),
+          finalOnlyRegular(championship),
+          championshipScoredInRound(championship),
+        );
 
-      db
-        .select({
-          id: round.id,
-          slug: round.slug,
-          editionId: round.editionId,
-          title: round.title,
-          fullscore: round.fullscore,
-          public: round.public,
-        })
-        .from(round)
-        .where(eq(round.public, true))
-        .orderBy(round.id),
+  const [rows, tasks] = await Promise.all([
+    db
+      .select({
+        id: round.id,
+        slug: round.slug,
+        editionId: round.editionId,
+        title: round.title,
+        fullscore: round.fullscore,
+        public: round.public,
+        exclusive: exclusiveRounds,
+      })
+      .from(round)
+      .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
+      .where(where)
+      .orderBy(round.id),
+    db
+      .select({
+        id: task.id,
+        slug: task.slug,
+        roundId: task.roundId,
+        title: task.title,
+      })
+      .from(task)
+      .innerJoin(round, eq(round.id, task.roundId))
+      .innerJoin(edition, eq(edition.id, round.editionId))
+      .where(where)
+      .orderBy(task.id),
+  ]);
 
-      db
-        .select({
-          id: task.id,
-          slug: task.slug,
-          roundId: task.roundId,
-          title: task.title,
-        })
-        .from(task)
-        .orderBy(task.id),
-
-      db
-        .select({
-          id: team.id,
-          slug: team.slug,
-          editionId: team.editionId,
-          name: team.name,
-          instituteId: team.instituteId,
-          coach: team.coach,
-          finalist: team.finalist,
-          junior: team.junior,
-        })
-        .from(team)
-        .where(and(eq(team.junior, false), eq(team.hidden, false)))
-        .orderBy(team.id),
-
-      db
-        .select({
-          id: institute.id,
-          name: institute.name,
-          city: institute.city,
-          region: institute.region,
-        })
-        .from(institute),
-
-      db
-        .select({
-          id: region.id,
-          name: region.name,
-        })
-        .from(region),
-
-      db
-        .select({
-          id: teamRound.id,
-          roundId: teamRound.roundId,
-          teamId: teamRound.teamId,
-          totalScores: v02b_teamRoundStats.totalScores,
-          rankTot: v02b_teamRoundStats.rankTot,
-          rankReg: v02b_teamRoundStats.rankReg,
-          medal: v02b_teamRoundStats.medal,
-        })
-        .from(teamRound)
-        .innerJoin(v02b_teamRoundStats, eq(v02b_teamRoundStats.teamRoundId, teamRound.id)),
-
-      db
-        .select({
-          id: v04a_teamStats.teamId,
-          totalScores: v04a_teamStats.totalScores,
-          rankTot: v04a_teamStats.rankTot,
-          rankReg: v04a_teamStats.rankReg,
-          totalMedals: v04a_teamStats.totalMedals,
-        })
-        .from(v04a_teamStats),
-
-      db
-        .select({
-          taskId: teamTaskScore.taskId,
-          teamId: teamTaskScore.teamId,
-          score: teamTaskScore.score,
-        })
-        .from(teamTaskScore),
-    ]);
-
-  const allHighlights = computeAllHighlights({
-    editions,
-    rounds,
+  return {
+    rounds: rows.map(({ exclusive, ...row }) => row),
     tasks,
-    teams,
+    roundPages: new Set(rows.filter((row) => row.exclusive).map((row) => row.id)),
+  };
+}
+
+/** Le pagine `/edition/:id/...` di un campionato non-regolare hanno il suo slug in fondo. */
+function inChampionship(item: HighlightInsert, championship: string): HighlightInsert {
+  const toChampionship = (path: string) =>
+    path.replace(/^\/edition\/([^/]+)(\/.*)?$/, (_, editionId: string, rest = "") =>
+      championshipPath(editionId, championship, rest),
+    );
+  return { ...item, page: toChampionship(item.page), link: toChampionship(item.link) };
+}
+
+/** Squadre, round e classifica di un singolo campionato. */
+async function loadTeamsData(
+  championship: string,
+  exclusiveMemberships: boolean,
+): Promise<{
+  teams: {
+    id: number;
+    slug: string;
+    editionId: string;
+    name: string;
+    instituteId: string;
+    coach: string;
+    finalist: boolean | null;
+  }[];
+  teamRounds: {
+    id: number;
+    roundId: number;
+    teamId: number;
+    totalScores: number;
+    rankTot: number;
+    rankReg: number;
+    medal: number | null;
+  }[];
+  teamStats: {
+    id: number;
+    totalScores: number;
+    rankTot: number;
+    rankReg: number;
+    totalMedals: Record<number, number> | null;
+  }[];
+}> {
+  const [teams, teamRounds, teamStats] = await Promise.all([
+    db
+      .select({
+        id: team.id,
+        slug: team.slug,
+        editionId: team.editionId,
+        name: team.name,
+        instituteId: team.instituteId,
+        coach: team.coach,
+        finalist: team.finalist,
+      })
+      .from(team)
+      .innerJoin(teamChampionship, membership(championship))
+      .where(
+        and(
+          eq(team.hidden, false),
+          // le squadre iscritte a più campionati (le 'bt-') hanno già le loro
+          // pagine nella passata dei regolari
+          exclusiveMemberships
+            ? notExists(
+                db
+                  .select({ teamId: teamChampionship.teamId })
+                  .from(teamChampionship)
+                  .where(
+                    and(
+                      eq(teamChampionship.teamId, team.id),
+                      eq(teamChampionship.championship, REGOLARI),
+                    ),
+                  ),
+              )
+            : undefined,
+        ),
+      )
+      .orderBy(team.id),
+
+    db
+      .select({
+        id: teamRound.id,
+        roundId: teamRound.roundId,
+        teamId: teamRound.teamId,
+        totalScores: v02b_teamRoundStats.totalScores,
+        rankTot: v02b_teamRoundStats.rankTot,
+        rankReg: v02b_teamRoundStats.rankReg,
+        medal: v02b_teamRoundStats.medal,
+      })
+      .from(teamRound)
+      .innerJoin(
+        v02b_teamRoundStats,
+        and(
+          eq(v02b_teamRoundStats.teamRoundId, teamRound.id),
+          eq(v02b_teamRoundStats.championship, championship),
+        ),
+      ),
+
+    db
+      .select({
+        id: v04a_teamStats.teamId,
+        totalScores: v04a_teamStats.totalScores,
+        rankTot: v04a_teamStats.rankTot,
+        rankReg: v04a_teamStats.rankReg,
+        totalMedals: v04a_teamStats.totalMedals,
+      })
+      .from(v04a_teamStats)
+      .where(eq(v04a_teamStats.championship, championship)),
+  ]);
+
+  return { teams, teamRounds, teamStats };
+}
+
+export async function refreshHighlights(): Promise<void> {
+  const [editions, institutes, regions, scores, otherChampionships] = await Promise.all([
+    db
+      .select({
+        id: edition.id,
+        title: edition.title,
+        year: edition.year,
+        public: edition.public,
+      })
+      .from(edition)
+      .where(eq(edition.public, true))
+      .orderBy(edition.id),
+
+    db
+      .select({
+        id: institute.id,
+        name: institute.name,
+        city: institute.city,
+        region: institute.region,
+      })
+      .from(institute),
+
+    db
+      .select({
+        id: region.id,
+        name: region.name,
+      })
+      .from(region),
+
+    db
+      .select({
+        taskId: teamTaskScore.taskId,
+        teamId: teamTaskScore.teamId,
+        score: teamTaskScore.score,
+      })
+      .from(teamTaskScore),
+
+    db
+      .selectDistinct({ championship: v02b_teamRoundStats.championship })
+      .from(v02b_teamRoundStats)
+      .where(ne(v02b_teamRoundStats.championship, REGOLARI))
+      .orderBy(v02b_teamRoundStats.championship),
+  ]);
+
+  // 1. regolari: tutte le pagine, come sempre
+  const [regularRounds, regularTeams] = await Promise.all([
+    loadRoundsAndTasks(null),
+    loadTeamsData(REGOLARI, false),
+  ]);
+  const highlights = computeAllHighlights({
+    editions,
+    rounds: regularRounds.rounds,
+    tasks: regularRounds.tasks,
+    teams: regularTeams.teams,
     institutes,
     regions,
-    teamRounds,
-    teamStats,
+    teamRounds: regularTeams.teamRounds,
+    teamStats: regularTeams.teamStats,
     scores,
   });
 
+  // 2. ogni altro campionato: solo le sue pagine (mai quelle miste)
+  const perChampionship = await Promise.all(
+    otherChampionships.map(async ({ championship }) => {
+      const [rounds, teams] = await Promise.all([
+        loadRoundsAndTasks(championship),
+        loadTeamsData(championship, true),
+      ]);
+      const items = computeAllHighlights(
+        {
+          editions,
+          rounds: rounds.rounds,
+          tasks: rounds.tasks,
+          teams: teams.teams,
+          institutes,
+          regions,
+          teamRounds: teams.teamRounds,
+          teamStats: teams.teamStats,
+          scores,
+        },
+        { site: false, roundPages: rounds.roundPages },
+      );
+      return items.map((item) => inChampionship(item, championship));
+    }),
+  );
+  for (const extra of perChampionship) {
+    highlights.push(...extra);
+  }
+
   await db.transaction(async (tx) => {
     await tx.delete(highlight);
-    for (const batch of chunk(allHighlights, 2000)) {
+    for (const batch of chunk(highlights, 2000)) {
       await tx.insert(highlight).values(batch);
     }
   });

@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 
 import { db } from "~/lib/db";
-import { institute, round, team, teamRound } from "~/lib/db/schema";
+import { institute, round, team, teamChampionship, teamRound } from "~/lib/db/schema";
 import { generateWord } from "~/lib/password";
 
 export const TEST_INSTITUTE_ALDINI = {
@@ -28,56 +28,56 @@ export const TEST_TEAMS = [
   // Gruppo 1: inviato a ois@aldini.istruzioneer.it
   {
     slug: "t-ois-001",
+    championship: "regolari",
     name: "Fuffole Buffose",
     instituteId: TEST_INSTITUTE_ALDINI.id,
     coach: "OIS Staff",
-    junior: false,
     hidden: true,
     unrestricted: false,
   },
   {
     slug: "b-ois-002",
+    championship: "esordienti",
     name: "I Trùzzi",
     instituteId: TEST_INSTITUTE_ALDINI.id,
     coach: "OIS Staff",
-    junior: true,
     hidden: true,
     unrestricted: false,
   },
   {
     slug: "bt-ois-003",
+    championship: "regolari",
     name: "Nerd+Nerd",
     instituteId: TEST_INSTITUTE_ALDINI.id,
     coach: "OIS Staff",
-    junior: false,
     hidden: true,
     unrestricted: false,
   },
   // Gruppo 2: i "tonni", inviati a ois-staff@googlegroups.com
   {
     slug: "tonno",
+    championship: "regolari",
     name: "Fuffole Buffose",
     instituteId: TEST_INSTITUTE_STAFF.id,
     coach: "OIS Staff",
-    junior: false,
     hidden: true,
     unrestricted: true,
   },
   {
     slug: "bonno",
+    championship: "esordienti",
     name: "I Trùzzi",
     instituteId: TEST_INSTITUTE_STAFF.id,
     coach: "OIS Staff",
-    junior: true,
     hidden: true,
     unrestricted: true,
   },
   {
     slug: "btonno",
+    championship: "esordienti",
     name: "Nerd+Nerd",
     instituteId: TEST_INSTITUTE_STAFF.id,
     coach: "OIS Staff",
-    junior: true,
     hidden: true,
     unrestricted: true,
   },
@@ -116,7 +116,6 @@ export async function seedTestUsers(editionId: string): Promise<void> {
           name: t.name,
           instituteId: t.instituteId,
           coach: t.coach,
-          junior: t.junior,
           hidden: t.hidden,
           unrestricted: t.unrestricted,
         },
@@ -125,6 +124,12 @@ export async function seedTestUsers(editionId: string): Promise<void> {
 
     if (teamRow) {
       insertedTeamIds.push(teamRow.id);
+
+      // 2b. Le squadre di test appartengono a un solo campionato
+      await db.delete(teamChampionship).where(eq(teamChampionship.teamId, teamRow.id));
+      await db
+        .insert(teamChampionship)
+        .values({ teamId: teamRow.id, championship: t.championship });
     }
   }
 

@@ -1,14 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useCallback } from "react";
+import { createContext, use, useCallback } from "react";
 
 import { RegionImage } from "~/components/region";
 import { Table } from "~/components/table";
+import { championshipPath } from "~/lib/championship-path";
+import { formatTableScore } from "~/lib/format";
 import type { TaskScoreItem } from "~/lib/score";
 
-export function TaskTable({ scores }: { scores: TaskScoreItem[] }) {
+const TaskContext = createContext<{ editionId: string; category: string }>({
+  editionId: "",
+  category: "",
+});
+
+export function TaskTable({
+  editionId,
+  category,
+  scores,
+}: {
+  editionId: string;
+  category: string;
+  scores: TaskScoreItem[];
+}) {
   const itemMatch = useCallback((search: string, score: TaskScoreItem) => {
     return (
       score.teamName.toLowerCase().includes(search) ||
@@ -18,13 +32,15 @@ export function TaskTable({ scores }: { scores: TaskScoreItem[] }) {
   }, []);
 
   return (
-    <Table
-      data={scores}
-      itemMatch={itemMatch}
-      header={TableHeaders}
-      row={TableRow}
-      className="grid-cols-[3rem_1fr_1fr_3rem_3rem]"
-    />
+    <TaskContext.Provider value={{ editionId, category }}>
+      <Table
+        data={scores}
+        itemMatch={itemMatch}
+        header={TableHeaders}
+        row={TableRow}
+        className="grid-cols-[3rem_1fr_1fr_3rem_3rem]"
+      />
+    </TaskContext.Provider>
   );
 }
 
@@ -41,13 +57,15 @@ function TableHeaders() {
 }
 
 function TableRow({ item: score }: { item: TaskScoreItem }) {
-  const params = useParams();
+  const { editionId, category } = use(TaskContext);
 
   return (
     <>
       <div>{score.rank}</div>
       <div className="min-w-48 text-wrap text-sm">
-        <Link href={`/edition/${params.editionId}/team/${score.teamSlug}`} className="link">
+        <Link
+          href={championshipPath(editionId, category, `/team/${score.teamSlug}`)}
+          className="link">
           {score.teamName}
         </Link>
       </div>
@@ -61,7 +79,7 @@ function TableRow({ item: score }: { item: TaskScoreItem }) {
           <RegionImage id={score.regionId} name={score.regionName} className="inline-block" />
         </Link>
       </div>
-      <div>{score.score}</div>
+      <div>{formatTableScore(score.score)}</div>
     </>
   );
 }

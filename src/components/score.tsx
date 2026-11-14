@@ -1,5 +1,7 @@
 import clsx from "clsx";
 
+import { formatTableScore } from "~/lib/format";
+
 export function Score({
   score,
   maxScore,
@@ -27,7 +29,7 @@ export function Score({
         "bg-emerald-100": percent > 15 && percent <= 30,
         "bg-emerald-50": percent <= 15,
       })}>
-      {score}
+      {formatTableScore(score)}
     </span>
   );
 }

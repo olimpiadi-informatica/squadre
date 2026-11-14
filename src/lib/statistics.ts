@@ -1,5 +1,6 @@
 import { and, asc, eq, isNotNull, isNull, notExists, or } from "drizzle-orm";
 
+import { membership, REGOLARI } from "~/lib/championship";
 import { db } from "~/lib/db";
 import {
   institute,
@@ -7,6 +8,7 @@ import {
   region,
   task,
   team,
+  teamChampionship,
   teamRound,
   teamRoundPenalization,
   teamTaskScore,
@@ -56,10 +58,9 @@ export async function getRoundStatistics(roundId: number): Promise<RoundStatisti
       })
       .from(teamTaskScore)
       .innerJoin(task, and(eq(task.id, teamTaskScore.taskId), eq(task.roundId, roundId)))
-      .innerJoin(
-        team,
-        and(eq(team.id, teamTaskScore.teamId), eq(team.junior, false), eq(team.hidden, false)),
-      )
+      .innerJoin(team, and(eq(team.id, teamTaskScore.teamId), eq(team.hidden, false)))
+      // le statistiche di un round riguardano i regolari, come le classifiche
+      .innerJoin(teamChampionship, membership(REGOLARI))
       .innerJoin(institute, eq(institute.id, team.instituteId))
       .innerJoin(teamRound, and(eq(teamRound.teamId, team.id), eq(teamRound.roundId, roundId)))
       .where(

@@ -50,7 +50,7 @@ function TableRow({ item: institute }: { item: Institute }) {
       <div>{institute.totalEditions}</div>
       <div>{institute.totalTeams}</div>
       <Medals medals={institute.totalMedals} />
-      <div>{institute.totalScores}</div>
+      <div>{Math.round(institute.totalScores)}</div>
     </>
   );
 }

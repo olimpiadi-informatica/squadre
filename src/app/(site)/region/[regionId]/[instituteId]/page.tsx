@@ -54,8 +54,8 @@ export default async function Page({ params }: PageProps<"/region/[regionId]/[in
           <CardBody title={`${institute.name}, ${institute.city}, ${institute.regionName}`}>
             <p>
               {institute.totalTeams} teams from this institute participated in{" "}
-              {institute.totalEditions} OIS editions, scoring a total of {institute.totalScores}{" "}
-              points.
+              {institute.totalEditions} OIS editions, scoring a total of{" "}
+              {Math.round(institute.totalScores)} points.
             </p>
             <p>
               The best rank ever achieved by a team of {institute.name} is{" "}

@@ -13,6 +13,7 @@ import {
   sql,
 } from "drizzle-orm";
 
+import { sortChampionships } from "./championship";
 import { db } from "./db";
 import { penalizedRound, penalizedTeamRound } from "./db/aliases";
 import {
@@ -143,12 +144,7 @@ export const getRoundAdmin = cache(
   },
 );
 
-export type Round = {
-  slug: string;
-  name: string;
-  editionId: string;
-  editionName: string;
-
+export type RoundStats = {
   teamScored: number;
   totalScores: number;
   maxScore: number;
@@ -156,26 +152,58 @@ export type Round = {
   medianScore: number;
 };
 
+export type Round = {
+  slug: string;
+  name: string;
+  editionId: string;
+  editionName: string;
+  /**
+   * Le statistiche del round per ciascun campionato che vi ha gareggiato: i
+   * round con classifiche parallele (OIS 11-15) ne hanno più di una.
+   */
+  championships: { championship: string; stats: RoundStats }[];
+};
+
 export const getRound = cache(
   async (editionId: string, roundSlug: string): Promise<Round | undefined> => {
-    const [result] = await db
+    const [base] = await db
       .select({
         slug: round.slug,
         name: round.title,
         editionId: edition.id,
         editionName: edition.title,
+        roundId: round.id,
+      })
+      .from(round)
+      .innerJoin(edition, eq(edition.id, round.editionId))
+      .where(and(eq(edition.id, editionId), eq(round.slug, roundSlug)));
+    if (!base) return undefined;
 
+    const stats = await db
+      .select({
+        championship: v03b_roundStats.championship,
         teamScored: v03b_roundStats.teamScored,
         totalScores: v03b_roundStats.totalScores,
         maxScore: v03b_roundStats.maxScore,
         avgScore: v03b_roundStats.avgScore,
         medianScore: v03b_roundStats.medianScore,
       })
-      .from(round)
-      .innerJoin(v03b_roundStats, eq(v03b_roundStats.roundId, round.id))
-      .innerJoin(edition, eq(edition.id, round.editionId))
-      .where(and(eq(edition.id, editionId), eq(round.slug, roundSlug)));
-    return result;
+      .from(v03b_roundStats)
+      .where(eq(v03b_roundStats.roundId, base.roundId));
+    if (stats.length === 0) return undefined;
+
+    const { roundId, ...rest } = base;
+    const byChampionship = new Map(stats.map((row) => [row.championship, row]));
+    return {
+      ...rest,
+      // ordine dei tab: prima i regolari
+      championships: sortChampionships([...byChampionship.keys()]).flatMap((championship) => {
+        const row = byChampionship.get(championship);
+        if (!row) return [];
+        const { championship: _championship, ...values } = row;
+        return [{ championship, stats: values }];
+      }),
+    };
   },
 );
 
@@ -186,6 +214,22 @@ export type RoundItem = {
   maxScore: number;
   public: boolean;
 };
+
+/**
+ * Esclude i round riservati agli esordienti (OIS 16-17): sono gli unici a non
+ * avere task regolari. Un round senza task (edizione appena creata) resta
+ * incluso.
+ */
+export const regularRoundsOnly = sql`(
+  not exists (select 1 from task t where t.round_id = ${round.id})
+  or exists (select 1 from task t where t.round_id = ${round.id} and t.regular = true)
+)`;
+
+/** Round con task ma nessun task regolare: riservati a un campionato. */
+export const exclusiveRounds = sql<boolean>`(
+  exists (select 1 from task t where t.round_id = ${round.id} and t.regular = false)
+  and not exists (select 1 from task t where t.round_id = ${round.id} and t.regular = true)
+)`;
 
 export const listAllRounds = cache((editionId?: string): Promise<RoundItem[]> => {
   return db
@@ -198,6 +242,12 @@ export const listAllRounds = cache((editionId?: string): Promise<RoundItem[]> =>
     })
     .from(round)
     .innerJoin(edition, and(eq(round.editionId, edition.id), eq(edition.public, true)))
-    .where(and(eq(round.editionId, editionId ?? "").if(editionId), eq(round.public, true)))
+    .where(
+      and(
+        eq(round.editionId, editionId ?? "").if(editionId),
+        eq(round.public, true),
+        regularRoundsOnly,
+      ),
+    )
     .orderBy(round.startsAt, round.slug);
 });

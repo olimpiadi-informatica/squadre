@@ -2,8 +2,31 @@ import { cache } from "react";
 
 import { and, eq, notInArray, sql } from "drizzle-orm";
 
+import {
+  ESORDIENTI,
+  finalOnlyRegular,
+  membership,
+  REGOLARI,
+  sortChampionships,
+} from "./championship";
 import { db } from "./db";
-import { edition, round, task, team, teamTaskScore, v00a_taskStats } from "./db/schema";
+import {
+  edition,
+  round,
+  task,
+  teamChampionship,
+  teamRound,
+  teamTaskScore,
+  v00a_taskStats,
+} from "./db/schema";
+
+export type TaskStats = {
+  teamScored: number;
+  totalScores: number;
+  maxScore: number;
+  avgScore: number;
+  medianScore: number;
+};
 
 export type Task = {
   slug: string;
@@ -13,36 +36,60 @@ export type Task = {
   roundSlug: string;
   roundName: string;
   statement: string;
-  teamScored: number;
-  totalScores: number;
-  maxScore: number;
-  avgScore: number;
-  medianScore: number;
+  /**
+   * Le statistiche del task, per ciascun campionato che vi ha gareggiato: un
+   * task "condiviso" (OIS 11-15) ha classifiche parallele, uno solo degli
+   * esordienti (round `1e`-`4e`) un'unica voce.
+   */
+  championships: { championship: string; stats: TaskStats }[];
 };
 
-export const getTask = cache(async (taskSlug: string): Promise<Task | undefined> => {
-  const [result] = await db
-    .select({
-      slug: task.slug,
-      title: task.title,
-      editionId: edition.id,
-      editionName: edition.title,
-      roundSlug: round.slug,
-      roundName: round.title,
-      statement: task.statement,
-      teamScored: v00a_taskStats.teamScored,
-      totalScores: v00a_taskStats.totalScores,
-      maxScore: v00a_taskStats.maxScore,
-      avgScore: v00a_taskStats.avgScore,
-      medianScore: v00a_taskStats.medianScore,
-    })
-    .from(task)
-    .innerJoin(v00a_taskStats, eq(v00a_taskStats.taskId, task.id))
-    .innerJoin(round, eq(round.id, task.roundId))
-    .innerJoin(edition, eq(edition.id, round.editionId))
-    .where(eq(task.slug, taskSlug));
-  return result;
-});
+export const getTask = cache(
+  async (editionId: string, roundSlug: string, taskSlug: string): Promise<Task | undefined> => {
+    const [base] = await db
+      .select({
+        id: task.id,
+        slug: task.slug,
+        title: task.title,
+        editionId: edition.id,
+        editionName: edition.title,
+        roundSlug: round.slug,
+        roundName: round.title,
+        statement: task.statement,
+      })
+      .from(task)
+      .innerJoin(round, eq(round.id, task.roundId))
+      .innerJoin(edition, eq(edition.id, round.editionId))
+      .where(and(eq(edition.id, editionId), eq(round.slug, roundSlug), eq(task.slug, taskSlug)));
+    if (!base) return undefined;
+
+    const stats = await db
+      .select({
+        championship: v00a_taskStats.championship,
+        teamScored: v00a_taskStats.teamScored,
+        totalScores: v00a_taskStats.totalScores,
+        maxScore: v00a_taskStats.maxScore,
+        avgScore: v00a_taskStats.avgScore,
+        medianScore: v00a_taskStats.medianScore,
+      })
+      .from(v00a_taskStats)
+      .where(eq(v00a_taskStats.taskId, base.id));
+    if (stats.length === 0) return undefined;
+
+    const { id: _id, ...rest } = base;
+    const byChampionship = new Map(stats.map((row) => [row.championship, row]));
+    return {
+      ...rest,
+      // ordine dei tab: prima i regolari
+      championships: sortChampionships([...byChampionship.keys()]).flatMap((championship) => {
+        const row = byChampionship.get(championship);
+        if (!row) return [];
+        const { championship: _championship, ...values } = row;
+        return [{ championship, stats: values }];
+      }),
+    };
+  },
+);
 
 export type TaskItem = {
   slug: string;
@@ -50,24 +97,48 @@ export type TaskItem = {
   roundSlug: string;
 };
 
-export const listTasks = cache((editionId?: string, roundSlug?: string): Promise<TaskItem[]> => {
-  return db
-    .select({
-      slug: task.slug,
-      editionId: edition.id,
-      roundSlug: round.slug,
-    })
-    .from(task)
-    .innerJoin(round, and(eq(round.id, task.roundId), eq(round.public, true)))
-    .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
-    .where(
-      and(
-        eq(edition.id, editionId ?? "").if(editionId),
-        eq(round.slug, roundSlug ?? "").if(roundSlug),
-      ),
-    )
-    .orderBy(task.slug);
-});
+/**
+ * Task di un'edizione. Per i campionati non-regolari restituisce solo i task
+ * che quel campionato ha effettivamente gareggiato.
+ */
+export const listTasks = cache(
+  (
+    editionId?: string,
+    roundSlug?: string,
+    championship: string = REGOLARI,
+  ): Promise<TaskItem[]> => {
+    const base = db
+      .select({
+        slug: task.slug,
+        editionId: edition.id,
+        roundSlug: round.slug,
+      })
+      .from(task)
+      .innerJoin(round, and(eq(round.id, task.roundId), eq(round.public, true)))
+      .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)));
+
+    const where = and(
+      eq(edition.id, editionId ?? "").if(editionId),
+      eq(round.slug, roundSlug ?? "").if(roundSlug),
+      finalOnlyRegular(championship),
+    );
+
+    if (championship === REGOLARI) {
+      return base.where(where).orderBy(task.slug);
+    }
+
+    return base
+      .innerJoin(teamRound, eq(teamRound.roundId, round.id))
+      .innerJoin(teamChampionship, membership(championship, teamRound.teamId))
+      .innerJoin(
+        teamTaskScore,
+        and(eq(teamTaskScore.teamId, teamChampionship.teamId), eq(teamTaskScore.taskId, task.id)),
+      )
+      .where(where)
+      .groupBy(task.slug, edition.id, round.slug)
+      .orderBy(task.slug);
+  },
+);
 
 export type RoundTaskItem = {
   slug: string;
@@ -80,8 +151,8 @@ export type RoundTaskItem = {
 };
 
 const scoredTeamsSql = sql<number>`(SELECT count(*)::int FROM ${teamTaskScore} WHERE ${teamTaskScore.taskId} = ${task.id})`;
-const scoredJuniorsSql = sql<number>`(SELECT count(*)::int FROM ${teamTaskScore} INNER JOIN ${team} ON ${team.id} = ${teamTaskScore.teamId} WHERE ${teamTaskScore.taskId} = ${task.id} AND ${team.junior})`;
-const scoredRegularsSql = sql<number>`(SELECT count(*)::int FROM ${teamTaskScore} INNER JOIN ${team} ON ${team.id} = ${teamTaskScore.teamId} WHERE ${teamTaskScore.taskId} = ${task.id} AND NOT ${team.junior})`;
+const scoredJuniorsSql = sql<number>`(SELECT count(*)::int FROM ${teamTaskScore} INNER JOIN ${teamChampionship} ON ${teamChampionship.teamId} = ${teamTaskScore.teamId} WHERE ${teamTaskScore.taskId} = ${task.id} AND ${teamChampionship.championship} = ${ESORDIENTI})`;
+const scoredRegularsSql = sql<number>`(SELECT count(*)::int FROM ${teamTaskScore} INNER JOIN ${teamChampionship} ON ${teamChampionship.teamId} = ${teamTaskScore.teamId} WHERE ${teamTaskScore.taskId} = ${task.id} AND ${teamChampionship.championship} = ${REGOLARI})`;
 
 export const listAllRoundTasks = cache(
   (editionId: string, roundSlug: string): Promise<RoundTaskItem[]> => {

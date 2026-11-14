@@ -29,7 +29,8 @@ export default async function Page() {
           <CardBody title="OIS Regions">
             <p>
               {stats.totalTeams} teams from {stats.totalInstitutes} schools participated in{" "}
-              {stats.totalEditions} OIS editions. Overall, {stats.totalScores} points were scored.
+              {stats.totalEditions} OIS editions. Overall, {Math.round(stats.totalScores)} points
+              were scored.
             </p>
           </CardBody>
         </Card>

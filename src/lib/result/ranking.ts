@@ -50,7 +50,8 @@ export async function processRanking(
         return {
           taskId: task.id,
           teamId: teams[row.Username],
-          score: Math.round(Number(junior ? row[`${task.slug}_esordienti`] : row[task.slug])),
+          // la colonna score è numeric(8,2): i punteggi frazionari vengono conservati
+          score: Number(junior ? row[`${task.slug}_esordienti`] : row[task.slug]),
         };
       }),
     );

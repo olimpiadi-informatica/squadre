@@ -28,8 +28,8 @@ export default async function Page() {
           <CardBody title="OIS Editions">
             <p>
               {stats.totalTeams} teams from {stats.totalInstitutes} schools participated in{" "}
-              {editions.length} OIS editions. Overall, {stats.totalScores} points were scored on{" "}
-              {stats.totalTasks} tasks.
+              {editions.length} OIS editions. Overall, {Math.round(stats.totalScores)} points were
+              scored on {stats.totalTasks} tasks.
             </p>
           </CardBody>
         </Card>

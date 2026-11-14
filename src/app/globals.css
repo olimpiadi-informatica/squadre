@@ -9,3 +9,9 @@
 .prose {
   @apply max-w-none;
 }
+
+/* Testo che matcha la ricerca nella tabella (vedi `table-large.tsx`). */
+::highlight(table-search) {
+  background-color: oklch(var(--wa));
+  color: oklch(var(--wac));
+}

@@ -11,6 +11,7 @@ import Papa from "papaparse";
 import { z } from "zod";
 
 import { verifyAdmin } from "~/lib/admin";
+import { ESORDIENTI, REGOLARI } from "~/lib/championship";
 import { deleteEdition, updateEditionVisibility } from "~/lib/edition";
 import { createNewEdition, type EditionData } from "~/lib/new-edition";
 import { refreshViews } from "~/lib/view";
@@ -98,9 +99,9 @@ export async function createEdition(files: FormData, data: EditionData) {
       name: row["Nome concorrente"],
       instituteId: row["Codice meccanografico"],
       coach: `${row["Nome referente"]} ${row["Cognome referente"]}`,
-      junior: row["Scelta del campionato"] === "Esordienti",
+      // la scelta del campionato alla registrazione: esordienti o regolari
+      championship: row["Scelta del campionato"] === "Esordienti" ? ESORDIENTI : REGOLARI,
       finalist: false,
-      points: 0,
     };
   });
 
