@@ -45,7 +45,7 @@ export async function createNewEdition(
   } = data;
 
   await db.transaction(async (tx) => {
-    await tx.insert(edition).values({ id, year, title, public: false });
+    await tx.insert(edition).values({ id, year, title, public: true });
 
     const roundRows = await tx
       .insert(round)

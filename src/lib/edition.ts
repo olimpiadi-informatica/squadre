@@ -7,14 +7,6 @@ import { edition, institute, round, v05a_editionStats, v06a_editionStats2 } from
 import { coalesce } from "./db/utils";
 import { regularRoundsOnly } from "./round";
 
-export async function updateEditionVisibility(id: string, isPublic: boolean): Promise<void> {
-  await db.update(edition).set({ public: isPublic }).where(eq(edition.id, id));
-}
-
-export async function deleteEdition(id: string): Promise<void> {
-  await db.delete(edition).where(eq(edition.id, id));
-}
-
 export type ScheduleEdition = {
   year: string;
   rounds: { id: string; name: string; startsAt: Date }[];
@@ -109,7 +101,6 @@ export type EditionAdminItem = {
   id: string;
   name: string;
   year: string;
-  public: boolean;
 };
 
 export const getEditionAdmin = cache(async (id: string): Promise<EditionAdminItem | undefined> => {
@@ -118,7 +109,6 @@ export const getEditionAdmin = cache(async (id: string): Promise<EditionAdminIte
       id: edition.id,
       name: edition.title,
       year: edition.year,
-      public: edition.public,
     })
     .from(edition)
     .where(eq(edition.id, id));
@@ -131,7 +121,6 @@ export const listEditionsAdmin = cache((): Promise<EditionAdminItem[]> => {
       id: edition.id,
       name: edition.title,
       year: edition.year,
-      public: edition.public,
     })
     .from(edition)
     .orderBy(desc(edition.year));

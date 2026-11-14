@@ -1,0 +1,1 @@
+CREATE INDEX "task_round_id_idx" ON "task" USING btree ("round_id");

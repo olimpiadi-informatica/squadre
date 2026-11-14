@@ -5,6 +5,7 @@ import { listEditionsAdmin } from "~/lib/edition";
 
 import { AdminEditionsTable } from "./editions-table";
 import { NewEditionButton } from "./new-edition-button";
+import { RefreshViewsButton } from "./refresh-views-button";
 
 export default async function AdminPage() {
   await verifyAdmin();
@@ -29,7 +30,7 @@ export default async function AdminPage() {
               </li>
               <li>
                 <a
-                  href="https://sites.google.com/aldini.istruzioneer.it/olimpiadi-informatica-squadre/homepage"
+                  href="https://oisquadre.it/calendario/"
                   target="_blank"
                   rel="noreferrer"
                   className="link link-primary">
@@ -39,6 +40,17 @@ export default async function AdminPage() {
             </ul>
             <CardActions>
               <NewEditionButton editions={editions} />
+            </CardActions>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody title="Aggiorna statistiche">
+            <p>
+              Ricalcola in background le statistiche. L&apos;operazione può richiedere qualche
+              minuto.
+            </p>
+            <CardActions>
+              <RefreshViewsButton />
             </CardActions>
           </CardBody>
         </Card>

@@ -1,15 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 
-import { Button, Form, FormButton, SubmitButton, TextField } from "@olinfo/react-components";
-
-import { Modal } from "~/components/modal";
 import { Table } from "~/components/table";
 import type { EditionAdminItem } from "~/lib/edition";
-
-import { deleteEditionAction, toggleEditionVisibility } from "./actions";
 
 export function AdminEditionsTable({ editions }: { editions: EditionAdminItem[] }) {
   const itemMatch = useCallback(
@@ -24,7 +19,7 @@ export function AdminEditionsTable({ editions }: { editions: EditionAdminItem[] 
       itemMatch={itemMatch}
       header={TableHeaders}
       row={TableRow}
-      className="grid-cols-[repeat(3,auto)]"
+      className="grid-cols-[repeat(2,auto)]"
     />
   );
 }
@@ -34,7 +29,6 @@ function TableHeaders() {
     <>
       <div>Nome</div>
       <div>Anno</div>
-      <div>Azioni</div>
     </>
   );
 }
@@ -48,111 +42,6 @@ function TableRow({ item: edition }: { item: EditionAdminItem }) {
         </Link>
       </div>
       <div>{edition.year}</div>
-      <div className="flex flex-wrap justify-center gap-2">
-        {edition.public ? (
-          <MakePrivateModalButton edition={edition} />
-        ) : (
-          <MakePublicModalButton edition={edition} />
-        )}
-        <DeleteModalButton edition={edition} />
-      </div>
-    </>
-  );
-}
-
-function MakePublicModalButton({ edition }: { edition: EditionAdminItem }) {
-  const modalRef = useRef<HTMLDialogElement>(null);
-
-  async function confirmMakePublic() {
-    await toggleEditionVisibility(edition.id, edition.public);
-    modalRef.current?.close();
-  }
-
-  return (
-    <>
-      <Button onClick={() => modalRef.current?.showModal()} className="btn-error btn-sm">
-        Rendi pubblico
-      </Button>
-      <Modal ref={modalRef} title="Rendi pubblica l'edizione?">
-        <p>{`L'edizione "${edition.name}" sarà visibile al pubblico.`}</p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <Button className="btn-info" onClick={() => modalRef.current?.close()}>
-            Annulla
-          </Button>
-          <Button onClick={confirmMakePublic} className="btn-warning">
-            Conferma
-          </Button>
-        </div>
-      </Modal>
-    </>
-  );
-}
-
-function MakePrivateModalButton({ edition }: { edition: EditionAdminItem }) {
-  const modalRef = useRef<HTMLDialogElement>(null);
-
-  async function confirmMakePrivate() {
-    await toggleEditionVisibility(edition.id, edition.public);
-    modalRef.current?.close();
-  }
-
-  return (
-    <>
-      <Button onClick={() => modalRef.current?.showModal()} className="btn-warning btn-sm">
-        Rendi privato
-      </Button>
-      <Modal ref={modalRef} title="Rendi privata l'edizione?">
-        <p>{`L'edizione "${edition.name}" sarà nascosta al pubblico.`}</p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <Button className="btn-info" onClick={() => modalRef.current?.close()}>
-            Annulla
-          </Button>
-          <Button onClick={confirmMakePrivate} className="btn-warning">
-            Conferma
-          </Button>
-        </div>
-      </Modal>
-    </>
-  );
-}
-
-function DeleteModalButton({ edition }: { edition: EditionAdminItem }) {
-  const modalRef = useRef<HTMLDialogElement>(null);
-
-  async function confirmDelete({ deleteConfirmation }: { deleteConfirmation: string }) {
-    if (deleteConfirmation === "Elimina") {
-      await deleteEditionAction(edition.id);
-      modalRef.current?.close();
-    }
-  }
-
-  return (
-    <>
-      <Button onClick={() => modalRef.current?.showModal()} className="btn-error btn-sm">
-        Elimina
-      </Button>
-      <Modal ref={modalRef} title="Elimina edizione">
-        <Form key={edition.id} onSubmit={confirmDelete}>
-          <p>
-            Sei sicuro di voler eliminare l'edizione "{edition.name}"? L'operazione è irreversibile.
-          </p>
-          <TextField
-            field="deleteConfirmation"
-            label="Digita Elimina per confermare:"
-            placeholder="Digita 'Elimina'"
-          />
-          {({ deleteConfirmation }) => (
-            <div className="flex flex-wrap justify-center gap-2">
-              <FormButton className="btn btn-info" onClick={() => modalRef.current?.close()}>
-                Annulla
-              </FormButton>
-              <SubmitButton className="btn-error" disabled={deleteConfirmation !== "Elimina"}>
-                Elimina
-              </SubmitButton>
-            </div>
-          )}
-        </Form>
-      </Modal>
     </>
   );
 }

@@ -5,6 +5,7 @@ import type { ReadableStream } from "node:stream/web";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 
 import { isString, uniqBy } from "es-toolkit/compat";
 import Papa from "papaparse";
@@ -12,7 +13,6 @@ import { z } from "zod";
 
 import { verifyAdmin } from "~/lib/admin";
 import { ESORDIENTI, REGOLARI } from "~/lib/championship";
-import { deleteEdition, updateEditionVisibility } from "~/lib/edition";
 import { createNewEdition, type EditionData } from "~/lib/new-edition";
 import { refreshViews } from "~/lib/view";
 
@@ -48,18 +48,12 @@ const csvRowSchema = z
         : row["Regione scuola"].toLowerCase().slice(0, 3),
   }));
 
-export async function toggleEditionVisibility(id: string, currentPublic: boolean) {
+export async function refreshAllViews() {
   await verifyAdmin();
-  await updateEditionVisibility(id, !currentPublic);
-  await refreshViews();
-  revalidatePath("/", "layout");
-}
 
-export async function deleteEditionAction(id: string) {
-  await verifyAdmin();
-  await deleteEdition(id);
-  await refreshViews();
-  revalidatePath("/", "layout");
+  // Il refresh delle materialized view può richiedere diversi minuti: lo eseguiamo
+  // in background, dopo che la risposta è stata inviata al client.
+  after(() => refreshViews());
 }
 
 export async function createEdition(files: FormData, data: EditionData) {

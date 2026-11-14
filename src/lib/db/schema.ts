@@ -73,7 +73,10 @@ export const task = pgTable(
     regular: boolean().notNull().default(true),
   },
 
-  (table) => [uniqueIndex("task_slug_round_id").on(table.slug, table.roundId)],
+  (table) => [
+    uniqueIndex("task_slug_round_id").on(table.slug, table.roundId),
+    index("task_round_id_idx").on(table.roundId),
+  ],
 );
 
 export const institute = pgTable("institute", {
@@ -151,7 +154,10 @@ export const teamRound = pgTable(
     delay: integer().notNull().default(0),
     participationStatus: text("participation_status").$type<ParticipationStatus>(),
   },
-  (table) => [uniqueIndex("team_round_round_id_team_id_unique").on(table.roundId, table.teamId)],
+  (table) => [
+    uniqueIndex("team_round_round_id_team_id_unique").on(table.roundId, table.teamId),
+    index("team_round_team_id_idx").on(table.teamId),
+  ],
 );
 
 export const teamTaskScore = pgTable(
