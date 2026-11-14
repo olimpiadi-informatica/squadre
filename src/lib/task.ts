@@ -35,7 +35,6 @@ export type Task = {
   editionName: string;
   roundSlug: string;
   roundName: string;
-  statement: string;
   /**
    * Le statistiche del task, per ciascun campionato che vi ha gareggiato: un
    * task "condiviso" (OIS 11-15) ha classifiche parallele, uno solo degli
@@ -55,7 +54,6 @@ export const getTask = cache(
         editionName: edition.title,
         roundSlug: round.slug,
         roundName: round.title,
-        statement: task.statement,
       })
       .from(task)
       .innerJoin(round, eq(round.id, task.roundId))
@@ -257,7 +255,6 @@ export async function saveRoundTasksForRound(
           slug: t.slug,
           roundId: roundId,
           title: t.title,
-          statement: "",
           junior: t.junior,
           regular: t.regular,
         })),

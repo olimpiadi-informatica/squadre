@@ -69,7 +69,6 @@ export const task = pgTable(
       .notNull()
       .references(() => round.id, { onDelete: "cascade" }),
     title: text().notNull(),
-    statement: text().notNull(),
     junior: boolean().notNull().default(false),
     regular: boolean().notNull().default(true),
   },

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Card, CardActions, CardBody } from "@olinfo/react-components";
+import { Card, CardBody } from "@olinfo/react-components";
 
 import { ChampionshipNav } from "~/app/(site)/championship-nav";
 import { TaskTable } from "~/app/(site)/edition/[editionId]/round/[roundId]/[taskName]/table";
@@ -63,32 +63,48 @@ export async function TaskView({ params, category }: TaskParams & { category: st
         </ul>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardBody title={`${task.title} (${task.slug})`}>
-            <p>
-              {active.stats.teamScored} teams scored {formatScore(active.stats.totalScores)} points
-              on this task, for a maximum score of {formatScore(active.stats.maxScore)}, an average
-              score of {formatScore(active.stats.avgScore)} and a median score of{" "}
-              {formatScore(active.stats.medianScore)}.
-            </p>
+        <div className="flex flex-col gap-4">
+          <Card>
+            <CardBody title={`${task.title} (${task.slug})`}>
+              <p>
+                {active.stats.teamScored} teams scored {formatScore(active.stats.totalScores)}{" "}
+                points on this task, for a maximum score of {formatScore(active.stats.maxScore)}, an
+                average score of {formatScore(active.stats.avgScore)} and a median score of{" "}
+                {formatScore(active.stats.medianScore)}.
+              </p>
+            </CardBody>
+          </Card>
+          <Highlights
+            page={championshipPath(editionId, category, `/round/${roundId}/${taskName}`)}
+          />
+        </div>
+        <Card className="md:h-full">
+          <CardBody title="Statement">
+            <div className="relative h-64 md:h-auto md:min-h-0 md:flex-1">
+              <a
+                href={`https://training.olinfo.it/task/ois_${task.slug}`}
+                target="_blank"
+                rel="noreferrer"
+                className="absolute inset-0 flex items-center justify-center">
+                <img
+                  src={`https://training.olinfo.it/files/task-preview/ois_${task.slug}`}
+                  alt={`${task.title} statement preview`}
+                  className="max-h-full max-w-full rounded-box object-contain"
+                />
+              </a>
+            </div>
+            <div className="card-actions mt-2 items-end justify-center">
+              <a
+                href={`https://training.olinfo.it/task/ois_${task.slug}`}
+                target="_blank"
+                className="btn btn-primary"
+                rel="noreferrer">
+                Solve this problem
+              </a>
+            </div>
           </CardBody>
         </Card>
-        <Highlights page={championshipPath(editionId, category, `/round/${roundId}/${taskName}`)} />
       </div>
-      <Card>
-        <CardBody title="Statement">
-          <p>{task.statement}</p>
-          <CardActions>
-            <a
-              href={`https://training.olinfo.it/task/ois_${task.slug}`}
-              target="_blank"
-              className="btn btn-primary"
-              rel="noreferrer">
-              Solve this problem
-            </a>
-          </CardActions>
-        </CardBody>
-      </Card>
       <ChampionshipNav
         active={category}
         links={task.championships.map((row) => ({
