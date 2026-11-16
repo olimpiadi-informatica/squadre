@@ -29,22 +29,42 @@ export default function LargeTable<T>({
   const ref = useRef<HTMLDivElement>(null);
   // larghezza del riquadro: `undefined` al primo render, così non parte da 0
   const [width, setWidth] = useState<number>();
+  // larghezze delle colonne congelate al primo render: `undefined` finché non
+  // sono state misurate
+  const [gridTemplateColumns, setGridTemplateColumns] = useState<string>();
 
-  // Le colonne NON vengono congelate in pixel: il template è quello della
-  // classe CSS passata dal chiamante e header/righe lo condividono con
-  // `grid-cols-subgrid`, quindi restano allineati. Misurare le colonne e
-  // riscriverle in pixel causava flicker al cambio di tab, perché Virtuoso
-  // aggiorna le celle dopo il commit (la misura risultava vecchia).
   const updateWidth = useCallback(() => {
     const viewport = ref.current?.children[0]?.children[0];
     if (viewport) setWidth(viewport.scrollWidth + 2);
   }, []);
 
-  // prima del primo disegno: il riquadro non deve mai apparire con la
-  // larghezza provvisoria
+  // Congela le larghezze delle colonne al primo rendering. Virtuoso monta e
+  // smonta le righe mentre si scorre: con le colonne `auto` + subgrid ogni
+  // riga contribuirebbe al ridimensionamento delle tracce, facendole cambiare
+  // larghezza durante lo scroll. Fissandole in pixel una volta sola le colonne
+  // restano stabili (le prime righe, `initialItemCount`, sono già nel DOM).
+  const updateColumnWidths = useCallback(() => {
+    const viewport = ref.current?.children[0]?.children[0];
+    const headers = viewport?.children[0];
+    if (!headers) return;
+
+    const widths = Array.from(headers.children, (header, i) => {
+      // `Item` ha p-2: aggiungiamo il padding alle colonne di bordo
+      const padding = i === 0 || i === headers.children.length - 1 ? 8 : 0;
+      return header.clientWidth + padding;
+    });
+    // se la tabella non è ancora stata disposta le larghezze sono tutte 0
+    if (widths.length > 0 && widths.some((column) => column > 0)) {
+      setGridTemplateColumns(widths.map((column) => `${column}px`).join(" "));
+    }
+  }, []);
+
+  // prima del primo disegno: né il riquadro né le colonne devono mai apparire
+  // con la larghezza provvisoria
   useLayoutEffect(() => {
+    updateColumnWidths();
     updateWidth();
-  }, [updateWidth]);
+  }, [updateColumnWidths, updateWidth]);
 
   useLayoutEffect(() => {
     const obs = new ResizeObserver(() => updateWidth());
@@ -81,6 +101,7 @@ export default function LargeTable<T>({
           increaseViewportBy={200}
           initialItemCount={10}
           className={clsx(style.scroller, className)}
+          style={{ gridTemplateColumns }}
           context={{ highlightedRow, query }}
           useWindowScroll
         />

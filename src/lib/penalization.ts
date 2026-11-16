@@ -391,13 +391,11 @@ export async function importRoundPlagiarismPenalization(
     for (const row of rows) {
       const firstTeam = ownerBySubmissionSlug.get(row.firstSubmissionSlug);
       if (!firstTeam) {
-        continue;
-        // throw new Error(`Submission ${row.firstSubmissionSlug} non trovata.`);
+        throw new Error(`Submission ${row.firstSubmissionSlug} non trovata.`);
       }
       const secondTeam = ownerBySubmissionSlug.get(row.secondSubmissionSlug);
       if (!secondTeam) {
-        continue;
-        // throw new Error(`Submission ${row.secondSubmissionSlug} non trovata.`);
+        throw new Error(`Submission ${row.secondSubmissionSlug} non trovata.`);
       }
 
       const [{ penalizationId }] = await tx

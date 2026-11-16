@@ -253,18 +253,26 @@ export const listEditionChampionships = cache((editionId: string): Promise<strin
  * Round in cui ha gareggiato un campionato di un'edizione (colonne della tabella
  * delle classifiche).
  *
- * Per le OIS 16-17 gli esordienti avevano i round dedicati '1e'..'4e'; per le
- * OIS 11-15 gareggiavano negli stessi round delle squadre regolari. La finale
- * non fa parte dei campionati non-regolari.
+ * Da OIS 16 i round 1-4 ospitano sia i task regolari sia quelli degli
+ * esordienti (prima con i round dedicati '1e'..'4e', poi nello stesso round).
+ * Nelle OIS 11-15 il biennio gareggiava sugli stessi task dei regolari. La
+ * finale non fa parte dei campionati non-regolari.
  */
 export const listChampionshipRounds = cache(
   (editionId: string, championship: string = REGOLARI): Promise<RoundItem[]> => {
+    // Il punteggio massimo dipende dai task del campionato: un round può
+    // ospitare sia i task regolari sia quelli degli esordienti, che valgono 100
+    // punti ciascuno. Se i task non sono ancora caricati vale `fullscore`.
+    const taskFlag = championship === ESORDIENTI ? "junior" : "regular";
     return db
       .select({
         id: round.slug,
         name: round.title,
         editionId: round.editionId,
-        maxScore: round.fullscore,
+        maxScore: sql<number>`coalesce(nullif(100 * (
+          select count(*)::int from task t
+          where t.round_id = ${round.id} and t.${sql.raw(taskFlag)} = true
+        ), 0), ${round.fullscore})`,
         public: round.public,
       })
       .from(round)

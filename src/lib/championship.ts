@@ -59,9 +59,10 @@ export function finalOnlyRegular(championship: string): SQL | undefined {
 
 /**
  * Vero se il campionato ha segnato almeno un punteggio nel round: è il modo in
- * cui le classifiche decidono quali round appartengono a quale campionato (le
- * squadre esordienti delle OIS 16/17 sono iscritte anche ai round regolari, ma
- * non vi hanno gareggiato).
+ * cui le classifiche decidono quali round appartengono a quale campionato. Da
+ * OIS 16 i round 1-4 ospitano sia i task regolari sia quelli degli esordienti,
+ * ma un campionato che non vi ha gareggiato non deve comparire in classifica
+ * (tutte le squadre hanno comunque una riga in `team_round`).
  */
 export function championshipScoredInRound(
   championship: string,

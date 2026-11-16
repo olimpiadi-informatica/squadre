@@ -1,4 +1,4 @@
-import { and, eq, ne, notExists } from "drizzle-orm";
+import { and, eq, exists, ne, notExists, sql } from "drizzle-orm";
 import { chunk, groupBy, keyBy, meanBy, orderBy, sum, sumBy, take } from "es-toolkit";
 
 import {
@@ -1063,6 +1063,24 @@ async function loadRoundsAndTasks(championship: string | null): Promise<{
           championshipScoredInRound(championship),
         );
 
+  // I task del campionato: i regolari gareggiano solo sui propri, gli altri
+  // campionati solo su quelli in cui hanno effettivamente segnato (un round
+  // può ospitare sia i task regolari sia quelli degli esordienti).
+  const tasksWhere =
+    championship == null
+      ? and(where, eq(task.regular, true))
+      : and(
+          where,
+          exists(
+            db
+              .select({ id: teamTaskScore.id })
+              .from(teamTaskScore)
+              .innerJoin(team, eq(team.id, teamTaskScore.teamId))
+              .innerJoin(teamChampionship, membership(championship, team.id))
+              .where(and(eq(teamTaskScore.taskId, task.id), eq(team.hidden, false))),
+          ),
+        );
+
   const [rows, tasks] = await Promise.all([
     db
       .select({
@@ -1088,7 +1106,7 @@ async function loadRoundsAndTasks(championship: string | null): Promise<{
       .from(task)
       .innerJoin(round, eq(round.id, task.roundId))
       .innerJoin(edition, eq(edition.id, round.editionId))
-      .where(where)
+      .where(tasksWhere)
       .orderBy(task.id),
   ]);
 
@@ -1298,7 +1316,7 @@ export async function refreshHighlights(): Promise<void> {
   }
 
   await db.transaction(async (tx) => {
-    await tx.delete(highlight);
+    await tx.execute(sql`TRUNCATE TABLE ${highlight}`);
     for (const batch of chunk(highlights, 2000)) {
       await tx.insert(highlight).values(batch);
     }

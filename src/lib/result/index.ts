@@ -76,8 +76,33 @@ export async function* parseResult(
     throw new Error("Nessuna squadra trovata per questo round");
   }
 
-  const scores = await processRanking(rankingPath, editionId, roundSlug, teamIds, false);
-  const juniorScores = await processRanking(rankingJuniorPath, editionId, roundSlug, teamIds, true);
+  // Un round ospita sia i regolari sia gli esordienti: ogni classifica
+  // contiene solo le squadre del proprio campionato.
+  const teamIdsOf = (junior: boolean) =>
+    Object.fromEntries(
+      Object.values(teams)
+        .filter((t) => t.junior === junior)
+        .map((t) => [t.slug, t.teamId]),
+    );
+  const teamIdsByChampionship = {
+    regular: teamIdsOf(false),
+    junior: teamIdsOf(true),
+  };
+
+  const scores = await processRanking(
+    rankingPath,
+    editionId,
+    roundSlug,
+    teamIdsByChampionship.regular,
+    false,
+  );
+  const juniorScores = await processRanking(
+    rankingJuniorPath,
+    editionId,
+    roundSlug,
+    teamIdsByChampionship.junior,
+    true,
+  );
 
   yield UploadResultStep.PARSE_SUBMISSIONS;
   const submissions = await processSubmissions(submissionsPath, editionId, roundSlug, teams);

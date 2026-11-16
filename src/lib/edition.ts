@@ -9,7 +9,7 @@ import { regularRoundsOnly } from "./round";
 
 export type ScheduleEdition = {
   year: string;
-  rounds: { id: string; name: string; startsAt: Date }[];
+  rounds: { id: string; name: string; startsAt: Date; endsAt: Date }[];
 };
 
 export const getLatestSchedule = cache(async (): Promise<ScheduleEdition> => {
@@ -29,6 +29,7 @@ export const getLatestSchedule = cache(async (): Promise<ScheduleEdition> => {
       id: round.slug,
       name: round.title,
       startsAt: round.startsAt,
+      endsAt: round.endsAt,
     })
     .from(round)
     .where(and(eq(round.editionId, latestEdition.id), regularRoundsOnly))

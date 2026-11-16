@@ -159,7 +159,7 @@ export type Round = {
   editionName: string;
   /**
    * Le statistiche del round per ciascun campionato che vi ha gareggiato: i
-   * round con classifiche parallele (OIS 11-15) ne hanno più di una.
+   * round con classifiche parallele ne hanno più di una.
    */
   championships: { championship: string; stats: RoundStats }[];
 };
@@ -216,9 +216,10 @@ export type RoundItem = {
 };
 
 /**
- * Esclude i round riservati agli esordienti (OIS 16-17): sono gli unici a non
- * avere task regolari. Un round senza task (edizione appena creata) resta
- * incluso.
+ * Esclude i round senza task regolari: un round può essere riservato a un altro
+ * campionato (non succede più dopo la fusione dei round esordienti delle OIS
+ * 16-17, ma la vista resta valida anche per eventuali round dedicati futuri).
+ * Un round senza task (edizione appena creata) resta incluso.
  */
 export const regularRoundsOnly = sql`(
   not exists (select 1 from task t where t.round_id = ${round.id})

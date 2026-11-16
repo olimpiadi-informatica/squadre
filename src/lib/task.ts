@@ -37,8 +37,8 @@ export type Task = {
   roundName: string;
   /**
    * Le statistiche del task, per ciascun campionato che vi ha gareggiato: un
-   * task "condiviso" (OIS 11-15) ha classifiche parallele, uno solo degli
-   * esordienti (round `1e`-`4e`) un'unica voce.
+   * task "condiviso" ha classifiche parallele, uno solo degli esordienti
+   * un'unica voce.
    */
   championships: { championship: string; stats: TaskStats }[];
 };
@@ -122,7 +122,9 @@ export const listTasks = cache(
     );
 
     if (championship === REGOLARI) {
-      return base.where(where).orderBy(task.slug);
+      // Un round può ospitare anche i task degli esordienti: i regolari
+      // gareggiano solo sui propri.
+      return base.where(and(where, eq(task.regular, true))).orderBy(task.slug);
     }
 
     return base
@@ -239,6 +241,10 @@ export async function saveRoundTasksForRound(
   tasks: RoundTaskItem[],
 ): Promise<void> {
   await db.transaction(async (tx) => {
+    if (tasks.length === 0) {
+      await tx.delete(task).where(eq(task.roundId, roundId));
+      return;
+    }
     await tx.delete(task).where(
       and(
         eq(task.roundId, roundId),

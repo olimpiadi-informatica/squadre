@@ -430,9 +430,10 @@ function finalOnlyRegularFinalists(championship: SQLWrapper): SQL {
 
 /**
  * Un round conta per un campionato solo se quel campionato ci ha effettivamente
- * segnato. Senza questo filtro le squadre esordienti, che nelle OIS 16/17 hanno
- * comunque `team_round` nei round regolari senza avervi segnato, riceverebbero
- * rank 1 e medaglie da partizioni composte solo da zeri.
+ * segnato. Da OIS 16 un round ospita sia i task regolari sia quelli degli
+ * esordienti, ma tutte le squadre hanno `team_round` in tutti i round: senza
+ * questo filtro un campionato che non ha gareggiato riceverebbe rank 1 e
+ * medaglie da partizioni composte solo da zeri.
  *
  * Gli alias interni (`s`, `t`, `tm`, `tc`) nascondono le tabelle esterne: i
  * riferimenti con il nome pieno (`round.id`, `team_championship.championship`)
@@ -732,10 +733,11 @@ export const v06a_editionStats2 = pgMaterializedView("v06a_edition_stats2").as((
     .from(v02b_teamRoundStats)
     .innerJoin(teamRound, eq(teamRound.id, v02b_teamRoundStats.teamRoundId))
     .innerJoin(team, and(eq(team.id, teamRound.teamId), eq(team.hidden, false)))
-    .innerJoin(task, eq(task.roundId, teamRound.roundId))
+    .innerJoin(task, and(eq(task.roundId, teamRound.roundId), eq(task.regular, true)))
     .innerJoin(round, and(eq(round.id, teamRound.roundId), eq(round.public, true)))
     .innerJoin(edition, and(eq(edition.id, round.editionId), eq(edition.public, true)))
-    // istituti e task contati sui soli regolari, come le classifiche
+    // istituti e task contati sui soli regolari, come le classifiche: un round
+    // può ospitare anche i task degli esordienti, che qui non vanno contati
     .where(sql`v02b_team_round_stats.championship = 'regolari'`)
     .groupBy(round.editionId),
 );

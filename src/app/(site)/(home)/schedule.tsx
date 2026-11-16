@@ -1,11 +1,28 @@
 import clsx from "clsx";
 import { intlFormat, isPast } from "date-fns";
 
-export function Schedule({ rounds }: { rounds: { id: string; name: string; startsAt: Date }[] }) {
+import { isPracticeRound } from "~/lib/round-config";
+
+const dateFormat = new Intl.DateTimeFormat("en-GB", {
+  dateStyle: "long",
+  timeZone: "Europe/Rome",
+});
+
+export function Schedule({
+  rounds,
+}: {
+  rounds: { id: string; name: string; startsAt: Date; endsAt: Date }[];
+}) {
   return (
     <ul className="steps steps-vertical">
-      {rounds.map(({ id, name, startsAt }) => (
-        <ScheduleItem key={id} round={name} date={startsAt} hideTime={id === "final"} />
+      {rounds.map(({ id, name, startsAt, endsAt }) => (
+        <ScheduleItem
+          key={id}
+          round={name}
+          date={startsAt}
+          endDate={isPracticeRound(id) ? endsAt : undefined}
+          hideTime={id === "final" || isPracticeRound(id)}
+        />
       ))}
     </ul>
   );
@@ -14,10 +31,12 @@ export function Schedule({ rounds }: { rounds: { id: string; name: string; start
 function ScheduleItem({
   round,
   date,
+  endDate,
   hideTime,
 }: {
   round: string;
   date: Date;
+  endDate?: Date;
   hideTime?: boolean;
 }) {
   const finished = isPast(date);
@@ -29,7 +48,7 @@ function ScheduleItem({
       <div className="py-4">
         <h3 className="text-lg font-bold">{round}</h3>
         {hideTime ? (
-          intlFormat(date, { dateStyle: "long", timeZone: "Europe/Rome" }, { locale: "en-GB" })
+          <span>{endDate ? dateFormat.formatRange(date, endDate) : dateFormat.format(date)}</span>
         ) : (
           <a
             href={`https://www.timeanddate.com/worldclock/fixedtime.html?msg=IIOT+-+${round}&iso=${encodeURIComponent(date.toISOString())}&ah=3`}

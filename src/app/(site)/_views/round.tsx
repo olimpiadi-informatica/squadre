@@ -42,7 +42,7 @@ export async function RoundView({ params, category }: RoundParams & { category: 
   if (!active) notFound();
 
   const [tasks, teams, scores] = await Promise.all([
-    listTasks(editionId, roundId),
+    listTasks(editionId, roundId, category),
     listRoundTeams(editionId, roundId, undefined, category),
     listScores(editionId, roundId, undefined, category),
   ]);

@@ -87,15 +87,13 @@ export function TaskManager({
     }
 
     const tasks: RoundTaskItem[] = [];
+    let directories = 0;
     for await (const [name, handle] of dirHandle.entries()) {
       if (handle.kind !== "directory") continue;
+      directories++;
 
-      let fileHandle: FileSystemFileHandle;
-      try {
-        fileHandle = await handle.getFileHandle("task.yaml.orig");
-      } catch {
-        continue;
-      }
+      const fileHandle = await getTaskYaml(handle);
+      if (!fileHandle) continue;
 
       const file = await fileHandle.getFile();
       const text = await file.text();
@@ -125,6 +123,11 @@ export function TaskManager({
     }
 
     const loaded = sortBy(tasks, [getTaskSortGroup, "slug"]);
+    if (loaded.length === 0) {
+      throw new Error(
+        `Nessun task trovato in "${dirHandle.name}" (${directories} cartelle): ogni sottocartella deve contenere task.yaml.orig o task.yaml. Se le cartelle dei task sono dei symlink il browser non le vede, copia la cartella con \`cp -RL\` e riprova.`,
+      );
+    }
     setTaskList(loaded);
     scheduleSave(loaded);
   }
@@ -140,28 +143,37 @@ export function TaskManager({
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardBody title="Carica task">
-            <div className="flex items-center gap-4">
-              <div
-                className={clsx(supportsDirectoryPicker === false && "tooltip")}
-                data-tip="È necessario un browser Chromium-based">
-                <Button
-                  onClick={handleLoadTaskList}
-                  className="btn-primary"
-                  disabled={supportsDirectoryPicker === false}>
-                  <Upload className="size-5" />
-                  Seleziona cartella del contest
-                </Button>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-4">
+                <div
+                  className={clsx(supportsDirectoryPicker === false && "tooltip")}
+                  data-tip="È necessario un browser Chromium-based">
+                  <Button
+                    onClick={() => {
+                      setSaveError(null);
+                      handleLoadTaskList().catch((err) =>
+                        setSaveError(err instanceof Error ? err.message : String(err)),
+                      );
+                    }}
+                    className="btn-primary"
+                    disabled={supportsDirectoryPicker === false}>
+                    <Upload className="size-5" />
+                    Seleziona cartella del contest
+                  </Button>
+                </div>
+                {isSaving && <span className="text-sm text-base-content/60">Salvataggio…</span>}
               </div>
-              {isSaving && <span className="text-sm text-base-content/60">Salvataggio…</span>}
-              {saveError && <span className="text-sm text-error">{saveError}</span>}
+              {saveError && (
+                <div role="alert" className="alert alert-error text-sm">
+                  {saveError}
+                </div>
+              )}
             </div>
           </CardBody>
         </Card>
       </div>
 
-      {taskList.length === 0 ? (
-        <p className="text-center text-base-content/60">Nessun task caricato</p>
-      ) : (
+      {taskList.length > 0 && (
         <Table
           data={taskList}
           itemMatch={itemMatch}
@@ -231,6 +243,19 @@ function TableHeaders() {
       <div className="text-center">Azioni</div>
     </>
   );
+}
+
+async function getTaskYaml(
+  dirHandle: FileSystemDirectoryHandle,
+): Promise<FileSystemFileHandle | null> {
+  // `task.yaml.orig` è la sorgente nei contest recenti, `task.yaml` è il file
+  // dei contest più vecchi (dove non esiste ancora il `.orig`).
+  for (const fileName of ["task.yaml.orig", "task.yaml"]) {
+    try {
+      return await dirHandle.getFileHandle(fileName);
+    } catch {}
+  }
+  return null;
 }
 
 async function getYamlTaskSet(

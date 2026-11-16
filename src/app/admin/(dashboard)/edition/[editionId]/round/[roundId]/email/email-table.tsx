@@ -81,10 +81,10 @@ function EmailRow({
 }) {
   return (
     <>
-      <div>
+      <div className="text-wrap break-words">
         {item.instituteName}, {item.instituteCity}
       </div>
-      <div className="text-sm opacity-70">
+      <div className="text-wrap break-words text-sm opacity-70">
         {item.address ?? <span className="italic opacity-50">-</span>}
       </div>
       <div>

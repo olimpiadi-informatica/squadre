@@ -57,6 +57,20 @@
       "when": 1794689326691,
       "tag": "0007_task_round_id_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794696338779,
+      "tag": "0008_merge_esordienti_rounds",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794696816094,
+      "tag": "0009_fix_total_tasks",
+      "breakpoints": true
     }
   ]
 }
