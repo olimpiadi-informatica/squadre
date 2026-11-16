@@ -6,6 +6,7 @@ import { Button, Card, CardBody } from "@olinfo/react-components";
 import clsx from "clsx";
 import { sortBy } from "es-toolkit";
 import { Trash2, Upload } from "lucide-react";
+import { parse as parseToml } from "smol-toml";
 import YAML from "yaml";
 import { z } from "zod";
 
@@ -92,12 +93,8 @@ export function TaskManager({
       if (handle.kind !== "directory") continue;
       directories++;
 
-      const fileHandle = await getTaskYaml(handle);
-      if (!fileHandle) continue;
-
-      const file = await fileHandle.getFile();
-      const text = await file.text();
-      const parsed = YAML.parse(text);
+      const metadata = await getTaskMetadata(handle);
+      if (!metadata) continue;
 
       let junior = false;
       let regular = false;
@@ -113,7 +110,7 @@ export function TaskManager({
 
       tasks.push({
         slug: name,
-        title: parsed?.title ?? name,
+        title: metadata.title ?? name,
         junior,
         regular,
         scoredTeams: 0,
@@ -125,7 +122,7 @@ export function TaskManager({
     const loaded = sortBy(tasks, [getTaskSortGroup, "slug"]);
     if (loaded.length === 0) {
       throw new Error(
-        `Nessun task trovato in "${dirHandle.name}" (${directories} cartelle): ogni sottocartella deve contenere task.yaml.orig o task.yaml. Se le cartelle dei task sono dei symlink il browser non le vede, copia la cartella con \`cp -RL\` e riprova.`,
+        `Nessun task trovato in "${dirHandle.name}" (${directories} cartelle): ogni sottocartella deve contenere task.toml, task.yaml.orig o task.yaml. Se le cartelle dei task sono dei symlink il browser non le vede, copia la cartella con \`cp -RL\` e riprova.`,
       );
     }
     setTaskList(loaded);
@@ -245,17 +242,42 @@ function TableHeaders() {
   );
 }
 
-async function getTaskYaml(
+async function getTaskMetadata(
   dirHandle: FileSystemDirectoryHandle,
-): Promise<FileSystemFileHandle | null> {
-  // `task.yaml.orig` è la sorgente nei contest recenti, `task.yaml` è il file
-  // dei contest più vecchi (dove non esiste ancora il `.orig`).
-  for (const fileName of ["task.yaml.orig", "task.yaml"]) {
-    try {
-      return await dirHandle.getFileHandle(fileName);
-    } catch {}
+): Promise<{ title?: string } | null> {
+  // `task.toml` è il formato dei contest recenti; `task.yaml.orig` è la
+  // sorgente dei contest precedenti, `task.yaml` dei più vecchi (dove non
+  // esiste ancora il `.orig`).
+  const tomlHandle = await getFileHandle(dirHandle, "task.toml");
+  if (tomlHandle) {
+    const text = await (await tomlHandle.getFile()).text();
+    return parseMetadata(parseToml(text));
   }
-  return null;
+
+  const yamlHandle =
+    (await getFileHandle(dirHandle, "task.yaml.orig")) ??
+    (await getFileHandle(dirHandle, "task.yaml"));
+  if (!yamlHandle) return null;
+
+  const text = await (await yamlHandle.getFile()).text();
+  return parseMetadata(YAML.parse(text));
+}
+
+function parseMetadata(metadata: unknown): { title?: string } {
+  if (typeof metadata !== "object" || metadata === null) return {};
+  const title = (metadata as Record<string, unknown>).title;
+  return typeof title === "string" ? { title } : {};
+}
+
+async function getFileHandle(
+  dirHandle: FileSystemDirectoryHandle,
+  fileName: string,
+): Promise<FileSystemFileHandle | null> {
+  try {
+    return await dirHandle.getFileHandle(fileName);
+  } catch {
+    return null;
+  }
 }
 
 async function getYamlTaskSet(
