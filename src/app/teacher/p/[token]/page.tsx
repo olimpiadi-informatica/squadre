@@ -18,8 +18,7 @@ const levelBadge = {
 } as const;
 
 const typeLabel = {
-  "screen-recording": "Screen recording",
-  "internet-check": "Internet",
+  proctoring: "Proctoring",
   plagiarism: "Copiatura",
   ai: "Uso di strumenti AI",
   other: "Violazione del codice d'onore",

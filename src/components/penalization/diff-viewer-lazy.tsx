@@ -22,12 +22,16 @@ function normalizeLanguage(language: string) {
       return "python";
     case "cs":
       return "csharp";
+    case "pas":
+      return "pascal";
     case "cpp":
     case "c":
     case "java":
       return language;
     default:
-      throw new Error(`Unsupported language: ${language}`);
+      // Il CMS può introdurre nuovi linguaggi: il diff resta leggibile anche
+      // senza evidenziazione invece di far fallire il viewer.
+      return "plaintext";
   }
 }
 

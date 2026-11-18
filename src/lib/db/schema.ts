@@ -217,6 +217,33 @@ export const submission = pgTable(
   ],
 );
 
+/**
+ * Metadati degli screenshot di proctoring, importati insieme ai controlli
+ * internet durante il caricamento dei risultati. I file immagine restano
+ * sulla macchina che li serve (vedi SCREENSHOTS_DIR); qui conserviamo solo
+ * timestamp e nome file, così le timeline non dipendono dal filesystem.
+ */
+export const screenshot = pgTable(
+  "screenshot",
+  {
+    id: serial().primaryKey(),
+    teamRoundId: integer("team_round_id")
+      .notNull()
+      .references(() => teamRound.id, { onDelete: "cascade" }),
+    pcHash: text("pc_hash").notNull(),
+    ts: timestamp().notNull(),
+    filename: text().notNull(),
+  },
+  (table) => [
+    uniqueIndex("screenshot_team_round_id_pc_hash_ts_unique").on(
+      table.teamRoundId,
+      table.pcHash,
+      table.ts,
+    ),
+    index("screenshot_team_round_id_idx").on(table.teamRoundId),
+  ],
+);
+
 export const highlight = pgTable(
   "highlight",
   {
@@ -262,13 +289,7 @@ export const credentialEmail = pgTable(
 export const penalizationLevelValues = ["yellow", "red"] as const;
 export type PenalizationLevel = (typeof penalizationLevelValues)[number];
 
-export const penalizationTypeValues = [
-  "screen-recording",
-  "internet-check",
-  "plagiarism",
-  "ai",
-  "other",
-] as const;
+export const penalizationTypeValues = ["proctoring", "plagiarism", "ai", "other"] as const;
 export type PenalizationType = (typeof penalizationTypeValues)[number];
 
 export const institutePenalization = pgTable(

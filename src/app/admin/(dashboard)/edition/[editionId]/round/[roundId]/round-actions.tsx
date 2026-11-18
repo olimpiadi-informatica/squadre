@@ -5,7 +5,15 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@olinfo/react-components";
 import clsx from "clsx";
-import { BookKey, FileKey, FileText, ListChecks, Mail, ShieldAlert, Wifi } from "lucide-react";
+import {
+  BookKey,
+  FileKey,
+  FileText,
+  ListChecks,
+  Mail,
+  MonitorPlay,
+  ShieldAlert,
+} from "lucide-react";
 
 import type { RoundAdminItem } from "~/lib/round";
 
@@ -108,13 +116,13 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
         </li>
         <li className="step step-primary">
           <div className="flex flex-col items-start gap-2 my-4">
-            <div className="text-left text-xl font-semibold">Internet</div>
+            <div className="text-left text-xl font-semibold">Proctoring</div>
 
             <Link
-              href={`/admin/edition/${round.editionId}/round/${round.slug}/internet`}
+              href={`/admin/edition/${round.editionId}/round/${round.slug}/proctoring`}
               className="btn btn-primary">
-              <Wifi className="size-5" />
-              Controllo internet
+              <MonitorPlay className="size-5" />
+              Controlli internet e registrazioni
             </Link>
           </div>
         </li>

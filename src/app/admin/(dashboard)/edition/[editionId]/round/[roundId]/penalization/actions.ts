@@ -9,7 +9,11 @@ import {
   PENALIZATION_EMAIL_TEMPLATE_ID,
   upsertEmailTemplateContent,
 } from "~/lib/email-template";
-import { importRoundPlagiarismPenalization, reviewPenalizationAppeal } from "~/lib/penalization";
+import {
+  importRoundPlagiarismPenalization,
+  importRoundProctoringPenalization,
+  reviewPenalizationAppeal,
+} from "~/lib/penalization";
 import { getRoundAdmin } from "~/lib/round";
 import { refreshViews } from "~/lib/view";
 
@@ -31,6 +35,28 @@ export async function uploadRoundPlagiarismPenalization(
   }
 
   await importRoundPlagiarismPenalization(editionId, roundSlug, files);
+  await refreshViews();
+  revalidatePath("/", "layout");
+}
+
+export async function uploadRoundProctoringPenalization(
+  editionId: string,
+  roundSlug: string,
+  formData: FormData,
+) {
+  await verifyAdmin();
+
+  const round = await getRoundAdmin(editionId, roundSlug);
+  if (!round) {
+    throw new Error("Round non trovato.");
+  }
+
+  const files = formData.getAll("files");
+  if (files.length === 0) {
+    throw new Error("Nessun file CSV caricato.");
+  }
+
+  await importRoundProctoringPenalization(editionId, roundSlug, files);
   await refreshViews();
   revalidatePath("/", "layout");
 }

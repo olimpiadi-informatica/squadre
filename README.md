@@ -38,6 +38,31 @@ pnpm dev
 
 L'applicazione sarà disponibile su [http://localhost:3000](http://localhost:3000).
 
+### Proctoring (admin)
+
+Le registrazioni dello schermo non sono salvate nel database: la pagina
+`/admin/edition/[editionId]/round/[roundId]/proctoring` le legge dalla
+directory `screenshots/` (oppure da `SCREENSHOTS_DIR`). Per scaricarle dal
+server di gara:
+
+```sh
+./scripts/download-screenshots.sh --teams-file teams.txt --with-logs
+```
+
+I log del proctoring (`logs.json`) contengono sia i controlli internet sia le
+registrazioni: durante il caricamento dei risultati vengono importati entrambi
+(tabella `screenshot` per i metadati, `internet_check` per i controlli). Se i
+metadati non sono nel database, la pagina usa la directory locale come fallback.
+
+La pagina admin è **Proctoring** (`.../proctoring`): controlli internet e
+registrazioni mancanti, con le due timeline affiancate. Entrambe le penalità
+vengono create in blocco con delle soglie (check internet falliti/mancanti e
+minuti di registrazione mancanti).
+
+Il visualizzatore frame-by-frame delle registrazioni è stato rimosso per ora;
+i metadati delle registrazioni restano importati insieme ai risultati, così il
+viewer potrà essere ripreso senza rifare il parsing.
+
 ### Compile and Minify for Production
 
 ```sh

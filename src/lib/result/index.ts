@@ -11,7 +11,14 @@ import { maxBy } from "es-toolkit/compat";
 import { extract } from "tar";
 
 import { db } from "~/lib/db";
-import { internetCheck, round, submission, teamRound, teamTaskScore } from "~/lib/db/schema";
+import {
+  internetCheck,
+  round,
+  screenshot,
+  submission,
+  teamRound,
+  teamTaskScore,
+} from "~/lib/db/schema";
 import { getRoundAdmin } from "~/lib/round";
 import { shouldPublishRound } from "~/lib/round-config";
 import { listRoundTeamsCredentials } from "~/lib/team";
@@ -20,6 +27,7 @@ import { refreshViews } from "~/lib/view";
 import { parseCmsLog } from "./cms-log";
 import { processInternetChecks } from "./internet";
 import { processRanking } from "./ranking";
+import { processScreenshots } from "./screenshot";
 import { processSubmissions } from "./submission";
 
 export enum UploadResultStep {
@@ -40,6 +48,7 @@ export async function* parseResult(
   archive: File,
   editionId: string,
   roundSlug: string,
+  onWarning?: (message: string) => void,
 ): AsyncGenerator<UploadResultStep> {
   const roundData = await getRoundAdmin(editionId, roundSlug);
   if (!roundData) {
@@ -66,7 +75,7 @@ export async function* parseResult(
   const rankingJuniorPath = getPath(roundPath, ["ranking-debutant.csv", "ranking-esordienti.csv"]);
   const submissionsPath = getPath(roundPath, ["subs"]);
   const cmsLogPath = getPath(roundPath, ["cms.log"]);
-  const internetPath = getPath(roundPath, ["internet", "internet-check"]);
+  const proctoringPath = getPath(roundPath, ["logs", "internet", "internet-check"]);
 
   yield UploadResultStep.PARSE_RANKIND;
   const teams = keyBy(await listRoundTeamsCredentials(editionId, roundSlug), (t) => t.slug);
@@ -105,7 +114,15 @@ export async function* parseResult(
   );
 
   yield UploadResultStep.PARSE_SUBMISSIONS;
-  const submissions = await processSubmissions(submissionsPath, editionId, roundSlug, teams);
+  const { submissions, skipped } = await processSubmissions(
+    submissionsPath,
+    editionId,
+    roundSlug,
+    teams,
+  );
+  for (const { fileName, reason } of skipped) {
+    onWarning?.(`Submission ignorata ${fileName}: ${reason}`);
+  }
   const firstSubmissionByTeamRoundId = mapValues(
     groupBy(submissions, (s) => s.teamRoundId),
     (subs) =>
@@ -127,13 +144,16 @@ export async function* parseResult(
   const loggedUsers = await parseCmsLog(cmsLogPath);
 
   yield UploadResultStep.PARSE_INTERNET;
-  const internetChecks = await processInternetChecks(
-    internetPath,
-    roundData,
-    teams,
-    firstSubmissionByTeamRoundId,
-    lastSubmissionByTeamRoundId,
-  );
+  const [internetChecks, screenshots] = await Promise.all([
+    processInternetChecks(
+      proctoringPath,
+      roundData,
+      teams,
+      firstSubmissionByTeamRoundId,
+      lastSubmissionByTeamRoundId,
+    ),
+    processScreenshots(proctoringPath, teams),
+  ]);
 
   yield UploadResultStep.SAVE_RANKIND;
   await db.delete(teamTaskScore).where(inArray(teamTaskScore.teamId, Object.values(teamIds)));
@@ -148,10 +168,12 @@ export async function* parseResult(
   }
 
   yield UploadResultStep.SAVE_SUBMISSIONS;
-  await db.delete(submission).where(inArray(submission.teamRoundId, Object.values(teamRoundIds)));
-  for (const submissionChunk of chunk(submissions, 200)) {
-    await db.insert(submission).values(submissionChunk);
-  }
+  await db.transaction(async (tx) => {
+    await tx.delete(submission).where(inArray(submission.teamRoundId, Object.values(teamRoundIds)));
+    for (const submissionChunk of chunk(submissions, 200)) {
+      await tx.insert(submission).values(submissionChunk);
+    }
+  });
 
   yield UploadResultStep.SAVE_PARTICIPATION;
   const scoredTeamIds = new Set<number>();
@@ -228,6 +250,11 @@ export async function* parseResult(
     .where(inArray(internetCheck.teamRoundId, Object.values(teamRoundIds)));
   for (const internetCheckChunk of chunk(internetChecks, 500)) {
     await db.insert(internetCheck).values(internetCheckChunk);
+  }
+
+  await db.delete(screenshot).where(inArray(screenshot.teamRoundId, Object.values(teamRoundIds)));
+  for (const screenshotChunk of chunk(screenshots, 500)) {
+    await db.insert(screenshot).values(screenshotChunk);
   }
 
   yield UploadResultStep.PUBLISH_ROUND;

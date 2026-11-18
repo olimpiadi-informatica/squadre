@@ -4,18 +4,7 @@ import type { ReadableStream } from "node:stream/web";
 
 import { cache } from "react";
 
-import {
-  and,
-  countDistinct,
-  eq,
-  exists,
-  gt,
-  inArray,
-  isNotNull,
-  min,
-  notExists,
-  sql,
-} from "drizzle-orm";
+import { and, eq, exists, inArray, isNotNull, min, sql } from "drizzle-orm";
 import { flatMapAsync } from "es-toolkit";
 import { isString } from "es-toolkit/compat";
 import Papa from "papaparse";
@@ -24,7 +13,6 @@ import { db } from "./db";
 import {
   institute,
   institutePenalization,
-  internetCheck,
   type PenalizationLevel,
   type PenalizationType,
   penalization,
@@ -34,17 +22,12 @@ import {
   team,
   teamRound,
   teamRoundPenalization,
-  teamTaskScore,
 } from "./db/schema";
 
-type InternetPenalizationFilters = {
-  missingThreshold: number;
-  failedThreshold: number;
-};
-
 const yellowAppealPolicy: Record<PenalizationType, boolean> = {
-  "screen-recording": false,
-  "internet-check": true,
+  // I controlli internet sono appellabili; le penalità manuali per le
+  // registrazioni mancanti impostano `appealAllowed: false` esplicitamente.
+  proctoring: true,
   plagiarism: true,
   ai: true,
   other: false,
@@ -424,91 +407,149 @@ export async function importRoundPlagiarismPenalization(
   });
 }
 
-export async function createRoundInternetPenalization(
+/**
+ * Importa le penalità proctoring da un CSV di squadre sospette (formato
+ * `Token,Reasons`). Il livello di default è giallo; se sono presenti anche
+ * colonne `level`/`appeal` le rispetta.
+ */
+export async function importRoundProctoringPenalization(
   editionId: string,
   roundSlug: string,
-  { missingThreshold, failedThreshold }: InternetPenalizationFilters,
+  files: FormDataEntryValue[],
 ) {
+  const rows = await flatMapAsync(files, parseProctoringCsv);
+  if (rows.length === 0) {
+    throw new Error("Il CSV non contiene righe valide.");
+  }
+
   await db.transaction(async (tx) => {
-    const teamRounds = await tx
+    const teams = await tx
       .select({
+        teamSlug: team.slug,
         teamRoundId: teamRound.id,
-        numPc: countDistinct(internetCheck.pcHash),
-        numFailedChecks: sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "failed")})`,
-        numMissingChecks: sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "missing")})`,
       })
       .from(teamRound)
       .innerJoin(team, eq(team.id, teamRound.teamId))
       .innerJoin(round, eq(round.id, teamRound.roundId))
-      .leftJoin(internetCheck, eq(internetCheck.teamRoundId, teamRound.id))
-      .where(
-        and(
-          eq(round.editionId, editionId),
-          eq(round.slug, roundSlug),
-          exists(
-            tx
-              .select()
-              .from(teamTaskScore)
-              .innerJoin(task, eq(task.id, teamTaskScore.taskId))
-              .where(
-                and(
-                  eq(teamTaskScore.teamId, teamRound.teamId),
-                  eq(task.roundId, teamRound.roundId),
-                  gt(teamTaskScore.score, 0),
-                ),
-              ),
-          ),
-          notExists(
-            tx
-              .select()
-              .from(teamRoundPenalization)
-              .innerJoin(penalization, eq(penalization.id, teamRoundPenalization.penalizationId))
-              .where(
-                and(
-                  eq(teamRoundPenalization.teamRoundId, teamRound.id),
-                  eq(penalization.type, "internet-check"),
-                ),
-              ),
-          ),
-        ),
-      )
-      .groupBy(teamRound.id)
-      .having(
-        ({ numPc, numFailedChecks, numMissingChecks }) => sql`
-          ${numPc} > 2
-          OR ${numFailedChecks} >= ${failedThreshold}
-          OR ${numMissingChecks} >= ${missingThreshold}
-        `,
-      );
+      .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug)));
 
-    for (const item of teamRounds) {
-      const reasons = [];
-      if (item.numPc > 2) {
-        reasons.push("troppi pc");
-      }
-      if (item.numFailedChecks >= failedThreshold) {
-        reasons.push("controlli internet falliti");
-      }
-      if (item.numMissingChecks >= missingThreshold) {
-        reasons.push("controlli internet mancanti");
+    const bySlug = new Map(teams.map((item) => [item.teamSlug, item] as const));
+
+    for (const row of rows) {
+      const target = bySlug.get(row.teamSlug);
+      if (!target) {
+        throw new Error(`Squadra ${row.teamSlug} non trovata nel round.`);
       }
 
-      const [{ penalizationId }] = await tx
+      const [existing] = await tx
+        .select({ id: penalization.id })
+        .from(penalization)
+        .innerJoin(teamRoundPenalization, eq(teamRoundPenalization.penalizationId, penalization.id))
+        .where(
+          and(
+            eq(teamRoundPenalization.teamRoundId, target.teamRoundId),
+            eq(penalization.type, "proctoring"),
+            eq(penalization.description, row.description),
+          ),
+        )
+        .limit(1);
+
+      if (existing) continue;
+
+      const [{ id }] = await tx
         .insert(penalization)
         .values({
-          level: "yellow",
-          type: "internet-check",
-          description: reasons.join(", "),
+          level: row.level,
+          type: "proctoring",
+          description: row.description,
           createdAt: new Date(),
-          appealAllowed: isPenalizationAppealable("yellow", "internet-check"),
+          appealAllowed: row.appealAllowed,
         })
-        .returning({ penalizationId: penalization.id });
+        .returning({ id: penalization.id });
 
       await tx.insert(teamRoundPenalization).values({
-        penalizationId,
-        teamRoundId: item.teamRoundId,
+        penalizationId: id,
+        teamRoundId: target.teamRoundId,
       });
     }
+  });
+}
+
+type ProctoringCsvRow = {
+  teamSlug: string;
+  level: PenalizationLevel;
+  description: string;
+  appealAllowed: boolean;
+};
+
+async function parseProctoringCsv(file: FormDataEntryValue): Promise<ProctoringCsvRow[]> {
+  const source = isString(file) ? file : Readable.fromWeb(file.stream() as ReadableStream);
+
+  const rows = await new Promise<string[][]>((resolve, reject) => {
+    Papa.parse(source, {
+      skipEmptyLines: true,
+      complete: (results) => {
+        if (results.errors.length > 0) {
+          reject(results.errors);
+        } else {
+          resolve(results.data as string[][]);
+        }
+      },
+    });
+  });
+
+  if (rows.length === 0) return [];
+
+  const header = rows[0].map((cell) => cell.trim().toLowerCase());
+  const hasHeader = header.some((cell) =>
+    [
+      "token",
+      "username",
+      "team",
+      "slug",
+      "squadra",
+      "level",
+      "color",
+      "livello",
+      "colore",
+      "reasons",
+      "reason",
+      "description",
+      "motivation",
+      "descrizione",
+      "motivazione",
+      "appeal",
+      "appellabile",
+    ].includes(cell),
+  );
+  const indexOf = (...names: string[]) => header.findIndex((cell) => names.includes(cell));
+
+  const teamIndex = hasHeader ? indexOf("token", "username", "team", "slug", "squadra") : 0;
+  const levelIndex = hasHeader ? indexOf("level", "color", "livello", "colore") : -1;
+  const descriptionIndex = hasHeader
+    ? indexOf("reasons", "reason", "description", "motivation", "descrizione", "motivazione")
+    : 1;
+  const appealIndex = hasHeader ? indexOf("appeal", "appellabile") : -1;
+
+  return (hasHeader ? rows.slice(1) : rows).map((columns, index) => {
+    const line = index + (hasHeader ? 2 : 1);
+    const teamSlug = teamIndex >= 0 ? columns[teamIndex]?.trim() : "";
+    if (!teamSlug) {
+      throw new Error(`Riga ${line}: token/username mancante.`);
+    }
+
+    const levelRaw = levelIndex >= 0 ? columns[levelIndex]?.trim().toLowerCase() : "";
+    const level: PenalizationLevel = levelRaw === "rosso" || levelRaw === "red" ? "red" : "yellow";
+    const description =
+      (descriptionIndex >= 0 ? columns[descriptionIndex]?.trim() : "") || "proctoring";
+    const appealRaw = appealIndex >= 0 ? columns[appealIndex]?.trim().toLowerCase() : "";
+    const appealAllowed =
+      level === "yellow" &&
+      (appealRaw
+        ? ["true", "1", "yes", "si", "sì"].includes(appealRaw)
+        : !/screenrecording|registrazione/i.test(description));
+
+    return { teamSlug, level, description, appealAllowed };
   });
 }
 

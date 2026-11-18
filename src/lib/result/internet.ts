@@ -28,7 +28,7 @@ type ParsedInternetCheck = {
 };
 
 export async function processInternetChecks(
-  internetPath: string,
+  logsPath: string,
   roundData: RoundAdminItem,
   teams: Record<string, TeamCredential>,
   firstSubmissionByTeamRoundId: Record<number, Date | undefined>,
@@ -36,13 +36,13 @@ export async function processInternetChecks(
 ) {
   const rows: InternetCheckInsert[] = [];
   const rawChecksByTeam = new Map<string, ParsedInternetCheck[]>();
-  const teamSlugs = await readdir(internetPath);
+  const teamSlugs = await readdir(logsPath);
 
   for (const teamSlug of teamSlugs) {
     if (teams[teamSlug] == null) continue;
 
-    const jsonlPath = path.join(internetPath, teamSlug, "internet.json");
-    const content = await readFile(jsonlPath, "utf8");
+    const content = await readTeamLogFile(logsPath, teamSlug, '"ic"');
+    if (content == null) continue;
     const lines = content.split(/\r?\n/);
     const checks: ParsedInternetCheck[] = [];
 
@@ -52,19 +52,35 @@ export async function processInternetChecks(
 
       try {
         const parsedLine = internetCheckLineSchema.parse(JSON.parse(line));
-        const userAgent = parsedLine.fp?.basicInfo?.userAgent ?? null;
+
+        // Le righe con `filename` sono screenshot: le gestisce
+        // processScreenshots. Qui servono solo i controlli internet.
+        if (parsedLine.ic == null || parsedLine.server_ts == null) continue;
+
+        // I log nuovi usano `client_ts`/`server_ts` in secondi; il formato
+        // storico di internet.json usava `ts`/`server_ts` in millisecondi.
+        const isSecondsFormat = typeof parsedLine.client_ts === "number";
+        const ts = isSecondsFormat ? parsedLine.client_ts : parsedLine.ts;
+        if (ts == null) continue;
+
+        const tsMs = isSecondsFormat ? Math.round(ts * 1000) : ts;
+        const serverTsMs = isSecondsFormat
+          ? Math.round(parsedLine.server_ts * 1000)
+          : parsedLine.server_ts;
+
+        const userAgent = getUserAgent(parsedLine.fp);
         const parsedUserAgent = parseUserAgent(userAgent);
 
         checks.push({
-          ts: new Date(parsedLine.ts),
-          serverTs: new Date(parsedLine.server_ts),
+          ts: new Date(tsMs),
+          serverTs: new Date(serverTsMs),
           ic: parsedLine.ic,
-          pcHash: getPcHash(parsedLine),
+          pcHash: getPcHash(parsedLine.fp),
           userAgent,
           ...parsedUserAgent,
         });
       } catch (error) {
-        throw new Error(`Errore nel file ${jsonlPath} alla riga ${index + 1}`, { cause: error });
+        throw new Error(`Errore nel log di ${teamSlug} alla riga ${index + 1}`, { cause: error });
       }
     }
 
@@ -386,9 +402,35 @@ function parseUserAgent(userAgent: string | null) {
   };
 }
 
-function getPcHash(entry: InternetCheckLine): string {
-  const stableData = stableStringify(entry.fp);
-  return hash("sha256", stableData);
+function getPcHash(fp: unknown): string {
+  // I log nuovi usano direttamente l'id del client (stringa), così lo stesso
+  // hash identifica anche la sessione degli screenshot. I log storici hanno
+  // un oggetto fingerprint: in quel caso lo stabiliamo e lo hashamo.
+  if (typeof fp === "string") return fp;
+
+  return hash("sha256", stableStringify(fp));
+}
+
+function getUserAgent(fp: unknown): string | null {
+  if (!isPlainObject(fp)) return null;
+  if (!isPlainObject(fp.basicInfo)) return null;
+
+  return typeof fp.basicInfo.userAgent === "string" ? fp.basicInfo.userAgent : null;
+}
+
+async function readTeamLogFile(logsPath: string, teamSlug: string, marker: string) {
+  // Se è presente il vecchio internet.json, lo preferiamo per i controlli:
+  // contiene l'oggetto fingerprint con basicInfo.userAgent, mentre logs.json
+  // espone solo l'id del PC. Gli screenshot vengono comunque letti da logs.json.
+  const legacy = await readFile(path.join(logsPath, teamSlug, "internet.json"), "utf8").catch(
+    () => null,
+  );
+  if (legacy?.includes(marker)) return legacy;
+
+  const logs = await readFile(path.join(logsPath, teamSlug, "logs.json"), "utf8").catch(() => null);
+  if (logs?.includes(marker)) return logs;
+
+  return legacy ?? logs;
 }
 
 function stableStringify(value: unknown): string {
@@ -406,18 +448,11 @@ function stableStringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
-const internetCheckLineSchema = z.strictObject({
-  ts: z.number().int(),
-  ic: z.array(z.boolean()),
-  server_ts: z.number().int(),
-  mid: z.string(),
-  fp: z.looseObject({
-    basicInfo: z
-      .looseObject({
-        userAgent: z.string().optional(),
-      })
-      .optional(),
-  }),
+const internetCheckLineSchema = z.looseObject({
+  ts: z.number().optional(),
+  client_ts: z.number().optional(),
+  ic: z.array(z.boolean()).optional(),
+  server_ts: z.number().optional(),
+  mid: z.string().optional(),
+  fp: z.unknown().optional(),
 });
-
-type InternetCheckLine = z.infer<typeof internetCheckLineSchema>;

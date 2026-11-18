@@ -317,6 +317,7 @@ export type TeamAdminItem = {
   instituteName: string;
   instituteCity: string;
   delay: number;
+  teamRoundId?: number;
 };
 
 export const getTeamAdmin = cache(
@@ -333,6 +334,7 @@ export const getTeamAdmin = cache(
         instituteName: institute.name,
         instituteCity: institute.city,
         delay: teamRound.delay,
+        teamRoundId: teamRound.id,
       })
       .from(teamRound)
       .innerJoin(team, eq(team.id, teamRound.teamId))

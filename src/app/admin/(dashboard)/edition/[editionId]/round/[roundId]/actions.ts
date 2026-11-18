@@ -151,10 +151,10 @@ export async function uploadRoundResults(
   editionId: string,
   roundSlug: string,
   formData: FormData,
-): Promise<ReadableStream<{ step: UploadResultStep; error?: string }>> {
+): Promise<ReadableStream<{ step: UploadResultStep; error?: string; warnings?: string[] }>> {
   await verifyAdmin();
 
-  return new ReadableStream<{ step: UploadResultStep; error?: string }>({
+  return new ReadableStream<{ step: UploadResultStep; error?: string; warnings?: string[] }>({
     async start(controller) {
       try {
         const file = formData.get("file");
@@ -166,10 +166,13 @@ export async function uploadRoundResults(
           return;
         }
 
+        const warnings: string[] = [];
         let lastStep = UploadResultStep.UPLOAD_ARCHIVE;
         let stepThrottle = delay(1000);
         try {
-          for await (const step of parseResult(file, editionId, roundSlug)) {
+          for await (const step of parseResult(file, editionId, roundSlug, (message) => {
+            warnings.push(message);
+          })) {
             if (lastStep !== step) {
               lastStep = step;
               await stepThrottle;
@@ -180,6 +183,10 @@ export async function uploadRoundResults(
         } catch (err: any) {
           console.error(err);
           controller.enqueue({ step: lastStep, error: err.message });
+        }
+
+        if (warnings.length > 0) {
+          controller.enqueue({ step: lastStep, warnings });
         }
 
         revalidatePath("/", "layout");

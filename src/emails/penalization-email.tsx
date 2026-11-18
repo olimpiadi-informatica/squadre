@@ -24,8 +24,7 @@ const levelLabel: Record<PenalizationLevel, string> = {
 };
 
 const typeLabel: Record<PenalizationType, string> = {
-  "screen-recording": "Screen recording",
-  "internet-check": "Internet",
+  proctoring: "Proctoring",
   plagiarism: "Copiatura",
   ai: "Uso di strumenti AI",
   other: "Violazione del codice d'onore",

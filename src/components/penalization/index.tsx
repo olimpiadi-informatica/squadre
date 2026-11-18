@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { Card, CardBody } from "@olinfo/react-components";
 import clsx from "clsx";
 
-import { InternetDetails } from "~/components/penalization/internet";
 import { PlagiarismDetails } from "~/components/penalization/plagiarism";
 import { getRoundPenalization, getTeamPenalization } from "~/lib/penalization";
 import type { RoundAdminItem } from "~/lib/round";
@@ -67,7 +66,6 @@ export async function PenalizationDetail({
       </Card>
 
       {penalization.type === "plagiarism" && <PlagiarismDetails teams={teams} />}
-      {penalization.type === "internet-check" && <InternetDetails round={round} team={teams[0]} />}
     </>
   );
 }

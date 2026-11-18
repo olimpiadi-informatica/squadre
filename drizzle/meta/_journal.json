@@ -71,6 +71,20 @@
       "when": 1794696816094,
       "tag": "0009_fix_total_tasks",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794864177508,
+      "tag": "0010_screenshot_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794865794335,
+      "tag": "0011_merge_proctoring_types",
+      "breakpoints": true
     }
   ]
 }

@@ -9,12 +9,19 @@ import type { submission } from "~/lib/db/schema";
 import { listRoundTasks } from "~/lib/task";
 import type { TeamCredential } from "~/lib/team";
 
+import { decodeSubmissionFile } from "./submission-file";
+
+export type SkippedSubmission = {
+  fileName: string;
+  reason: string;
+};
+
 export async function processSubmissions(
   subsPath: string,
   editionId: string,
   roundSlug: string,
   teams: Record<string, TeamCredential>,
-): Promise<(typeof submission.$inferInsert)[]> {
+): Promise<{ submissions: (typeof submission.$inferInsert)[]; skipped: SkippedSubmission[] }> {
   const [regularTasks, juniorTasks, files] = await Promise.all([
     listRoundTasks(editionId, roundSlug, false),
     listRoundTasks(editionId, roundSlug, true),
@@ -26,11 +33,19 @@ export async function processSubmissions(
     junior: keyBy(juniorTasks, (task) => task.slug),
   };
 
-  return flatMapAsync(
+  const skipped: SkippedSubmission[] = [];
+
+  const submissions = await flatMapAsync(
     files.filter((entry) => entry.isFile()),
     limitAsync(async (entry) => {
       const filePath = path.join(subsPath, entry.name);
-      const code = await readFile(filePath, "utf8");
+      const decoded = decodeSubmissionFile(await readFile(filePath), entry.name);
+      if (!decoded.ok) {
+        skipped.push({ fileName: entry.name, reason: decoded.reason });
+        return [];
+      }
+
+      const { metadata, code } = decoded;
 
       const match = /^(?<slug>\d+)\.\w+\.(?<language>\w+)$/u.exec(entry.name);
       if (!match?.groups) {
@@ -39,14 +54,12 @@ export async function processSubmissions(
 
       const { slug, language } = match.groups;
 
-      const teamSlug = getMetadataValue(code, "user", entry.name);
-      const team = teams[teamSlug];
+      const team = teams[metadata.user];
       if (!team) return [];
 
-      const taskName = getMetadataValue(code, "task", entry.name);
       const task = team.junior
-        ? taskMaps.junior[taskName.replace("_esordienti", "")]
-        : taskMaps.regular[taskName];
+        ? taskMaps.junior[metadata.task.replace("_esordienti", "")]
+        : taskMaps.regular[metadata.task];
       if (!task) {
         throw new Error(`Task non trovato per la submission: ${entry.name}`);
       }
@@ -56,23 +69,16 @@ export async function processSubmissions(
           slug,
           teamRoundId: team.teamRoundId,
           taskId: task.id,
-          score: parseScore(getMetadataValue(code, "score", entry.name), entry.name),
-          timestamp: parseTimestamp(getMetadataValue(code, "date", entry.name), entry.name),
+          score: parseScore(metadata.score, entry.name),
+          timestamp: parseTimestamp(metadata.date, entry.name),
           language,
           code,
         } satisfies typeof submission.$inferInsert,
       ];
     }, 64),
   );
-}
 
-function getMetadataValue(source: string, key: string, fileName: string): string {
-  const match = new RegExp(String.raw`(?:^|\n)\s*\*?\s*${key}:\s*(.+?)\s*$`, "mu").exec(source);
-  if (!match?.[1]) {
-    throw new Error(`Metadato "${key}" mancante nella submission: ${fileName}`);
-  }
-
-  return match[1].trim();
+  return { submissions, skipped: skipped.sort((a, b) => a.fileName.localeCompare(b.fileName)) };
 }
 
 function parseScore(rawScore: string, fileName: string): number {

@@ -7,9 +7,9 @@ import { getEditionAdmin } from "~/lib/edition";
 import { getRoundAdmin } from "~/lib/round";
 import { getTeamAdmin } from "~/lib/team";
 
-export default async function AdminRoundInternetTeamPage({
+export default async function AdminRoundProctoringTeamPage({
   params,
-}: PageProps<"/admin/edition/[editionId]/round/[roundId]/internet/[teamId]">) {
+}: PageProps<"/admin/edition/[editionId]/round/[roundId]/proctoring/[teamId]">) {
   await verifyAdmin();
 
   const { editionId, roundId, teamId } = await params;
@@ -35,7 +35,7 @@ export default async function AdminRoundInternetTeamPage({
             <Link href={`/admin/edition/${editionId}/round/${roundId}`}>{round.title}</Link>
           </li>
           <li>
-            <Link href={`/admin/edition/${editionId}/round/${roundId}/internet`}>Internet</Link>
+            <Link href={`/admin/edition/${editionId}/round/${roundId}/proctoring`}>Proctoring</Link>
           </li>
           <li>{team.slug}</li>
         </ul>

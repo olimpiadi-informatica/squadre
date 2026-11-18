@@ -15,7 +15,6 @@ import {
 } from "~/lib/email-template";
 import { listRoundPenalization } from "~/lib/penalization";
 import { getRoundAdmin } from "~/lib/round";
-import { isPenalizationEmailClosed } from "~/lib/round-config";
 
 import {
   savePenalizationAppealResultEmailTemplate,
@@ -24,6 +23,7 @@ import {
 } from "./actions";
 import { PenalizationTable } from "./penalization-table";
 import { UploadPlagiarismButton } from "./upload-plagiarism-button";
+import { UploadProctoringButton } from "./upload-proctoring-button";
 
 export default async function AdminRoundPenalizationPage({
   params,
@@ -41,12 +41,13 @@ export default async function AdminRoundPenalizationPage({
       getEmailTemplateContent(PENALIZATION_APPEAL_RESULT_EMAIL_TEMPLATE_ID),
     ]);
   if (!edition || !round) notFound();
-  const sendingClosed = isPenalizationEmailClosed(round.endsAt);
+  // Invio delle email di penalizzazione temporaneamente disabilitato.
+  const sendingClosed = true;
 
   const stats = {
     total: penalization.length,
     plagiarism: penalization.filter((penalization) => penalization.type === "plagiarism").length,
-    internet: penalization.filter((penalization) => penalization.type === "internet-check").length,
+    proctoring: penalization.filter((penalization) => penalization.type === "proctoring").length,
     red: penalization.filter((penalization) => penalization.level === "red").length,
     yellow: penalization.filter((penalization) => penalization.level === "yellow").length,
   };
@@ -89,13 +90,14 @@ export default async function AdminRoundPenalizationPage({
             <div className="grid gap-4 mt-5 md:grid-cols-5">
               <Stat label="Totale" value={stats.total} />
               <Stat label="Copiature" value={stats.plagiarism} />
-              <Stat label="Internet" value={stats.internet} />
+              <Stat label="Proctoring" value={stats.proctoring} />
               <Stat label="Livello giallo" value={stats.yellow} />
               <Stat label="Livello rosso" value={stats.red} />
             </div>
 
             <CardActions>
               <UploadPlagiarismButton editionId={editionId} roundId={roundId} />
+              <UploadProctoringButton editionId={editionId} roundId={roundId} />
               <TemplateModal
                 label="Template email esito ricorso"
                 content={appealResultTemplate ?? ""}

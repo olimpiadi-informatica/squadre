@@ -47,3 +47,4 @@ venv/
 __pycache__/
 /emails/
 /scripts/
+/screenshots/
