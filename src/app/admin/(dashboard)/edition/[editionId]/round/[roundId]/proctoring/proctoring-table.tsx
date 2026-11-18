@@ -10,6 +10,16 @@ import type { ProctoringTeamRow } from "~/lib/proctoring";
 
 const MISSING_WARNING_MS = 30 * 60_000;
 
+const penalizationLabel = {
+  yellow: "Giallo",
+  red: "Rosso",
+} as const;
+
+const penalizationBadge = {
+  yellow: "badge-warning",
+  red: "badge-error",
+} as const;
+
 function formatDuration(ms: number) {
   const totalMinutes = Math.max(Math.round(ms / 60_000), 1);
   if (totalMinutes < 60) return `${totalMinutes} min`;
@@ -35,6 +45,15 @@ function ProctoringRow({
         {item.instituteName}, {item.instituteCity}
       </div>
       <div className={clsx(item.numPc > 2 && "font-semibold text-error")}>{item.numPc}</div>
+      <div>
+        {item.penalization ? (
+          <span className={clsx("badge badge-sm", penalizationBadge[item.penalization])}>
+            {penalizationLabel[item.penalization]}
+          </span>
+        ) : (
+          <span className="opacity-60">-</span>
+        )}
+      </div>
       <div>
         {item.internet && item.internet.numChecks > 0 ? (
           <>
@@ -121,7 +140,7 @@ export function ProctoringTable({
       itemMatch={itemMatch}
       header={TableHeaders}
       row={Row}
-      className="grid-cols-[repeat(7,auto)]"
+      className="grid-cols-[repeat(8,auto)]"
     />
   );
 }
@@ -133,6 +152,7 @@ function TableHeaders() {
       <div className="min-w-32">Nome</div>
       <div className="min-w-48">Istituto</div>
       <div className="min-w-10">PC</div>
+      <div className="min-w-24">Penalizzato</div>
       <div className="min-w-28">Internet</div>
       <div className="min-w-24">Screenshot</div>
       <div className="min-w-20">Azioni</div>

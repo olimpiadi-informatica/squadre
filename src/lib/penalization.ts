@@ -282,6 +282,7 @@ export type TeamPenalizationDetail = {
   instituteName: string;
   instituteCity: string;
   delay: number;
+  teamRoundId: number;
   submissionId: number | null;
   submissionSlug: string | null;
   submissionScore: number | null;
@@ -303,6 +304,7 @@ export function getTeamPenalization(
       instituteName: institute.name,
       instituteCity: institute.city,
       delay: teamRound.delay,
+      teamRoundId: teamRound.id,
       submissionId: submission.id,
       submissionSlug: submission.slug,
       submissionScore: submission.score,

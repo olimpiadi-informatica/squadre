@@ -85,6 +85,20 @@
       "when": 1794865794335,
       "tag": "0011_merge_proctoring_types",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795028434775,
+      "tag": "0012_missing_fk_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795030974986,
+      "tag": "0013_narrow_vermin",
+      "breakpoints": true
     }
   ]
 }

@@ -147,52 +147,81 @@ async function getCredentialData(editionId: string, roundSlug: string, junior: b
   };
 }
 
+type UploadResultMessage = {
+  step: UploadResultStep;
+  error?: string;
+  warnings?: string[];
+};
+
+// Alcuni step restano a lungo senza produrre nulla (il salvataggio proctoring
+// su uno storico grande, il refresh delle materialized view finale). Il proxy
+// davanti all'app chiude le risposte silenziose troppo a lungo: nginx di
+// default dopo 60 secondi di `proxy_read_timeout`. Un battito con l'ultimo
+// step tiene viva la connessione, e il client ignora gli step ripetuti.
+const HEARTBEAT_INTERVAL_MS = 10_000;
+
 export async function uploadRoundResults(
   editionId: string,
   roundSlug: string,
   formData: FormData,
-): Promise<ReadableStream<{ step: UploadResultStep; error?: string; warnings?: string[] }>> {
+): Promise<ReadableStream<UploadResultMessage>> {
   await verifyAdmin();
 
-  return new ReadableStream<{ step: UploadResultStep; error?: string; warnings?: string[] }>({
+  return new ReadableStream<UploadResultMessage>({
     async start(controller) {
+      let lastStep = UploadResultStep.UPLOAD_ARCHIVE;
+      let closed = false;
+      const send = (message: UploadResultMessage) => {
+        if (closed) return;
+        try {
+          controller.enqueue(message);
+        } catch {
+          // Connessione chiusa dal client: smettiamo di scrivere, ma il
+          // lavoro in corso prosegue fino in fondo per non lasciare il
+          // database a metà.
+          closed = true;
+        }
+      };
+      const heartbeat = setInterval(() => send({ step: lastStep }), HEARTBEAT_INTERVAL_MS);
+
       try {
         const file = formData.get("file");
         if (!(file instanceof File)) {
-          controller.enqueue({
-            step: UploadResultStep.UPLOAD_ARCHIVE,
-            error: "Nessun file caricato",
-          });
+          send({ step: UploadResultStep.UPLOAD_ARCHIVE, error: "Nessun file caricato" });
           return;
         }
 
         const warnings: string[] = [];
-        let lastStep = UploadResultStep.UPLOAD_ARCHIVE;
         let stepThrottle = delay(1000);
         try {
-          for await (const step of parseResult(file, editionId, roundSlug, (message) => {
-            warnings.push(message);
-          })) {
-            if (lastStep !== step) {
-              lastStep = step;
-              await stepThrottle;
-              stepThrottle = delay(1000);
-            }
-            controller.enqueue({ step });
-          }
+          await parseResult(file, editionId, roundSlug, {
+            onWarning: (message) => {
+              warnings.push(message);
+            },
+            onStep: async (step) => {
+              if (lastStep !== step) {
+                lastStep = step;
+                await stepThrottle;
+                stepThrottle = delay(1000);
+              }
+              send({ step });
+            },
+          });
         } catch (err: any) {
           console.error(err);
-          controller.enqueue({ step: lastStep, error: err.message });
+          send({ step: lastStep, error: err.message });
         }
 
         if (warnings.length > 0) {
-          controller.enqueue({ step: lastStep, warnings });
+          send({ step: lastStep, warnings });
         }
 
         revalidatePath("/", "layout");
       } catch (err) {
         controller.error(err);
       } finally {
+        closed = true;
+        clearInterval(heartbeat);
         controller.close();
       }
     },

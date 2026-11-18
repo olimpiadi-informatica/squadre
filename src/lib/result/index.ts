@@ -13,14 +13,17 @@ import { extract } from "tar";
 import { db } from "~/lib/db";
 import {
   internetCheck,
+  penalization,
   round,
   screenshot,
   submission,
   teamRound,
+  teamRoundPenalization,
   teamTaskScore,
 } from "~/lib/db/schema";
 import { getRoundAdmin } from "~/lib/round";
 import { shouldPublishRound } from "~/lib/round-config";
+import { listRoundTasks } from "~/lib/task";
 import { listRoundTeamsCredentials } from "~/lib/team";
 import { refreshViews } from "~/lib/view";
 
@@ -44,24 +47,42 @@ export enum UploadResultStep {
   PUBLISH_ROUND,
 }
 
-export async function* parseResult(
+export type ParseResultOptions = {
+  onStep?: (step: UploadResultStep) => void | Promise<void>;
+  onWarning?: (message: string) => void;
+};
+
+// Il protocollo di Postgres accetta al massimo 65535 parametri per statement:
+// con 3-9 colonne per riga i limiti qui sotto restano larghi, e riducono di
+// 4-10 volte i round-trip verso il database rispetto ai vecchi chunk da 500.
+const SCORE_CHUNK_SIZE = 5000;
+const SUBMISSION_CHUNK_SIZE = 500;
+const INTERNET_CHECK_CHUNK_SIZE = 2000;
+const SCREENSHOT_CHUNK_SIZE = 2000;
+const TEAM_ROUND_UPDATE_CHUNK_SIZE = 5000;
+
+export async function parseResult(
   archive: File,
   editionId: string,
   roundSlug: string,
-  onWarning?: (message: string) => void,
-): AsyncGenerator<UploadResultStep> {
+  { onStep, onWarning }: ParseResultOptions = {},
+): Promise<void> {
+  const report = async (step: UploadResultStep) => {
+    await onStep?.(step);
+  };
+
   const roundData = await getRoundAdmin(editionId, roundSlug);
   if (!roundData) {
     throw new Error("Round non trovato");
   }
 
-  yield UploadResultStep.UPLOAD_ARCHIVE;
+  await report(UploadResultStep.UPLOAD_ARCHIVE);
   await using tempDir = await mkdtempDisposable(path.join(tmpdir(), "round-result-"));
   const archivePath = path.join(tempDir.path, "archive.tar.gz");
 
   await pipeline(archive.stream() as ReadableStream, createWriteStream(archivePath));
 
-  yield UploadResultStep.EXTRACT_ARCHIVE;
+  await report(UploadResultStep.EXTRACT_ARCHIVE);
   await extract({ file: archivePath, cwd: tempDir.path });
 
   const archiveFiles = await readdir(tempDir.path, { withFileTypes: true });
@@ -77,9 +98,8 @@ export async function* parseResult(
   const cmsLogPath = getPath(roundPath, ["cms.log"]);
   const proctoringPath = getPath(roundPath, ["logs", "internet", "internet-check"]);
 
-  yield UploadResultStep.PARSE_RANKIND;
+  await report(UploadResultStep.PARSE_RANKIND);
   const teams = keyBy(await listRoundTeamsCredentials(editionId, roundSlug), (t) => t.slug);
-  const teamIds = mapValues(teams, (t) => t.teamId);
   const teamRoundIds = mapValues(teams, (t) => t.teamRoundId);
   if (Object.keys(teams).length === 0) {
     throw new Error("Nessuna squadra trovata per questo round");
@@ -113,7 +133,7 @@ export async function* parseResult(
     true,
   );
 
-  yield UploadResultStep.PARSE_SUBMISSIONS;
+  await report(UploadResultStep.PARSE_SUBMISSIONS);
   const { submissions, skipped } = await processSubmissions(
     submissionsPath,
     editionId,
@@ -140,10 +160,10 @@ export async function* parseResult(
       ),
   );
 
-  yield UploadResultStep.PARSE_LOGS;
+  await report(UploadResultStep.PARSE_LOGS);
   const loggedUsers = await parseCmsLog(cmsLogPath);
 
-  yield UploadResultStep.PARSE_INTERNET;
+  await report(UploadResultStep.PARSE_INTERNET);
   const [internetChecks, screenshots] = await Promise.all([
     processInternetChecks(
       proctoringPath,
@@ -155,109 +175,136 @@ export async function* parseResult(
     processScreenshots(proctoringPath, teams),
   ]);
 
-  yield UploadResultStep.SAVE_RANKIND;
-  await db.delete(teamTaskScore).where(inArray(teamTaskScore.teamId, Object.values(teamIds)));
-  for (const scoreChunk of chunk([...scores, ...juniorScores], 500)) {
-    await db
-      .insert(teamTaskScore)
-      .values(scoreChunk)
-      .onConflictDoUpdate({
-        target: [teamTaskScore.taskId, teamTaskScore.teamId],
-        set: { score: sql.raw(`EXCLUDED.${teamTaskScore.score.name}`) },
-      });
-  }
+  // I punteggi vanno cancellati per i task del round, non per squadra: le
+  // stesse squadre gareggiano in più round e i loro punteggi degli altri round
+  // devono restare.
+  const [roundTasks, roundJuniorTasks] = await Promise.all([
+    listRoundTasks(editionId, roundSlug, false),
+    listRoundTasks(editionId, roundSlug, true),
+  ]);
+  const roundTaskIds = [...new Set([...roundTasks, ...roundJuniorTasks].map((t) => t.id))];
 
-  yield UploadResultStep.SAVE_SUBMISSIONS;
+  // Tutte le scritture stanno in un'unica transazione: un solo commit invece
+  // di uno per chunk, e nessuno stato a metà se qualcosa fallisce. Le letture
+  // pubbliche continuano a vedere i risultati precedenti fino al commit.
   await db.transaction(async (tx) => {
+    await report(UploadResultStep.SAVE_RANKIND);
+    await tx.delete(teamTaskScore).where(inArray(teamTaskScore.taskId, roundTaskIds));
+    for (const scoreChunk of chunk([...scores, ...juniorScores], SCORE_CHUNK_SIZE)) {
+      await tx
+        .insert(teamTaskScore)
+        .values(scoreChunk)
+        .onConflictDoUpdate({
+          target: [teamTaskScore.taskId, teamTaskScore.teamId],
+          set: { score: sql.raw(`EXCLUDED.${teamTaskScore.score.name}`) },
+        });
+    }
+
+    await report(UploadResultStep.SAVE_SUBMISSIONS);
     await tx.delete(submission).where(inArray(submission.teamRoundId, Object.values(teamRoundIds)));
-    for (const submissionChunk of chunk(submissions, 200)) {
+    for (const submissionChunk of chunk(submissions, SUBMISSION_CHUNK_SIZE)) {
       await tx.insert(submission).values(submissionChunk);
+    }
+
+    // Le penalizzazioni puntano alle submission (copiature) tramite un id che
+    // il reimport rigenera, e portano stati che non hanno più senso sui nuovi
+    // risultati (ricorsi, invii). Se restassero, la pagina delle copiature
+    // mostrerebbe riferimenti vuoti: le azzeriamo insieme ai risultati, così
+    // vanno reimportati i TSV delle copiature e i CSV di proctoring.
+    await tx.delete(penalization).where(
+      inArray(
+        penalization.id,
+        tx
+          .select({ id: teamRoundPenalization.penalizationId })
+          .from(teamRoundPenalization)
+          .where(inArray(teamRoundPenalization.teamRoundId, Object.values(teamRoundIds))),
+      ),
+    );
+
+    await report(UploadResultStep.SAVE_PARTICIPATION);
+    const scoredTeamIds = new Set<number>();
+    for (const s of [...scores, ...juniorScores]) {
+      if (s.score > 0) {
+        scoredTeamIds.add(s.teamId);
+      }
+    }
+    for (const sub of submissions) {
+      if (sub.score > 0) {
+        const t = Object.values(teams).find((tm) => tm.teamRoundId === sub.teamRoundId);
+        if (t) scoredTeamIds.add(t.teamId);
+      }
+    }
+
+    const submittedTeamRoundIds = new Set<number>();
+    for (const sub of submissions) {
+      submittedTeamRoundIds.add(sub.teamRoundId);
+    }
+
+    const scoredRoundIds: number[] = [];
+    const submittedRoundIds: number[] = [];
+    const loggedRoundIds: number[] = [];
+    const nullRoundIds: number[] = [];
+
+    for (const t of Object.values(teams)) {
+      if (scoredTeamIds.has(t.teamId)) {
+        scoredRoundIds.push(t.teamRoundId);
+      } else if (submittedTeamRoundIds.has(t.teamRoundId)) {
+        submittedRoundIds.push(t.teamRoundId);
+      } else if (loggedUsers.has(t.slug)) {
+        loggedRoundIds.push(t.teamRoundId);
+      } else {
+        nullRoundIds.push(t.teamRoundId);
+      }
+    }
+
+    if (scoredRoundIds.length > 0) {
+      for (const chunkIds of chunk(scoredRoundIds, TEAM_ROUND_UPDATE_CHUNK_SIZE)) {
+        await tx
+          .update(teamRound)
+          .set({ participationStatus: "scored" })
+          .where(inArray(teamRound.id, chunkIds));
+      }
+    }
+    if (submittedRoundIds.length > 0) {
+      for (const chunkIds of chunk(submittedRoundIds, TEAM_ROUND_UPDATE_CHUNK_SIZE)) {
+        await tx
+          .update(teamRound)
+          .set({ participationStatus: "submitted" })
+          .where(inArray(teamRound.id, chunkIds));
+      }
+    }
+    if (loggedRoundIds.length > 0) {
+      for (const chunkIds of chunk(loggedRoundIds, TEAM_ROUND_UPDATE_CHUNK_SIZE)) {
+        await tx
+          .update(teamRound)
+          .set({ participationStatus: "logged" })
+          .where(inArray(teamRound.id, chunkIds));
+      }
+    }
+    if (nullRoundIds.length > 0) {
+      for (const chunkIds of chunk(nullRoundIds, TEAM_ROUND_UPDATE_CHUNK_SIZE)) {
+        await tx
+          .update(teamRound)
+          .set({ participationStatus: null })
+          .where(inArray(teamRound.id, chunkIds));
+      }
+    }
+
+    await report(UploadResultStep.SAVE_INTERNET);
+    await tx
+      .delete(internetCheck)
+      .where(inArray(internetCheck.teamRoundId, Object.values(teamRoundIds)));
+    for (const internetCheckChunk of chunk(internetChecks, INTERNET_CHECK_CHUNK_SIZE)) {
+      await tx.insert(internetCheck).values(internetCheckChunk);
+    }
+
+    await tx.delete(screenshot).where(inArray(screenshot.teamRoundId, Object.values(teamRoundIds)));
+    for (const screenshotChunk of chunk(screenshots, SCREENSHOT_CHUNK_SIZE)) {
+      await tx.insert(screenshot).values(screenshotChunk);
     }
   });
 
-  yield UploadResultStep.SAVE_PARTICIPATION;
-  const scoredTeamIds = new Set<number>();
-  for (const s of [...scores, ...juniorScores]) {
-    if (s.score > 0) {
-      scoredTeamIds.add(s.teamId);
-    }
-  }
-  for (const sub of submissions) {
-    if (sub.score > 0) {
-      const t = Object.values(teams).find((tm) => tm.teamRoundId === sub.teamRoundId);
-      if (t) scoredTeamIds.add(t.teamId);
-    }
-  }
-
-  const submittedTeamRoundIds = new Set<number>();
-  for (const sub of submissions) {
-    submittedTeamRoundIds.add(sub.teamRoundId);
-  }
-
-  const scoredRoundIds: number[] = [];
-  const submittedRoundIds: number[] = [];
-  const loggedRoundIds: number[] = [];
-  const nullRoundIds: number[] = [];
-
-  for (const t of Object.values(teams)) {
-    if (scoredTeamIds.has(t.teamId)) {
-      scoredRoundIds.push(t.teamRoundId);
-    } else if (submittedTeamRoundIds.has(t.teamRoundId)) {
-      submittedRoundIds.push(t.teamRoundId);
-    } else if (loggedUsers.has(t.slug)) {
-      loggedRoundIds.push(t.teamRoundId);
-    } else {
-      nullRoundIds.push(t.teamRoundId);
-    }
-  }
-
-  if (scoredRoundIds.length > 0) {
-    for (const chunkIds of chunk(scoredRoundIds, 500)) {
-      await db
-        .update(teamRound)
-        .set({ participationStatus: "scored" })
-        .where(inArray(teamRound.id, chunkIds));
-    }
-  }
-  if (submittedRoundIds.length > 0) {
-    for (const chunkIds of chunk(submittedRoundIds, 500)) {
-      await db
-        .update(teamRound)
-        .set({ participationStatus: "submitted" })
-        .where(inArray(teamRound.id, chunkIds));
-    }
-  }
-  if (loggedRoundIds.length > 0) {
-    for (const chunkIds of chunk(loggedRoundIds, 500)) {
-      await db
-        .update(teamRound)
-        .set({ participationStatus: "logged" })
-        .where(inArray(teamRound.id, chunkIds));
-    }
-  }
-  if (nullRoundIds.length > 0) {
-    for (const chunkIds of chunk(nullRoundIds, 500)) {
-      await db
-        .update(teamRound)
-        .set({ participationStatus: null })
-        .where(inArray(teamRound.id, chunkIds));
-    }
-  }
-
-  yield UploadResultStep.SAVE_INTERNET;
-  await db
-    .delete(internetCheck)
-    .where(inArray(internetCheck.teamRoundId, Object.values(teamRoundIds)));
-  for (const internetCheckChunk of chunk(internetChecks, 500)) {
-    await db.insert(internetCheck).values(internetCheckChunk);
-  }
-
-  await db.delete(screenshot).where(inArray(screenshot.teamRoundId, Object.values(teamRoundIds)));
-  for (const screenshotChunk of chunk(screenshots, 500)) {
-    await db.insert(screenshot).values(screenshotChunk);
-  }
-
-  yield UploadResultStep.PUBLISH_ROUND;
+  await report(UploadResultStep.PUBLISH_ROUND);
   await db
     .update(round)
     .set({ public: shouldPublishRound(roundSlug) })

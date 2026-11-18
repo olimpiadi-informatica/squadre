@@ -56,8 +56,12 @@ export const round = pgTable("round", {
   title: text().notNull(),
   fullscore: integer().notNull(),
   public: boolean().notNull().default(true),
-  startsAt: timestamp("starts_at").notNull().default(sql`'1970-01-01 00:00:00'`),
-  endsAt: timestamp("ends_at").notNull().default(sql`'1970-01-01 00:00:00'`),
+  startsAt: timestamp("starts_at", { withTimezone: true })
+    .notNull()
+    .default(sql`'1970-01-01 00:00:00'`),
+  endsAt: timestamp("ends_at", { withTimezone: true })
+    .notNull()
+    .default(sql`'1970-01-01 00:00:00'`),
 });
 
 export const task = pgTable(
@@ -173,26 +177,43 @@ export const teamTaskScore = pgTable(
     // I punteggi delle finali storiche hanno al più 2 decimali
     score: numeric("score", { precision: 8, scale: 2, mode: "number" }).notNull(),
   },
-  (table) => [uniqueIndex("task_score_task_id_team_id_unique").on(table.taskId, table.teamId)],
+  (table) => [
+    uniqueIndex("task_score_task_id_team_id_unique").on(table.taskId, table.teamId),
+    // L'upload dei risultati cancella i punteggi con `team_id IN (...)`: senza
+    // questo indice il delete degenera in una scansione completa della tabella.
+    index("team_task_score_team_id_idx").on(table.teamId),
+  ],
 );
 
 export const internetCheckStatusValues = ["succeeded", "failed", "missing", "empty"] as const;
 export type InternetCheckStatus = (typeof internetCheckStatusValues)[number];
 
-export const internetCheck = pgTable("internet_check", {
-  id: serial().primaryKey(),
-  teamRoundId: integer("team_round_id")
-    .notNull()
-    .references(() => teamRound.id, { onDelete: "cascade" }),
-  startTs: timestamp("start_ts").notNull(),
-  endTs: timestamp("end_ts").notNull(),
-  status: text().notNull().$type<InternetCheckStatus>(),
-  pcHash: text("pc_hash").notNull(),
-  userAgent: text("user_agent"),
-  browserName: text("browser_name"),
-  browserMajor: integer("browser_major"),
-  osName: text("os_name"),
-});
+export const internetCheck = pgTable(
+  "internet_check",
+  {
+    id: serial().primaryKey(),
+    teamRoundId: integer("team_round_id")
+      .notNull()
+      .references(() => teamRound.id, { onDelete: "cascade" }),
+    startTs: timestamp("start_ts", { withTimezone: true }).notNull(),
+    endTs: timestamp("end_ts", { withTimezone: true }).notNull(),
+    status: text().notNull().$type<InternetCheckStatus>(),
+    pcHash: text("pc_hash").notNull(),
+    userAgent: text("user_agent"),
+    browserName: text("browser_name"),
+    browserMajor: integer("browser_major"),
+    osName: text("os_name"),
+  },
+  (table) => [
+    // Usato dall'aggregazione della pagina di proctoring: permette un
+    // index-only scan invece di un sort su disco di tutti i controlli.
+    index("internet_check_team_round_id_pc_hash_status_idx").on(
+      table.teamRoundId,
+      table.pcHash,
+      table.status,
+    ),
+  ],
+);
 
 export const submission = pgTable(
   "submission",
@@ -206,7 +227,7 @@ export const submission = pgTable(
       .notNull()
       .references(() => task.id, { onDelete: "cascade" }),
     score: integer().notNull(),
-    timestamp: timestamp().notNull(),
+    timestamp: timestamp({ withTimezone: true }).notNull(),
     language: text().notNull(),
     code: text().notNull(),
   },
@@ -231,7 +252,7 @@ export const screenshot = pgTable(
       .notNull()
       .references(() => teamRound.id, { onDelete: "cascade" }),
     pcHash: text("pc_hash").notNull(),
-    ts: timestamp().notNull(),
+    ts: timestamp({ withTimezone: true }).notNull(),
     filename: text().notNull(),
   },
   (table) => [
@@ -329,10 +350,10 @@ export const penalization = pgTable(
     level: text().notNull().$type<PenalizationLevel>(),
     type: text().notNull().$type<PenalizationType>(),
     description: text().notNull(),
-    createdAt: timestamp("created_at").notNull(),
-    sentAt: timestamp("sent_at"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
     appealAllowed: boolean().notNull(),
-    allowAppealUntil: timestamp("allow_appeal_until"),
+    allowAppealUntil: timestamp("allow_appeal_until", { withTimezone: true }),
     appealApproved: boolean("appeal_approved"),
   },
   (table) => [index("idx_penalization_type").on(table.type)],
@@ -377,20 +398,20 @@ export const user = pgTable("user", {
   email: text().notNull().unique(),
   emailVerified: boolean("email_verified").notNull(),
   image: text(),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
   role: text(),
   banned: boolean(),
   banReason: text("ban_reason"),
-  banExpires: timestamp("ban_expires"),
+  banExpires: timestamp("ban_expires", { withTimezone: true }),
 });
 
 export const session = pgTable("session", {
   id: text().primaryKey().notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   token: text().notNull().unique(),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   userId: text("user_id")
@@ -409,21 +430,21 @@ export const account = pgTable("account", {
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   idToken: text("id_token"),
-  accessTokenExpiresAt: timestamp("access_token_expires_at"),
-  refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+  accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }),
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
   scope: text(),
   password: text(),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
 });
 
 export const verification = pgTable("verification", {
   id: text().primaryKey().notNull(),
   identifier: text().notNull(),
   value: text().notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at"),
-  updatedAt: timestamp("updated_at"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 // ─── Materialized Views ───────────────────────────────────────────────────────

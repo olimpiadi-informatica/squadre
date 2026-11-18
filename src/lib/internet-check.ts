@@ -1,4 +1,4 @@
-import { and, countDistinct, eq, exists, gt, inArray, ne, sql } from "drizzle-orm";
+import { and, countDistinct, eq, exists, gt, ne, sql } from "drizzle-orm";
 
 import { db } from "./db";
 import {
@@ -63,6 +63,36 @@ export function getTeamRoundInternetChecks(
   editionId: string,
   roundSlug: string,
 ): Promise<TeamRoundInternetCheck[]> {
+  /**
+   * I controlli sono aggregati per `team_round` in una sottoquery: aggregare
+   * direttamente sulla join (con `count(distinct pc_hash)`) costringe Postgres a
+   * ordinare tutti i controlli su disco, mentre così può usare l'indice
+   * `internet_check_team_round_id_pc_hash_status_idx` con un index-only scan.
+   */
+  const checks = db
+    .select({
+      teamRoundId: internetCheck.teamRoundId,
+      numPc: countDistinct(internetCheck.pcHash).as("num_pc"),
+      numChecks: sql<number>`COUNT(*) FILTER (WHERE ${ne(internetCheck.status, "empty")})`.as(
+        "num_checks",
+      ),
+      numSucceededChecks:
+        sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "succeeded")})`.as(
+          "num_succeeded_checks",
+        ),
+      numFailedChecks:
+        sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "failed")})`.as(
+          "num_failed_checks",
+        ),
+      numMissingChecks:
+        sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "missing")})`.as(
+          "num_missing_checks",
+        ),
+    })
+    .from(internetCheck)
+    .groupBy(internetCheck.teamRoundId)
+    .as("checks");
+
   return db
     .select({
       teamSlug: team.slug,
@@ -71,21 +101,21 @@ export function getTeamRoundInternetChecks(
       instituteCity: institute.city,
       editionId: round.editionId,
       roundSlug: round.slug,
-      numPc: countDistinct(internetCheck.pcHash),
-      numChecks: sql<number>`COUNT(*) FILTER (WHERE ${ne(internetCheck.status, "empty")})`,
-      numSucceededChecks: sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "succeeded")})`,
-      numFailedChecks: sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "failed")})`,
-      numMissingChecks: sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "missing")})`,
+      numPc: sql<number>`COALESCE(${checks.numPc}, 0)::int`,
+      numChecks: sql<number>`COALESCE(${checks.numChecks}, 0)::int`,
+      numSucceededChecks: sql<number>`COALESCE(${checks.numSucceededChecks}, 0)::int`,
+      numFailedChecks: sql<number>`COALESCE(${checks.numFailedChecks}, 0)::int`,
+      numMissingChecks: sql<number>`COALESCE(${checks.numMissingChecks}, 0)::int`,
       hasIssues: sql<boolean>`
-        COUNT(*) FILTER (WHERE ${inArray(internetCheck.status, ["failed", "missing"])}) > 0
-        OR COUNT(DISTINCT ${internetCheck.pcHash}) > 2
+        COALESCE(${checks.numFailedChecks}, 0) + COALESCE(${checks.numMissingChecks}, 0) > 0
+        OR COALESCE(${checks.numPc}, 0) > 2
       `,
     })
     .from(teamRound)
     .innerJoin(team, eq(team.id, teamRound.teamId))
     .innerJoin(round, eq(round.id, teamRound.roundId))
     .innerJoin(institute, eq(institute.id, team.instituteId))
-    .leftJoin(internetCheck, eq(internetCheck.teamRoundId, teamRound.id))
+    .leftJoin(checks, eq(checks.teamRoundId, teamRound.id))
     .where(
       and(
         eq(round.editionId, editionId),
@@ -105,6 +135,5 @@ export function getTeamRoundInternetChecks(
         ),
       ),
     )
-    .groupBy(team.slug, team.name, institute.name, institute.city, round.editionId, round.slug)
     .orderBy(institute.name, institute.city, team.name);
 }

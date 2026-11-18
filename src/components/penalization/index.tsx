@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Card, CardBody } from "@olinfo/react-components";
 import clsx from "clsx";
 
+import { InternetDetails } from "~/components/penalization/internet";
 import { PlagiarismDetails } from "~/components/penalization/plagiarism";
 import { getRoundPenalization, getTeamPenalization } from "~/lib/penalization";
 import type { RoundAdminItem } from "~/lib/round";
@@ -66,6 +67,14 @@ export async function PenalizationDetail({
       </Card>
 
       {penalization.type === "plagiarism" && <PlagiarismDetails teams={teams} />}
+
+      {penalization.type === "proctoring" && (
+        <div className="flex flex-col gap-4">
+          {teams.map((team) => (
+            <InternetDetails key={team.id} round={round} team={team} />
+          ))}
+        </div>
+      )}
     </>
   );
 }

@@ -3,7 +3,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { addSeconds, clamp, max, min } from "date-fns";
-import { groupBy, isPlainObject, sortBy } from "es-toolkit";
+import { flatMapAsync, groupBy, isPlainObject, limitAsync, sortBy } from "es-toolkit";
 import { UAParser } from "ua-parser-js";
 import { z } from "zod";
 
@@ -13,6 +13,10 @@ import { getRoundEndForTeam, getRoundStartForTeam } from "~/lib/round-config";
 import type { TeamCredential } from "~/lib/team";
 
 const CHECK_VALIDITY_SEC = 100;
+
+// Quanti file di log leggere contemporaneamente: senza un limite un archivio
+// con centinaia di squadre terrebbe aperti troppi file e troppa memoria.
+const LOG_READ_CONCURRENCY = 32;
 
 type InternetCheckInsert = typeof internetCheck.$inferInsert;
 
@@ -34,69 +38,72 @@ export async function processInternetChecks(
   firstSubmissionByTeamRoundId: Record<number, Date | undefined>,
   lastSubmissionByTeamRoundId: Record<number, Date | undefined>,
 ) {
-  const rows: InternetCheckInsert[] = [];
-  const rawChecksByTeam = new Map<string, ParsedInternetCheck[]>();
-  const teamSlugs = await readdir(logsPath);
+  const teamSlugs = new Set(await readdir(logsPath));
 
-  for (const teamSlug of teamSlugs) {
-    if (teams[teamSlug] == null) continue;
+  // I log delle squadre sono indipendenti: leggerli in parallelo evita di
+  // sommare la latenza di ogni file a quella dei successivi, che con centinaia
+  // di squadre diventa il costo dominante dell'import.
+  return flatMapAsync(
+    Object.entries(teams).filter(([teamSlug]) => teamSlugs.has(teamSlug)),
+    limitAsync(async ([teamSlug, team]) => {
+      const content = await readTeamLogFile(logsPath, teamSlug, '"ic"');
+      if (content == null) return [];
 
-    const content = await readTeamLogFile(logsPath, teamSlug, '"ic"');
-    if (content == null) continue;
-    const lines = content.split(/\r?\n/);
-    const checks: ParsedInternetCheck[] = [];
+      const checks = sortBy(parseInternetChecks(content, teamSlug), ["serverTs"]);
 
-    for (let index = 0; index < lines.length; index++) {
-      const line = lines[index].trim();
-      if (!line) continue;
-
-      try {
-        const parsedLine = internetCheckLineSchema.parse(JSON.parse(line));
-
-        // Le righe con `filename` sono screenshot: le gestisce
-        // processScreenshots. Qui servono solo i controlli internet.
-        if (parsedLine.ic == null || parsedLine.server_ts == null) continue;
-
-        // I log nuovi usano `client_ts`/`server_ts` in secondi; il formato
-        // storico di internet.json usava `ts`/`server_ts` in millisecondi.
-        const isSecondsFormat = typeof parsedLine.client_ts === "number";
-        const ts = isSecondsFormat ? parsedLine.client_ts : parsedLine.ts;
-        if (ts == null) continue;
-
-        const tsMs = isSecondsFormat ? Math.round(ts * 1000) : ts;
-        const serverTsMs = isSecondsFormat
-          ? Math.round(parsedLine.server_ts * 1000)
-          : parsedLine.server_ts;
-
-        const userAgent = getUserAgent(parsedLine.fp);
-        const parsedUserAgent = parseUserAgent(userAgent);
-
-        checks.push({
-          ts: new Date(tsMs),
-          serverTs: new Date(serverTsMs),
-          ic: parsedLine.ic,
-          pcHash: getPcHash(parsedLine.fp),
-          userAgent,
-          ...parsedUserAgent,
-        });
-      } catch (error) {
-        throw new Error(`Errore nel log di ${teamSlug} alla riga ${index + 1}`, { cause: error });
-      }
-    }
-
-    rawChecksByTeam.set(teamSlug, sortBy(checks, ["serverTs"]));
-  }
-
-  for (const [teamSlug, team] of Object.entries(teams)) {
-    rows.push(
-      ...buildTeamInternetChecks(rawChecksByTeam.get(teamSlug) ?? [], roundData, team, {
+      return buildTeamInternetChecks(checks, roundData, team, {
         firstSubmissionTs: firstSubmissionByTeamRoundId[team.teamRoundId],
         lastSubmissionTs: lastSubmissionByTeamRoundId[team.teamRoundId],
-      }),
-    );
+      });
+    }, LOG_READ_CONCURRENCY),
+  );
+}
+
+function parseInternetChecks(content: string, teamSlug: string): ParsedInternetCheck[] {
+  const checks: ParsedInternetCheck[] = [];
+  const lines = content.split(/\r?\n/);
+
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index].trim();
+    if (!line) continue;
+
+    try {
+      const parsedLine = internetCheckLineSchema.parse(JSON.parse(line));
+
+      // Le righe con `filename` sono screenshot: le gestisce
+      // processScreenshots. Qui servono solo i controlli internet.
+      if (parsedLine.ic == null || parsedLine.server_ts == null) continue;
+
+      // I log nuovi usano `client_ts`/`server_ts` in secondi; il formato
+      // storico di internet.json usava `ts`/`server_ts` in millisecondi.
+      const isSecondsFormat = typeof parsedLine.client_ts === "number";
+      const ts = isSecondsFormat ? parsedLine.client_ts : parsedLine.ts;
+      if (ts == null) continue;
+
+      const tsMs = isSecondsFormat ? Math.round(ts * 1000) : ts;
+      const serverTsMs = isSecondsFormat
+        ? Math.round(parsedLine.server_ts * 1000)
+        : parsedLine.server_ts;
+
+      const userAgent = getUserAgent(parsedLine.fp);
+      const parsedUserAgent = parseUserAgent(userAgent);
+
+      checks.push({
+        // `client_ts`/`server_ts` sono epoch UTC veri: vanno usati così come
+        // sono, senza reinterpretarli come orologio italiano.
+        ts: new Date(tsMs),
+        serverTs: new Date(serverTsMs),
+        ic: parsedLine.ic,
+        pcHash: getPcHash(parsedLine.fp),
+        userAgent,
+        ...parsedUserAgent,
+      });
+    } catch (error) {
+      throw new Error(`Errore nel log di ${teamSlug} alla riga ${index + 1}`, { cause: error });
+    }
   }
 
-  return rows;
+  return checks;
 }
 
 function buildTeamInternetChecks(

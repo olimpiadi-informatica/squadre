@@ -3,8 +3,8 @@ import type { SQLChunk, SQLWrapper } from "drizzle-orm/sql/sql";
 
 /**
  * `sum`/`avg`/`min`/`max` su `numeric` tornano da Postgres come stringhe: il
- * cast a `float8` le converte in numeri già in Postgres, così non serve alcun
- * parser globale lato `pg` (vedi `src/lib/db/index.ts`). L'arrotondamento a due
+ * cast a `float8` le converte in numeri già in Postgres, così non serve un
+ * parser globale lato `pg` per i `numeric`. L'arrotondamento a due
  * decimali evita il rumore del virgola mobile nelle somme (1709.3400000000001).
  */
 export function coalesce(value: SQL, fallback: number): SQL<number> {

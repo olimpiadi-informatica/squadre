@@ -6,6 +6,7 @@ import { TriangleAlert } from "lucide-react";
 
 import { PenalizationDetail } from "~/components/penalization";
 import { getInstitutePenalization, getInstitutePenalizationAccess } from "~/lib/penalization";
+import { getRoundAdmin } from "~/lib/round";
 
 export default async function TeacherPenalizationDetailPage({
   params,
@@ -18,27 +19,16 @@ export default async function TeacherPenalizationDetailPage({
     getInstitutePenalizationAccess(token),
     getInstitutePenalization(token, id),
   ]);
-  if (!access || !penalization) notFound();
+  if (!access) notFound();
+
+  const round = await getRoundAdmin(access.editionId, access.roundSlug);
+  if (!penalization || !round) notFound();
 
   const isAppealOpen = Boolean(
     penalization.appealAllowed &&
       penalization.allowAppealUntil &&
       penalization.allowAppealUntil >= new Date(),
   );
-
-  const round = {
-    id: access.roundId,
-    slug: access.roundSlug,
-    title: access.roundTitle,
-    editionId: access.editionId,
-    startsAt: new Date(0),
-    endsAt: new Date(0),
-    public: false,
-    schoolCount: 0,
-    teamCount: 0,
-    taskCount: 0,
-    sentEmailCount: 0,
-  };
 
   return (
     <div className="flex flex-col gap-6">

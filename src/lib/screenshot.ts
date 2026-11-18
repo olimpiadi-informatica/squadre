@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { cache } from "react";
 
-import { and, eq, exists, gt, max, min } from "drizzle-orm";
+import { and, eq, exists, gt, inArray, max, min, sql } from "drizzle-orm";
 
 import { db } from "./db";
 import type { PenalizationLevel, PenalizationType } from "./db/schema";
@@ -38,13 +38,6 @@ const SAFE_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const SESSION_ID = /^[A-Za-z0-9]+$/u;
 const FRAME_FILE = /^(?<seconds>\d+(?:\.\d+)?)\.(?:jpe?g|png)$/iu;
 
-export type ScreenshotFrame = {
-  /** Timestamp del frame in millisecondi (epoch). */
-  ts: number;
-  /** Nome del file, es. `1794839208.042.jpg`. */
-  file: string;
-};
-
 export type ScreenshotGap = {
   startMs: number;
   endMs: number;
@@ -60,7 +53,8 @@ export type ScreenshotGap = {
 export type ScreenshotSession = {
   /** Hash della sessione di registrazione (nome della directory). */
   id: string;
-  frames: ScreenshotFrame[];
+  /** Timestamp dei frame in millisecondi (epoch), in ordine crescente. */
+  frames: number[];
   gaps: ScreenshotGap[];
   medianIntervalMs: number;
   firstMs: number;
@@ -153,17 +147,16 @@ export const getTeamScreenshotSessions = cache(
         .select({
           pcHash: screenshot.pcHash,
           ts: screenshot.ts,
-          filename: screenshot.filename,
         })
         .from(screenshot)
         .where(eq(screenshot.teamRoundId, teamRoundId))
         .orderBy(screenshot.pcHash, screenshot.ts);
 
       if (rows.length > 0) {
-        const framesByPc = new Map<string, ScreenshotFrame[]>();
+        const framesByPc = new Map<string, number[]>();
         for (const row of rows) {
           const frames = framesByPc.get(row.pcHash) ?? [];
-          frames.push({ ts: row.ts.getTime(), file: row.filename });
+          frames.push(row.ts.getTime());
           framesByPc.set(row.pcHash, frames);
         }
 
@@ -174,22 +167,86 @@ export const getTeamScreenshotSessions = cache(
       }
     }
 
-    const teamDir = path.join(SCREENSHOTS_DIR, teamSlug);
-    const entries = await readdir(teamDir, { withFileTypes: true }).catch(() => []);
-
-    const sessions = await Promise.all(
-      entries
-        .filter((entry) => entry.isDirectory() && SESSION_ID.test(entry.name))
-        .map(async (entry) =>
-          readSession(path.join(teamDir, entry.name), entry.name, gapThresholdMs),
-        ),
-    );
-
-    return sessions
-      .filter((session): session is ScreenshotSession => session !== null)
-      .sort((a, b) => a.firstMs - b.firstMs || a.id.localeCompare(b.id));
+    return getTeamFileSystemSessions(teamSlug, gapThresholdMs);
   },
 );
+
+/**
+ * Sessioni lette da `SCREENSHOTS_DIR` quando i metadati non sono nel database
+ * (es. registrazioni scaricate localmente). Il resto della pagina usa
+ * `getRoundScreenshotSessions`, che carica tutto il round con una sola query.
+ */
+async function getTeamFileSystemSessions(
+  teamSlug: string,
+  gapThresholdMs = DEFAULT_GAP_THRESHOLD_MS,
+): Promise<ScreenshotSession[]> {
+  if (!SAFE_SEGMENT.test(teamSlug)) return [];
+
+  const teamDir = path.join(SCREENSHOTS_DIR, teamSlug);
+  const entries = await readdir(teamDir, { withFileTypes: true }).catch(() => []);
+
+  const sessions = await Promise.all(
+    entries
+      .filter((entry) => entry.isDirectory() && SESSION_ID.test(entry.name))
+      .map(async (entry) =>
+        readSession(path.join(teamDir, entry.name), entry.name, gapThresholdMs),
+      ),
+  );
+
+  return sessions
+    .filter((session): session is ScreenshotSession => session !== null)
+    .sort((a, b) => a.firstMs - b.firstMs || a.id.localeCompare(b.id));
+}
+
+/**
+ * Sessioni di tutte le squadre indicate, in una sola query: per ogni
+ * registrazione (una per PC) si prendono solo i timestamp dei frame.
+ * Evita la query per squadra che rendeva lenta la pagina di proctoring.
+ */
+export async function getRoundScreenshotSessions(
+  teamRoundIds: number[],
+  gapThresholdMs = DEFAULT_GAP_THRESHOLD_MS,
+): Promise<Map<number, ScreenshotSession[]>> {
+  const sessionsByTeamRound = new Map<number, ScreenshotSession[]>();
+  if (teamRoundIds.length === 0) return sessionsByTeamRound;
+
+  const rows = await db
+    .select({
+      teamRoundId: screenshot.teamRoundId,
+      pcHash: screenshot.pcHash,
+      // `date_part` restituisce direttamente `float8`, mentre
+      // `EXTRACT(EPOCH ...)` produce un `numeric`: su centinaia di migliaia di
+      // righe la differenza è di centinaia di millisecondi.
+      frames: sql<
+        number[]
+      >`ARRAY_AGG(ROUND(date_part('epoch', ${screenshot.ts}) * 1000) ORDER BY ${screenshot.ts})`,
+    })
+    .from(screenshot)
+    .where(inArray(screenshot.teamRoundId, teamRoundIds))
+    .groupBy(screenshot.teamRoundId, screenshot.pcHash);
+
+  const framesByTeamRound = new Map<number, Map<string, number[]>>();
+  for (const row of rows) {
+    let framesByPc = framesByTeamRound.get(row.teamRoundId);
+    if (!framesByPc) {
+      framesByPc = new Map();
+      framesByTeamRound.set(row.teamRoundId, framesByPc);
+    }
+    framesByPc.set(row.pcHash, row.frames);
+  }
+
+  for (const [teamRoundId, framesByPc] of framesByTeamRound) {
+    sessionsByTeamRound.set(
+      teamRoundId,
+      [...framesByPc.entries()]
+        .map(([pcHash, frames]) => buildSession(pcHash, frames, gapThresholdMs))
+        .filter((session): session is ScreenshotSession => session !== null)
+        .sort((a, b) => a.firstMs - b.firstMs || a.id.localeCompare(b.id)),
+    );
+  }
+
+  return sessionsByTeamRound;
+}
 
 async function readSession(
   dir: string,
@@ -200,27 +257,27 @@ async function readSession(
 
   const frames = files
     .map(parseFrame)
-    .filter((frame): frame is ScreenshotFrame => frame !== null)
-    .sort((a, b) => a.ts - b.ts);
+    .filter((ts): ts is number => ts !== null)
+    .sort((a, b) => a - b);
 
   return buildSession(id, frames, gapThresholdMs);
 }
 
 function buildSession(
   id: string,
-  frames: ScreenshotFrame[],
+  frames: number[],
   gapThresholdMs: number,
 ): ScreenshotSession | null {
   if (frames.length === 0) return null;
 
-  const sortedFrames = [...frames].sort((a, b) => a.ts - b.ts);
-  const deltas = sortedFrames.slice(1).map((frame, index) => frame.ts - sortedFrames[index].ts);
+  const sortedFrames = [...frames].sort((a, b) => a - b);
+  const deltas = sortedFrames.slice(1).map((ts, index) => ts - sortedFrames[index]);
   const medianIntervalMs = deltas.length > 0 ? median(deltas) : 10_000;
 
   const gaps: ScreenshotGap[] = [];
   for (let index = 0; index < sortedFrames.length - 1; index++) {
-    const startMs = sortedFrames[index].ts;
-    const endMs = sortedFrames[index + 1].ts;
+    const startMs = sortedFrames[index];
+    const endMs = sortedFrames[index + 1];
     if (endMs - startMs > gapThresholdMs) {
       gaps.push({ startMs, endMs, durationMs: endMs - startMs });
     }
@@ -231,19 +288,19 @@ function buildSession(
     frames: sortedFrames,
     gaps,
     medianIntervalMs,
-    firstMs: sortedFrames[0].ts,
-    lastMs: sortedFrames[sortedFrames.length - 1].ts,
+    firstMs: sortedFrames[0],
+    lastMs: sortedFrames[sortedFrames.length - 1],
   };
 }
 
-function parseFrame(file: string): ScreenshotFrame | null {
+function parseFrame(file: string): number | null {
   const match = FRAME_FILE.exec(file);
   if (!match?.groups?.seconds) return null;
 
   const seconds = Number(match.groups.seconds);
   if (!Number.isFinite(seconds)) return null;
 
-  return { ts: Math.round(seconds * 1000), file };
+  return Math.round(seconds * 1000);
 }
 
 function median(values: number[]) {
@@ -327,18 +384,18 @@ export function computeSessionRecordingStats(
   // estensione anche prima della prima submission e dopo l'ultima.
   const validityMs = Math.max(gapThresholdMs, 100_000, intervalMs * 2);
   const framesDuringRace = session.frames.filter(
-    (frame) => frame.ts >= contestStartMs && frame.ts <= contestEndMs,
+    (ts) => ts >= contestStartMs && ts <= contestEndMs,
   );
-  const lastPreStartFrame = session.frames.findLast((frame) => frame.ts < contestStartMs);
+  const lastPreStartFrame = session.frames.findLast((ts) => ts < contestStartMs);
   const effectiveFrames = [...framesDuringRace];
-  if (lastPreStartFrame && lastPreStartFrame.ts + validityMs > contestStartMs) {
+  if (lastPreStartFrame != null && lastPreStartFrame + validityMs > contestStartMs) {
     effectiveFrames.unshift(lastPreStartFrame);
   }
 
   const recordedIntervals: [number, number][] = [];
   for (let index = 0; index < effectiveFrames.length; index++) {
-    const frameStart = effectiveFrames[index].ts;
-    const nextStart = effectiveFrames[index + 1]?.ts ?? contestEndMs;
+    const frameStart = effectiveFrames[index];
+    const nextStart = effectiveFrames[index + 1] ?? contestEndMs;
     const segmentStart = Math.max(contestStartMs, frameStart);
     const segmentEnd = Math.min(contestEndMs, nextStart, frameStart + validityMs);
     if (segmentEnd > segmentStart) {
@@ -414,11 +471,9 @@ export function computeSessionRecordingStats(
   const missingMs = gaps.reduce((sum, gap) => sum + gap.durationMs, 0);
   const recordedMs = Math.max(relevantMs - missingMs, 0);
 
-  const framesInWindow = session.frames.filter(
-    (frame) => frame.ts >= contestStartMs && frame.ts <= contestEndMs,
-  );
+  const framesInWindow = session.frames.filter((ts) => ts >= contestStartMs && ts <= contestEndMs);
   const framesInRelevantWindow = session.frames.filter(
-    (frame) => frame.ts >= relevantStartMs && frame.ts <= relevantEndMs,
+    (ts) => ts >= relevantStartMs && ts <= relevantEndMs,
   );
 
   return {
@@ -433,8 +488,8 @@ export function computeSessionRecordingStats(
     gaps,
     framesInWindow: framesInWindow.length,
     framesInRelevantWindow: framesInRelevantWindow.length,
-    firstFrameMs: framesInRelevantWindow[0]?.ts ?? null,
-    lastFrameMs: framesInRelevantWindow[framesInRelevantWindow.length - 1]?.ts ?? null,
+    firstFrameMs: framesInRelevantWindow[0] ?? null,
+    lastFrameMs: framesInRelevantWindow[framesInRelevantWindow.length - 1] ?? null,
     recordedMs,
     missingMs,
     coverage: relevantMs > 0 ? clamp(recordedMs / relevantMs, 0, 1) : 1,
@@ -618,11 +673,21 @@ export async function listRoundRecordings(
     return available.has(item.teamSlug) || relevantPenalties.length > 0;
   });
 
+  // Le sessioni di tutte le squadre vengono caricate in un colpo solo: una
+  // query per squadra (erano ~550) dominava il tempo di caricamento.
+  const sessionsByTeamRound = await getRoundScreenshotSessions(
+    candidates.map((item) => item.teamRoundId),
+    gapThresholdMs,
+  );
+  const fileSystemTeams = new Set(screenshotTeams);
+
   return Promise.all(
     candidates.map(async (item) => {
-      const sessions = available.has(item.teamSlug)
-        ? await getTeamScreenshotSessions(item.teamRoundId, item.teamSlug, gapThresholdMs)
-        : [];
+      const sessions =
+        sessionsByTeamRound.get(item.teamRoundId) ??
+        (fileSystemTeams.has(item.teamSlug)
+          ? await getTeamFileSystemSessions(item.teamSlug, gapThresholdMs)
+          : []);
       const window = getRecordingWindow(roundRecord, item.delay);
       const submissionWindow = submissionWindowByTeam.get(item.teamSlug);
 

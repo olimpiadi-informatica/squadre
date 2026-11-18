@@ -1,5 +1,6 @@
+import type { PenalizationLevel } from "./db/schema";
 import { getTeamRoundInternetChecks } from "./internet-check";
-import { listRoundRecordings } from "./screenshot";
+import { listRoundRecordings, type RecordingPenalization } from "./screenshot";
 
 export type ProctoringInternetStats = {
   numPc: number;
@@ -27,8 +28,24 @@ export type ProctoringTeamRow = {
   numPc: number;
   internet: ProctoringInternetStats | null;
   recording: ProctoringRecordingStats | null;
+  /** Livello della penalizzazione di proctoring più grave, se presente. */
+  penalization: PenalizationLevel | null;
   hasIssues: boolean;
 };
+
+/**
+ * Solo le penalizzazioni di tipo proctoring riguardano questa pagina; le altre
+ * (plagio, AI, ...) non vengono mostrate. Un rosso prevale su un giallo.
+ */
+function worstPenalizationLevel(penalizations: RecordingPenalization[]): PenalizationLevel | null {
+  const levels = penalizations
+    .filter((item) => item.type === "proctoring")
+    .map((item) => item.level);
+
+  if (levels.includes("red")) return "red";
+  if (levels.length > 0) return "yellow";
+  return null;
+}
 
 export async function listRoundProctoring(
   editionId: string,
@@ -62,6 +79,7 @@ export async function listRoundProctoring(
         largestGapMs: team.largestGapMs,
         hasIssues: team.hasIssues,
       },
+      penalization: worstPenalizationLevel(team.penalizations),
       hasIssues: team.hasIssues,
     });
   }
@@ -90,6 +108,7 @@ export async function listRoundProctoring(
         numPc: team.numPc,
         internet,
         recording: null,
+        penalization: null,
         hasIssues: team.hasIssues,
       });
     }
