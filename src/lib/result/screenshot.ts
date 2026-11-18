@@ -55,17 +55,21 @@ function parseScreenshotLines(content: string, teamRoundId: number): ScreenshotI
     try {
       const parsed = JSON.parse(line) as {
         client_ts?: unknown;
-        ts?: unknown;
+        server_ts?: unknown;
         fp?: unknown;
         filename?: unknown;
       };
 
+      // Solo l'ora di arrivo al server: gli orologi dei PC non sono affidabili.
+      // Formato nuovo: `client_ts`/`server_ts` in secondi; formato storico:
+      // `ts`/`server_ts` in millisecondi.
+      const isSecondsFormat = typeof parsed.client_ts === "number";
       const tsMs =
-        typeof parsed.client_ts === "number"
-          ? Math.round(parsed.client_ts * 1000)
-          : typeof parsed.ts === "number"
-            ? parsed.ts
-            : null;
+        typeof parsed.server_ts === "number"
+          ? isSecondsFormat
+            ? Math.round(parsed.server_ts * 1000)
+            : parsed.server_ts
+          : null;
       if (tsMs === null || typeof parsed.filename !== "string" || typeof parsed.fp !== "string") {
         continue;
       }

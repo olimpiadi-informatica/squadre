@@ -12,8 +12,12 @@ export type ProctoringInternetStats = {
 };
 
 export type ProctoringRecordingStats = {
+  /** PC che hanno inviato almeno un frame. */
   numSessions: number;
+  /** PC monitorati che non hanno inviato nemmeno un frame. */
+  numMissingPcs: number;
   totalFrames: number;
+  /** Somma del tempo mancante su tutti i PC. */
   missingMs: number;
   numGaps: number;
   largestGapMs: number;
@@ -59,11 +63,6 @@ export async function listRoundProctoring(
   const rows = new Map<string, ProctoringTeamRow>();
 
   for (const team of recordingTeams) {
-    const missingMs =
-      team.numSessions === 0
-        ? Math.max(team.relevantWindow.endMs - team.relevantWindow.startMs, 0)
-        : Math.max(...team.sessionStats.map((stats) => stats.missingMs), 0);
-
     rows.set(team.teamSlug, {
       teamSlug: team.teamSlug,
       teamName: team.teamName,
@@ -73,8 +72,9 @@ export async function listRoundProctoring(
       internet: null,
       recording: {
         numSessions: team.numSessions,
+        numMissingPcs: team.missingPcs.length,
         totalFrames: team.totalFrames,
-        missingMs,
+        missingMs: team.missingMs,
         numGaps: team.numGaps,
         largestGapMs: team.largestGapMs,
         hasIssues: team.hasIssues,

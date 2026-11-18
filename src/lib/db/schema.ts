@@ -215,6 +215,26 @@ export const internetCheck = pgTable(
   ],
 );
 
+/**
+ * Periodi in cui il proctoring non ha raccolto dati per cause tecniche (servizio
+ * spento, guasto, ...). Non sono buchi della squadra: vanno esclusi sia dai
+ * controlli internet sia dalle registrazioni, sia dai conteggi sia dalla
+ * timeline. `teamId` null significa "tutto il round".
+ */
+export const proctoringUnavailable = pgTable(
+  "proctoring_unavailable",
+  {
+    id: serial().primaryKey(),
+    roundId: integer("round_id")
+      .notNull()
+      .references(() => round.id, { onDelete: "cascade" }),
+    teamId: integer("team_id").references(() => team.id, { onDelete: "cascade" }),
+    startTs: timestamp("start_ts", { withTimezone: true }).notNull(),
+    endTs: timestamp("end_ts", { withTimezone: true }).notNull(),
+  },
+  (table) => [index("proctoring_unavailable_round_id_idx").on(table.roundId)],
+);
+
 export const submission = pgTable(
   "submission",
   {

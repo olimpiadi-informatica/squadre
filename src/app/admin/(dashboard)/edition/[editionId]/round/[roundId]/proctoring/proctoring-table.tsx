@@ -78,7 +78,7 @@ function ProctoringRow({
         {item.recording && item.recording.numSessions > 0 ? (
           <>
             <div>{item.recording.totalFrames} frame</div>
-            <div className="text-xs opacity-70">
+            <div className="text-xs leading-tight opacity-70">
               <span
                 className={clsx(
                   item.recording.missingMs >= MISSING_WARNING_MS
@@ -91,6 +91,11 @@ function ProctoringRow({
                 {item.recording.missingMs > 0 ? formatDuration(item.recording.missingMs) : "0"}
               </span>
             </div>
+            {item.recording.numMissingPcs > 0 && (
+              <div className="whitespace-normal text-xs leading-tight text-error">
+                {item.recording.numMissingPcs} PC senza registrazione
+              </div>
+            )}
           </>
         ) : (
           <span className="whitespace-normal text-xs leading-tight text-error">
@@ -154,7 +159,7 @@ function TableHeaders() {
       <div className="min-w-10">PC</div>
       <div className="min-w-24">Penalizzato</div>
       <div className="min-w-28">Internet</div>
-      <div className="min-w-24">Screenshot</div>
+      <div className="min-w-36">Screenshot</div>
       <div className="min-w-20">Azioni</div>
     </>
   );

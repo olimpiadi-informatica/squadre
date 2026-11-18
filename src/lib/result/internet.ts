@@ -21,7 +21,6 @@ const LOG_READ_CONCURRENCY = 32;
 type InternetCheckInsert = typeof internetCheck.$inferInsert;
 
 type ParsedInternetCheck = {
-  ts: Date;
   serverTs: Date;
   ic: boolean[];
   pcHash: string;
@@ -74,13 +73,12 @@ function parseInternetChecks(content: string, teamSlug: string): ParsedInternetC
       // processScreenshots. Qui servono solo i controlli internet.
       if (parsedLine.ic == null || parsedLine.server_ts == null) continue;
 
+      // Gli orologi dei PC delle squadre non sono affidabili (diversi sono
+      // sfasati anche di un'ora), quindi l'unico timestamp usato è quello di
+      // arrivo al server.
       // I log nuovi usano `client_ts`/`server_ts` in secondi; il formato
       // storico di internet.json usava `ts`/`server_ts` in millisecondi.
       const isSecondsFormat = typeof parsedLine.client_ts === "number";
-      const ts = isSecondsFormat ? parsedLine.client_ts : parsedLine.ts;
-      if (ts == null) continue;
-
-      const tsMs = isSecondsFormat ? Math.round(ts * 1000) : ts;
       const serverTsMs = isSecondsFormat
         ? Math.round(parsedLine.server_ts * 1000)
         : parsedLine.server_ts;
@@ -89,9 +87,6 @@ function parseInternetChecks(content: string, teamSlug: string): ParsedInternetC
       const parsedUserAgent = parseUserAgent(userAgent);
 
       checks.push({
-        // `client_ts`/`server_ts` sono epoch UTC veri: vanno usati così come
-        // sono, senza reinterpretarli come orologio italiano.
-        ts: new Date(tsMs),
         serverTs: new Date(serverTsMs),
         ic: parsedLine.ic,
         pcHash: getPcHash(parsedLine.fp),

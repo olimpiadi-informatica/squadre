@@ -15,3 +15,23 @@
   background-color: oklch(var(--wa));
   color: oklch(var(--wac));
 }
+
+/* Sfondo a strisce per i tratti "non disponibili" delle timeline (controlli
+   internet e registrazioni). Sta sulla barra intera, non sui singoli segmenti,
+   così il tratteggio resta continuo invece di ripartire a ogni porzione.
+   Grigio a strisce oblique, per non confonderlo con un buco della squadra. */
+.timeline-unavailable {
+  background-image: repeating-linear-gradient(
+    135deg,
+    oklch(var(--bc) / 0.22) 0 2px,
+    transparent 2px 7px
+  );
+}
+
+/* Segmento "vuoto" (fuori dalla finestra rilevante): opaco, altrimenti il
+   tratteggio della barra trasparirebbe. Stesso colore di `bg-base-content/10`
+   sopra `bg-base-200`. */
+.timeline-empty {
+  background-color: oklch(var(--b2));
+  background-image: linear-gradient(oklch(var(--bc) / 0.1), oklch(var(--bc) / 0.1));
+}

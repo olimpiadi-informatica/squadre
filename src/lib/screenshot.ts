@@ -9,6 +9,7 @@ import { db } from "./db";
 import type { PenalizationLevel, PenalizationType } from "./db/schema";
 import {
   institute,
+  internetCheck,
   penalization,
   round,
   screenshot,
@@ -19,6 +20,14 @@ import {
   teamRoundPenalization,
   teamTaskScore,
 } from "./db/schema";
+import {
+  getProctoringUnavailable,
+  mergeWindows,
+  overlapMs,
+  splitWindow,
+  type TimeWindow,
+  unavailableForTeam,
+} from "./proctoring-unavailable";
 import { getRoundEndForTeam, getRoundStartForTeam } from "./round-config";
 
 /**
@@ -78,7 +87,7 @@ export type RelevantWindow = RecordingWindow & {
 export type RecordingSegment = {
   startMs: number;
   endMs: number;
-  status: "recorded" | "gap" | "empty";
+  status: "recorded" | "gap" | "empty" | "unavailable";
 };
 
 export type SessionRecordingStats = {
@@ -93,6 +102,7 @@ export type SessionRecordingStats = {
   lastFrameMs: number | null;
   recordedMs: number;
   missingMs: number;
+  unavailableMs: number;
   coverage: number;
   largestGapMs: number;
 };
@@ -115,6 +125,13 @@ export type RecordingTeamSummary = {
   sessions: ScreenshotSession[];
   sessionStats: SessionRecordingStats[];
   penalizations: RecordingPenalization[];
+  /**
+   * PC che hanno fatto controlli internet ma non hanno mai inviato un frame:
+   * senza questa lista una registrazione completamente assente non comparirebbe
+   * da nessuna parte (non esiste nessuna sessione da cui accorgersene).
+   */
+  missingPcs: string[];
+  monitoredPcs: string[];
   totalFrames: number;
   numSessions: number;
   firstMs: number | null;
@@ -123,6 +140,9 @@ export type RecordingTeamSummary = {
   maxCoverage: number;
   largestGapMs: number;
   numGaps: number;
+  unavailableMs: number;
+  /** Somma del tempo mancante di tutti i PC (non il massimo). */
+  missingMs: number;
   hasIssues: boolean;
 };
 
@@ -361,6 +381,7 @@ export function computeSessionRecordingStats(
     ...window,
     hasSubmissions: false,
   },
+  unavailableWindows: TimeWindow[] = [],
 ): SessionRecordingStats {
   const intervalMs = clamp(session.medianIntervalMs, 1_000, 60_000);
   const _thresholdMs = Math.max(gapThresholdMs, intervalMs * 2);
@@ -418,6 +439,26 @@ export function computeSessionRecordingStats(
   let cursor = contestStartMs;
   let hasRecorded = false;
 
+  // Finestre in cui il proctoring non stava raccogliendo: i buchi che ci cadono
+  // dentro non sono colpa della squadra.
+  const unavailable = mergeWindows(unavailableWindows);
+
+  const pushMissing = (startMs: number, endMs: number, kind: "start" | "internal" | "end") => {
+    for (const piece of splitWindow(startMs, endMs, unavailable)) {
+      if (piece.unavailable) {
+        segments.push({ startMs: piece.startMs, endMs: piece.endMs, status: "unavailable" });
+        continue;
+      }
+      segments.push({ startMs: piece.startMs, endMs: piece.endMs, status: "gap" });
+      gaps.push({
+        startMs: piece.startMs,
+        endMs: piece.endMs,
+        durationMs: piece.endMs - piece.startMs,
+        kind,
+      });
+    }
+  };
+
   const pushGap = (gapStartMs: number, gapEndMs: number, kind: "start" | "internal" | "end") => {
     if (gapEndMs <= gapStartMs) return;
 
@@ -428,26 +469,14 @@ export function computeSessionRecordingStats(
       }
       const missingStart = Math.max(gapStartMs, relevantStartMs);
       if (gapEndMs > missingStart) {
-        segments.push({ startMs: missingStart, endMs: gapEndMs, status: "gap" });
-        gaps.push({
-          startMs: missingStart,
-          endMs: gapEndMs,
-          durationMs: gapEndMs - missingStart,
-          kind: "start",
-        });
+        pushMissing(missingStart, gapEndMs, "start");
       }
       return;
     }
 
     const missingEnd = Math.min(gapEndMs, relevantEndMs);
     if (missingEnd > gapStartMs) {
-      segments.push({ startMs: gapStartMs, endMs: missingEnd, status: "gap" });
-      gaps.push({
-        startMs: gapStartMs,
-        endMs: missingEnd,
-        durationMs: missingEnd - gapStartMs,
-        kind,
-      });
+      pushMissing(gapStartMs, missingEnd, kind);
     }
     const emptyStart = Math.max(gapStartMs, relevantEndMs);
     if (gapEndMs > emptyStart) {
@@ -469,7 +498,17 @@ export function computeSessionRecordingStats(
   }
 
   const missingMs = gaps.reduce((sum, gap) => sum + gap.durationMs, 0);
-  const recordedMs = Math.max(relevantMs - missingMs, 0);
+  const unavailableMs = overlapMs(relevantStartMs, relevantEndMs, unavailable);
+  const availableMs = Math.max(relevantMs - unavailableMs, 0);
+  const recordedMs = Math.max(availableMs - missingMs, 0);
+
+  const timestampedSegments: RecordingSegment[] = segments.flatMap((segment) =>
+    splitWindow(segment.startMs, segment.endMs, unavailable).map((piece) => ({
+      startMs: piece.startMs,
+      endMs: piece.endMs,
+      status: piece.unavailable ? ("unavailable" as const) : segment.status,
+    })),
+  );
 
   const framesInWindow = session.frames.filter((ts) => ts >= contestStartMs && ts <= contestEndMs);
   const framesInRelevantWindow = session.frames.filter(
@@ -484,7 +523,7 @@ export function computeSessionRecordingStats(
       endMs: relevantEndMs,
       hasSubmissions: relevantWindow.hasSubmissions,
     },
-    segments,
+    segments: timestampedSegments,
     gaps,
     framesInWindow: framesInWindow.length,
     framesInRelevantWindow: framesInRelevantWindow.length,
@@ -492,7 +531,8 @@ export function computeSessionRecordingStats(
     lastFrameMs: framesInRelevantWindow[framesInRelevantWindow.length - 1] ?? null,
     recordedMs,
     missingMs,
-    coverage: relevantMs > 0 ? clamp(recordedMs / relevantMs, 0, 1) : 1,
+    unavailableMs,
+    coverage: availableMs > 0 ? clamp(recordedMs / availableMs, 0, 1) : 1,
     largestGapMs: gaps.reduce((max, gap) => Math.max(max, gap.durationMs), 0),
   };
 }
@@ -507,12 +547,20 @@ function summarizeTeam(
     window: RecordingWindow;
     relevantWindow: RelevantWindow;
     sessions: ScreenshotSession[];
+    monitoredPcs: string[];
     penalizations: RecordingPenalization[];
+    unavailable: TimeWindow[];
   },
   gapThresholdMs: number,
 ): RecordingTeamSummary {
   const sessionStats = base.sessions.map((session) =>
-    computeSessionRecordingStats(session, base.window, gapThresholdMs, base.relevantWindow),
+    computeSessionRecordingStats(
+      session,
+      base.window,
+      gapThresholdMs,
+      base.relevantWindow,
+      base.unavailable,
+    ),
   );
 
   const internalGaps = sessionStats.flatMap((stats) =>
@@ -526,9 +574,29 @@ function summarizeTeam(
     .map((stats) => stats.lastFrameMs)
     .filter((value): value is number => value !== null);
 
+  const unavailableMs = overlapMs(
+    base.relevantWindow.startMs,
+    base.relevantWindow.endMs,
+    base.unavailable,
+  );
+  const availableMs = Math.max(
+    base.relevantWindow.endMs - base.relevantWindow.startMs - unavailableMs,
+    0,
+  );
+
+  const recordedPcs = new Set(base.sessions.map((session) => session.id));
+  const missingPcs = base.monitoredPcs.filter((pcHash) => !recordedPcs.has(pcHash));
+  // Senza PC monitorati né frame non si sa quanti PC ci fossero: se ne assume
+  // uno, così "nessuna registrazione" resta conteggiata come tale.
+  const missingPcCount = Math.max(missingPcs.length, base.sessions.length === 0 ? 1 : 0);
+  const missingMs =
+    sessionStats.reduce((sum, stats) => sum + stats.missingMs, 0) + missingPcCount * availableMs;
+
   return {
     ...base,
     sessionStats,
+    missingPcs,
+    missingMs,
     totalFrames: base.sessions.reduce((total, session) => total + session.frames.length, 0),
     numSessions: base.sessions.length,
     firstMs: firstFrames.length > 0 ? Math.min(...firstFrames) : null,
@@ -537,8 +605,10 @@ function summarizeTeam(
     maxCoverage: coverages.length > 0 ? Math.max(...coverages) : 0,
     largestGapMs: internalGaps.reduce((max, gap) => Math.max(max, gap.durationMs), 0),
     numGaps: internalGaps.length,
+    unavailableMs,
     hasIssues:
       base.sessions.length === 0 ||
+      missingPcs.length > 0 ||
       internalGaps.length > 0 ||
       sessionStats.some((stats) => stats.coverage < 0.9),
   };
@@ -569,76 +639,103 @@ export async function listRoundRecordings(
 
   if (!roundRecord) return [];
 
-  const [teams, penalties, submissionWindows, screenshotTeams, dbScreenshotTeams] =
-    await Promise.all([
-      db
-        .select({
-          teamSlug: team.slug,
-          teamName: team.name,
-          instituteName: institute.name,
-          instituteCity: institute.city,
-          delay: teamRound.delay,
-          teamRoundId: teamRound.id,
-        })
-        .from(teamRound)
-        .innerJoin(team, eq(team.id, teamRound.teamId))
-        .innerJoin(round, eq(round.id, teamRound.roundId))
-        .innerJoin(institute, eq(institute.id, team.instituteId))
-        .where(
-          and(
-            eq(round.editionId, editionId),
-            eq(round.slug, roundSlug),
-            exists(
-              db
-                .select()
-                .from(teamTaskScore)
-                .innerJoin(task, eq(task.id, teamTaskScore.taskId))
-                .where(
-                  and(
-                    eq(teamTaskScore.teamId, teamRound.teamId),
-                    eq(task.roundId, teamRound.roundId),
-                    gt(teamTaskScore.score, 0),
-                  ),
+  const [
+    teams,
+    penalties,
+    submissionWindows,
+    screenshotTeams,
+    dbScreenshotTeams,
+    monitoredPcs,
+    unavailable,
+  ] = await Promise.all([
+    db
+      .select({
+        teamId: team.id,
+        teamSlug: team.slug,
+        teamName: team.name,
+        instituteName: institute.name,
+        instituteCity: institute.city,
+        delay: teamRound.delay,
+        teamRoundId: teamRound.id,
+      })
+      .from(teamRound)
+      .innerJoin(team, eq(team.id, teamRound.teamId))
+      .innerJoin(round, eq(round.id, teamRound.roundId))
+      .innerJoin(institute, eq(institute.id, team.instituteId))
+      .where(
+        and(
+          eq(round.editionId, editionId),
+          eq(round.slug, roundSlug),
+          exists(
+            db
+              .select()
+              .from(teamTaskScore)
+              .innerJoin(task, eq(task.id, teamTaskScore.taskId))
+              .where(
+                and(
+                  eq(teamTaskScore.teamId, teamRound.teamId),
+                  eq(task.roundId, teamRound.roundId),
+                  gt(teamTaskScore.score, 0),
                 ),
-            ),
+              ),
           ),
-        )
-        .orderBy(institute.name, institute.city, team.name),
-      db
-        .select({
-          teamSlug: team.slug,
-          id: penalization.id,
-          level: penalization.level,
-          type: penalization.type,
-          description: penalization.description,
-        })
-        .from(penalization)
-        .innerJoin(teamRoundPenalization, eq(teamRoundPenalization.penalizationId, penalization.id))
-        .innerJoin(teamRound, eq(teamRound.id, teamRoundPenalization.teamRoundId))
-        .innerJoin(team, eq(team.id, teamRound.teamId))
-        .innerJoin(round, eq(round.id, teamRound.roundId))
-        .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug))),
-      db
-        .select({
-          teamSlug: team.slug,
-          firstSubmission: min(submission.timestamp),
-          lastSubmission: max(submission.timestamp),
-        })
-        .from(teamRound)
-        .innerJoin(team, eq(team.id, teamRound.teamId))
-        .innerJoin(round, eq(round.id, teamRound.roundId))
-        .leftJoin(submission, eq(submission.teamRoundId, teamRound.id))
-        .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug)))
-        .groupBy(team.slug),
-      listScreenshotTeams(),
-      db
-        .selectDistinct({ teamSlug: team.slug })
-        .from(screenshot)
-        .innerJoin(teamRound, eq(teamRound.id, screenshot.teamRoundId))
-        .innerJoin(team, eq(team.id, teamRound.teamId))
-        .innerJoin(round, eq(round.id, teamRound.roundId))
-        .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug))),
-    ]);
+        ),
+      )
+      .orderBy(institute.name, institute.city, team.name),
+    db
+      .select({
+        teamSlug: team.slug,
+        id: penalization.id,
+        level: penalization.level,
+        type: penalization.type,
+        description: penalization.description,
+      })
+      .from(penalization)
+      .innerJoin(teamRoundPenalization, eq(teamRoundPenalization.penalizationId, penalization.id))
+      .innerJoin(teamRound, eq(teamRound.id, teamRoundPenalization.teamRoundId))
+      .innerJoin(team, eq(team.id, teamRound.teamId))
+      .innerJoin(round, eq(round.id, teamRound.roundId))
+      .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug))),
+    db
+      .select({
+        teamSlug: team.slug,
+        firstSubmission: min(submission.timestamp),
+        lastSubmission: max(submission.timestamp),
+      })
+      .from(teamRound)
+      .innerJoin(team, eq(team.id, teamRound.teamId))
+      .innerJoin(round, eq(round.id, teamRound.roundId))
+      .leftJoin(submission, eq(submission.teamRoundId, teamRound.id))
+      .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug)))
+      .groupBy(team.slug),
+    listScreenshotTeams(),
+    db
+      .selectDistinct({ teamSlug: team.slug })
+      .from(screenshot)
+      .innerJoin(teamRound, eq(teamRound.id, screenshot.teamRoundId))
+      .innerJoin(team, eq(team.id, teamRound.teamId))
+      .innerJoin(round, eq(round.id, teamRound.roundId))
+      .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug))),
+    // I PC che hanno fatto controlli internet: se uno non ha frame la sua
+    // registrazione manca del tutto e va contata come tale.
+    db
+      .selectDistinct({
+        teamRoundId: internetCheck.teamRoundId,
+        pcHash: internetCheck.pcHash,
+      })
+      .from(internetCheck)
+      .innerJoin(teamRound, eq(teamRound.id, internetCheck.teamRoundId))
+      .innerJoin(round, eq(round.id, teamRound.roundId))
+      .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug))),
+    getProctoringUnavailable(roundRecord.id),
+  ]);
+
+  const monitoredPcsByTeamRound = new Map<number, string[]>();
+  for (const item of monitoredPcs) {
+    const list = monitoredPcsByTeamRound.get(item.teamRoundId) ?? [];
+    list.push(item.pcHash);
+    monitoredPcsByTeamRound.set(item.teamRoundId, list);
+  }
 
   const submissionWindowByTeam = new Map(
     submissionWindows.map((item) => [item.teamSlug, item] as const),
@@ -701,7 +798,9 @@ export async function listRoundRecordings(
             submissionWindow?.lastSubmission ?? null,
           ),
           sessions,
+          monitoredPcs: monitoredPcsByTeamRound.get(item.teamRoundId) ?? [],
           penalizations: penaltyByTeam.get(item.teamSlug) ?? [],
+          unavailable: unavailableForTeam(unavailable, item.teamId),
         },
         gapThresholdMs,
       );

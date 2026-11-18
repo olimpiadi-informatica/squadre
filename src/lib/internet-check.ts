@@ -5,6 +5,7 @@ import {
   type InternetCheckStatus,
   institute,
   internetCheck,
+  proctoringUnavailable,
   round,
   task,
   team,
@@ -59,10 +60,41 @@ export type TeamRoundInternetCheck = {
   hasIssues: boolean;
 };
 
-export function getTeamRoundInternetChecks(
+export async function getTeamRoundInternetChecks(
   editionId: string,
   roundSlug: string,
 ): Promise<TeamRoundInternetCheck[]> {
+  /**
+   * Finestre in cui il proctoring non stava raccogliendo: le righe che ci
+   * cadono dentro non sono buchi della squadra e non vanno conteggiate.
+   *
+   * Le finestre sono poche, quindi le trasformiamo in condizioni letterali
+   * invece di un `EXISTS` correlato: su centinaia di migliaia di righe la
+   * differenza è di quasi un ordine di grandezza.
+   */
+  const unavailableWindows = await db
+    .select({
+      teamId: proctoringUnavailable.teamId,
+      startTs: proctoringUnavailable.startTs,
+      endTs: proctoringUnavailable.endTs,
+    })
+    .from(proctoringUnavailable)
+    .innerJoin(round, eq(round.id, proctoringUnavailable.roundId))
+    .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug)));
+
+  const notUnavailable =
+    unavailableWindows.length === 0
+      ? sql`true`
+      : sql`NOT (${sql.join(
+          unavailableWindows.map((window) => {
+            const overlap = sql`${internetCheck.startTs} < ${window.endTs} AND ${internetCheck.endTs} > ${window.startTs}`;
+            return window.teamId == null
+              ? sql`(${overlap})`
+              : sql`(${overlap} AND ${teamRound.teamId} = ${window.teamId})`;
+          }),
+          sql` OR `,
+        )})`;
+
   /**
    * I controlli sono aggregati per `team_round` in una sottoquery: aggregare
    * direttamente sulla join (con `count(distinct pc_hash)`) costringe Postgres a
@@ -73,23 +105,27 @@ export function getTeamRoundInternetChecks(
     .select({
       teamRoundId: internetCheck.teamRoundId,
       numPc: countDistinct(internetCheck.pcHash).as("num_pc"),
-      numChecks: sql<number>`COUNT(*) FILTER (WHERE ${ne(internetCheck.status, "empty")})`.as(
-        "num_checks",
-      ),
+      numChecks:
+        sql<number>`COUNT(*) FILTER (WHERE ${ne(internetCheck.status, "empty")} AND ${notUnavailable})`.as(
+          "num_checks",
+        ),
       numSucceededChecks:
-        sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "succeeded")})`.as(
+        sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "succeeded")} AND ${notUnavailable})`.as(
           "num_succeeded_checks",
         ),
       numFailedChecks:
-        sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "failed")})`.as(
+        sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "failed")} AND ${notUnavailable})`.as(
           "num_failed_checks",
         ),
       numMissingChecks:
-        sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "missing")})`.as(
+        sql<number>`COUNT(*) FILTER (WHERE ${eq(internetCheck.status, "missing")} AND ${notUnavailable})`.as(
           "num_missing_checks",
         ),
     })
     .from(internetCheck)
+    .innerJoin(teamRound, eq(teamRound.id, internetCheck.teamRoundId))
+    .innerJoin(round, eq(round.id, teamRound.roundId))
+    .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug)))
     .groupBy(internetCheck.teamRoundId)
     .as("checks");
 

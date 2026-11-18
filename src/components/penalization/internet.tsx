@@ -5,6 +5,12 @@ import { clamp, countBy, groupBy, minBy, round } from "es-toolkit";
 import { maxBy } from "es-toolkit/compat";
 
 import { getTeamInternetChecks, type TeamInternetSegment } from "~/lib/internet-check";
+import {
+  getProctoringUnavailable,
+  overlapMs,
+  splitWindow,
+  unavailableForTeam,
+} from "~/lib/proctoring-unavailable";
 import type { RoundAdminItem } from "~/lib/round";
 import { getRoundEndForTeam, getRoundStartForTeam } from "~/lib/round-config";
 import {
@@ -18,6 +24,14 @@ import {
 import { getTeamRoundSubmissions, type TeamRoundSubmission } from "~/lib/submission";
 import type { TeamAdminItem } from "~/lib/team";
 
+/**
+ * `unavailable` non è uno stato salvato nel database: indica i tratti in cui il
+ * proctoring non stava raccogliendo (vedi `proctoring_unavailable`) e viene
+ * calcolato al volo.
+ */
+type DisplayStatus = TeamInternetSegment["status"] | "unavailable";
+type DisplaySegment = Omit<TeamInternetSegment, "status"> & { status: DisplayStatus };
+
 export async function InternetDetails({
   round,
   team,
@@ -29,11 +43,31 @@ export async function InternetDetails({
   const contestEnd = getRoundEndForTeam(round.startsAt, round.endsAt, round.slug, team.delay);
   const timelineDurationMs = Math.max(differenceInMilliseconds(contestEnd, contestStart), 1);
 
-  const [segments, submissions, recordingSessions] = await Promise.all([
+  const [rawSegments, submissions, recordingSessions, unavailable] = await Promise.all([
     getTeamInternetChecks(round.id, team.id),
     getTeamRoundSubmissions(round.id, team.id),
     getTeamScreenshotSessions(team.teamRoundId ?? null, team.slug, DEFAULT_GAP_THRESHOLD_MS),
+    getProctoringUnavailable(round.id),
   ]);
+
+  const unavailableWindows = unavailableForTeam(unavailable, team.id);
+  // La finestra "non disponibile" vince su qualunque altro stato, anche su
+  // `empty`: altrimenti il periodo prima della prima submission nasconderebbe
+  // il tratteggio e le due barre non coinciderebbero.
+  //
+  // Uno stato fuori dalla lista è una riga storica (es. lo script che segnava a
+  // mano `unavailable` nel database): la riportiamo a `missing`, che è quello
+  // che era, invece di disegnarla come non disponibile.
+  const segments: DisplaySegment[] = rawSegments.flatMap((segment): DisplaySegment[] =>
+    splitWindow(segment.startTs.getTime(), segment.endTs.getTime(), unavailableWindows).map(
+      (piece) => ({
+        ...segment,
+        startTs: new Date(piece.startMs),
+        endTs: new Date(piece.endMs),
+        status: piece.unavailable ? "unavailable" : normalizeStatus(segment.status),
+      }),
+    ),
+  );
 
   const contestWindow = { startMs: contestStart.getTime(), endMs: contestEnd.getTime() };
   const relevantWindow = getRelevantWindow(
@@ -42,7 +76,13 @@ export async function InternetDetails({
     submissions[submissions.length - 1]?.timestamp ?? null,
   );
   const recordingStats = recordingSessions.map((session) =>
-    computeSessionRecordingStats(session, contestWindow, DEFAULT_GAP_THRESHOLD_MS, relevantWindow),
+    computeSessionRecordingStats(
+      session,
+      contestWindow,
+      DEFAULT_GAP_THRESHOLD_MS,
+      relevantWindow,
+      unavailableWindows,
+    ),
   );
   const recordingByPc = new Map(recordingStats.map((stats) => [stats.session.id, stats] as const));
 
@@ -51,16 +91,22 @@ export async function InternetDetails({
   const actualChecks = segments.filter(
     (segment) => segment.status === "succeeded" || segment.status === "failed",
   );
-  const scoredSegments = segments.filter((segment) => segment.status !== "empty");
+  const scoredSegments = segments.filter((segment) => isScoredStatus(segment.status));
   const totalSucceededChecks = segments.filter((segment) => segment.status === "succeeded").length;
   const firstCheck = minBy(actualChecks, (s) => s.startTs.getTime());
   const lastCheck = maxBy(actualChecks, (s) => s.startTs.getTime());
   const lastSubmission = maxBy(submissions, (s) => s.timestamp.getTime());
   const numPc = pcIds.length;
-  const maxMissingMs =
-    recordingStats.length === 0
-      ? 0
-      : Math.max(...recordingStats.map((stats) => stats.missingMs), 0);
+
+  // Un PC che ha fatto controlli internet ma non ha inviato nessun frame non
+  // compare tra le sessioni: la sua registrazione manca per intero.
+  const recordedPcIds = new Set(recordingStats.map((stats) => stats.session.id));
+  const missingPcIds = pcIds.filter((pc) => !recordedPcIds.has(pc));
+  const unavailableMs = overlapMs(relevantWindow.startMs, relevantWindow.endMs, unavailableWindows);
+  const availableMs = Math.max(relevantWindow.endMs - relevantWindow.startMs - unavailableMs, 0);
+  const missingMs =
+    recordingStats.reduce((sum, stats) => sum + stats.missingMs, 0) +
+    missingPcIds.length * availableMs;
 
   return (
     <>
@@ -76,7 +122,10 @@ export async function InternetDetails({
             <p className="font-semibold">Registrazioni:</p>
             <p>
               {recordingStats.length} PC
-              {maxMissingMs > 0 ? ` · ${formatMissingDuration(maxMissingMs)} mancanti` : ""}
+              {missingPcIds.length > 0 && (
+                <span className="text-error"> · {missingPcIds.length} PC senza registrazione</span>
+              )}
+              {missingMs > 0 ? ` · ${formatMissingDuration(missingMs)} mancanti` : ""}
             </p>
             <p className="font-semibold">Intervallo gara:</p>
             <p>
@@ -99,6 +148,8 @@ export async function InternetDetails({
             pcHash={pc}
             segments={pcChecks[pc] ?? []}
             recording={recordingByPc.get(pc)}
+            noRecordingIsIssue={availableMs > 0}
+            unavailableMs={unavailableMs}
             contestStart={contestStart}
             timelineDurationMs={timelineDurationMs}
             submissions={submissions}
@@ -113,18 +164,24 @@ function PcInternet({
   pcHash,
   segments,
   recording,
+  noRecordingIsIssue,
+  unavailableMs,
   contestStart,
   timelineDurationMs,
   submissions,
 }: {
   pcHash: string;
-  segments: TeamInternetSegment[];
+  segments: DisplaySegment[];
   recording: SessionRecordingStats | undefined;
+  /** `false` se nel periodo utile il proctoring non stava raccogliendo. */
+  noRecordingIsIssue: boolean;
+  /** Tempo non disponibile dentro il periodo utile (uguale per tutti i PC). */
+  unavailableMs: number;
   contestStart: Date;
   timelineDurationMs: number;
   submissions: TeamRoundSubmission[];
 }) {
-  const scoredSegments = segments.filter((segment) => segment.status !== "empty");
+  const scoredSegments = segments.filter((segment) => isScoredStatus(segment.status));
   const pcInfo = segments[0];
   const totalChecks = scoredSegments.length;
   const checkTypes = countBy(scoredSegments, (segment) => segment.status);
@@ -156,6 +213,11 @@ function PcInternet({
             success rate: <span className="font-semibold">{successRate}%</span> | succeeded:{" "}
             {checkTypes.succeeded ?? 0} | failed: {checkTypes.failed ?? 0} | missing:{" "}
             {checkTypes.missing ?? 0}
+            {unavailableMs > 0 && <> | non disponibili: {formatMissingDuration(unavailableMs)}</>}
+          </span>
+        ) : unavailableMs > 0 ? (
+          <span className="opacity-60">
+            nessun controllo · non disponibili: {formatMissingDuration(unavailableMs)}
           </span>
         ) : (
           <span className="opacity-60">nessun controllo</span>
@@ -163,7 +225,7 @@ function PcInternet({
       </div>
 
       {segments.length > 0 && (
-        <div className="h-5 flex w-full rounded border border-base-300 bg-base-200">
+        <div className="timeline-unavailable h-5 flex w-full rounded border border-base-300 bg-base-200">
           {segments.map((segment, index) => {
             const width =
               differenceInMilliseconds(segment.endTs, segment.startTs) / timelineDurationMs;
@@ -173,7 +235,12 @@ function PcInternet({
               <div
                 key={index}
                 className={clsx(
-                  "h-full",
+                  // `grow`: le larghezze percentuali vengono arrotondate al
+                  // pixel, con centinaia di segmenti l'errore si accumula e
+                  // lascia qualche px scoperti a destra (dove si vedrebbe il
+                  // tratteggio del contenitore). Con `grow` i segmenti assorbono
+                  // l'arrotondamento e riempiono esattamente la barra.
+                  "h-full grow",
                   getInternetColorClass(segment.status),
                   !isEmptySegment && "tooltip",
                 )}
@@ -196,14 +263,19 @@ function PcInternet({
             coverage: <span className="font-semibold">{round(recording.coverage * 100, 1)}%</span> |
             frames: {recording.framesInRelevantWindow} | missing:{" "}
             {recording.missingMs > 0 ? formatMissingDuration(recording.missingMs) : "0"}
+            {recording.unavailableMs > 0 && (
+              <> | non disponibili: {formatMissingDuration(recording.unavailableMs)}</>
+            )}
           </span>
         ) : (
-          <span className="opacity-60">nessuna registrazione</span>
+          <span className={clsx(noRecordingIsIssue ? "font-semibold text-error" : "opacity-60")}>
+            nessuna registrazione
+          </span>
         )}
       </div>
 
       {recording ? (
-        <div className="h-5 flex w-full rounded border border-base-300 bg-base-200">
+        <div className="timeline-unavailable h-5 flex w-full rounded border border-base-300 bg-base-200">
           {recording.segments.map((segment, index) => {
             const width =
               differenceInMilliseconds(segment.endMs, segment.startMs) / timelineDurationMs;
@@ -213,7 +285,7 @@ function PcInternet({
               <div
                 key={index}
                 className={clsx(
-                  "h-full",
+                  "h-full grow",
                   getRecordingColorClass(segment.status),
                   !isEmptySegment && "tooltip",
                 )}
@@ -257,7 +329,7 @@ function PcInternet({
   );
 }
 
-function getInternetColorClass(status: TeamInternetSegment["status"]) {
+function getInternetColorClass(status: DisplayStatus) {
   switch (status) {
     case "succeeded":
       return "bg-success";
@@ -266,7 +338,10 @@ function getInternetColorClass(status: TeamInternetSegment["status"]) {
     case "missing":
       return "bg-warning";
     case "empty":
-      return "bg-base-content/10";
+      return "timeline-empty";
+    case "unavailable":
+      // Trasparente: lascia vedere il tratteggio della barra.
+      return "bg-transparent";
   }
 }
 
@@ -277,11 +352,13 @@ function getRecordingColorClass(status: RecordingSegment["status"]) {
     case "gap":
       return "bg-error";
     case "empty":
-      return "bg-base-content/10";
+      return "timeline-empty";
+    case "unavailable":
+      return "bg-transparent";
   }
 }
 
-function formatInternetLabel(status: TeamInternetSegment["status"]) {
+function formatInternetLabel(status: DisplayStatus) {
   switch (status) {
     case "succeeded":
       return "✅";
@@ -289,9 +366,21 @@ function formatInternetLabel(status: TeamInternetSegment["status"]) {
       return "❌";
     case "missing":
       return "⚠️";
+    case "unavailable":
+      return "non disponibile";
     case "empty":
       return "";
   }
+}
+
+function isScoredStatus(status: DisplayStatus) {
+  return status !== "empty" && status !== "unavailable";
+}
+
+const KNOWN_STATUSES: TeamInternetSegment["status"][] = ["succeeded", "failed", "missing", "empty"];
+
+function normalizeStatus(status: TeamInternetSegment["status"]): TeamInternetSegment["status"] {
+  return KNOWN_STATUSES.includes(status) ? status : "missing";
 }
 
 function getRecordingLabel(status: RecordingSegment["status"]) {
@@ -300,6 +389,8 @@ function getRecordingLabel(status: RecordingSegment["status"]) {
       return "registrato";
     case "gap":
       return "mancante";
+    case "unavailable":
+      return "non disponibile";
     case "empty":
       return "";
   }
