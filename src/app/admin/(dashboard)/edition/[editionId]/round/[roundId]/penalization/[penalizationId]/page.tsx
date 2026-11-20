@@ -51,7 +51,10 @@ export default async function AdminRoundPenalizationDetailPage({
       </div>
 
       <PenalizationDetail round={round} penalizationId={numericPenalizationId} />
-      <PenalizationFrames penalizationId={numericPenalizationId} />
+      <PenalizationFrames
+        penalizationId={numericPenalizationId}
+        srcPrefix="/admin/api/screenshot"
+      />
       {penalization.appealApproved !== null && (
         <Card>
           <CardBody title="Ricorso">

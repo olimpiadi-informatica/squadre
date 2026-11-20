@@ -18,6 +18,7 @@ import {
 import {
   alias,
   boolean,
+  customType,
   index,
   integer,
   numeric,
@@ -32,6 +33,10 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { coalesce, median } from "./utils";
+
+const bytea = customType<{ data: Buffer }>({
+  dataType: () => "bytea",
+});
 
 // ─── Tables ───────────────────────────────────────────────────────────────────
 
@@ -260,9 +265,10 @@ export const submission = pgTable(
 
 /**
  * Metadati degli screenshot di proctoring, importati insieme ai controlli
- * internet durante il caricamento dei risultati. I file immagine restano
- * sulla macchina che li serve (vedi SCREENSHOTS_DIR); qui conserviamo solo
- * timestamp e nome file, così le timeline non dipendono dal filesystem.
+ * internet durante il caricamento dei risultati. Il file immagine di norma
+ * resta sulla macchina che lo serve (vedi SCREENSHOTS_DIR); per i frame usati
+ * come prova di una penalizzazione copiamo anche i byte qui, così sono
+ * disponibili anche dove la directory delle registrazioni non viene montata.
  */
 export const screenshot = pgTable(
   "screenshot",
@@ -274,6 +280,8 @@ export const screenshot = pgTable(
     pcHash: text("pc_hash").notNull(),
     ts: timestamp({ withTimezone: true }).notNull(),
     filename: text().notNull(),
+    image: bytea("image"),
+    contentType: text("content_type").notNull().default("image/jpeg"),
   },
   (table) => [
     uniqueIndex("screenshot_team_round_id_pc_hash_ts_unique").on(

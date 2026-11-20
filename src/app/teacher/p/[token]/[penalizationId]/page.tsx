@@ -5,6 +5,7 @@ import { Card, CardBody } from "@olinfo/react-components";
 import { TriangleAlert } from "lucide-react";
 
 import { PenalizationDetail } from "~/components/penalization";
+import { PenalizationFrames } from "~/components/penalization/frames";
 import { getInstitutePenalization, getInstitutePenalizationAccess } from "~/lib/penalization";
 import { getRoundAdmin } from "~/lib/round";
 
@@ -36,6 +37,7 @@ export default async function TeacherPenalizationDetailPage({
         Torna alle penalizzazioni
       </Link>
       <PenalizationDetail round={round} penalizationId={id} />
+      <PenalizationFrames penalizationId={id} srcPrefix={`/teacher/p/${token}/frame`} />
 
       <Card>
         <CardBody title="Ricorso">

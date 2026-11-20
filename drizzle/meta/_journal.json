@@ -120,6 +120,13 @@
       "when": 1795204743614,
       "tag": "0016_penalization_frames",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795207047066,
+      "tag": "0017_screenshot_image",
+      "breakpoints": true
     }
   ]
 }

@@ -338,9 +338,11 @@ export type ScreenshotFile = {
 };
 
 /**
- * Legge dal filesystem il frame indicato dai metadati. I segmenti di percorso
- * vengono validati prima di toccare il disco: `pcHash` e `filename` arrivano
- * dai log di proctoring e non sono fidati.
+ * Legge il frame indicato dai metadati. Se i byte sono stati importati nel
+ * database (frame allegati a una penalizzazione) non serve il filesystem;
+ * altrimenti si legge da `SCREENSHOTS_DIR`. I segmenti di percorso vengono
+ * validati prima di toccare il disco: `pcHash` e `filename` arrivano dai log
+ * di proctoring e non sono fidati.
  */
 export async function readScreenshotFile(screenshotId: number): Promise<ScreenshotFile | null> {
   const [row] = await db
@@ -348,6 +350,8 @@ export async function readScreenshotFile(screenshotId: number): Promise<Screensh
       teamSlug: team.slug,
       pcHash: screenshot.pcHash,
       filename: screenshot.filename,
+      image: screenshot.image,
+      contentType: screenshot.contentType,
     })
     .from(screenshot)
     .innerJoin(teamRound, eq(teamRound.id, screenshot.teamRoundId))
@@ -355,6 +359,11 @@ export async function readScreenshotFile(screenshotId: number): Promise<Screensh
     .where(eq(screenshot.id, screenshotId));
 
   if (!row) return null;
+
+  if (row.image) {
+    return { data: row.image, contentType: row.contentType };
+  }
+
   if (!SAFE_SEGMENT.test(row.teamSlug) || !SESSION_ID.test(row.pcHash)) return null;
   if (path.basename(row.filename) !== row.filename || !FRAME_FILE.test(row.filename)) return null;
 

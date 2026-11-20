@@ -61,8 +61,11 @@ minuti di registrazione mancanti).
 
 Il visualizzatore frame-by-frame completo non è disponibile. Nella pagina di
 dettaglio di una penalizzazione vengono però mostrati i frame allegati come
-prova (`penalization_frame`, importati dallo script `scripts/import-18`);
-i metadati delle registrazioni restano importati insieme ai risultati.
+prova (`penalization_frame`, importati dallo script `scripts/import-18`) e
+visibili sia agli admin sia ai referenti tramite il token dell'istituto.
+I byte di questi frame sono salvati in `screenshot.image`, quindi non
+dipendono dalla directory locale delle registrazioni; i metadati delle altre
+registrazioni restano importati insieme ai risultati.
 
 ### Compile and Minify for Production
 

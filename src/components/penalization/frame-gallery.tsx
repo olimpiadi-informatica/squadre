@@ -9,8 +9,8 @@ import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import { Modal } from "~/components/modal";
 import type { PenalizationFrameDetail } from "~/lib/penalization";
 
-function frameSrc(frame: PenalizationFrameDetail) {
-  return `/admin/api/screenshot/${frame.screenshotId}`;
+function frameSrc(srcPrefix: string, frame: PenalizationFrameDetail) {
+  return `${srcPrefix}/${frame.screenshotId}`;
 }
 
 function formatFrameTime(frame: PenalizationFrameDetail) {
@@ -21,7 +21,15 @@ function formatFrameTime(frame: PenalizationFrameDetail) {
   );
 }
 
-function FrameImage({ frame, className }: { frame: PenalizationFrameDetail; className?: string }) {
+function FrameImage({
+  srcPrefix,
+  frame,
+  className,
+}: {
+  srcPrefix: string;
+  frame: PenalizationFrameDetail;
+  className?: string;
+}) {
   const [failed, setFailed] = useState(false);
 
   if (failed) {
@@ -39,7 +47,7 @@ function FrameImage({ frame, className }: { frame: PenalizationFrameDetail; clas
 
   return (
     <img
-      src={frameSrc(frame)}
+      src={frameSrc(srcPrefix, frame)}
       alt="Frame di proctoring"
       className={className}
       onError={() => setFailed(true)}
@@ -47,7 +55,13 @@ function FrameImage({ frame, className }: { frame: PenalizationFrameDetail; clas
   );
 }
 
-export function FrameGallery({ frames }: { frames: PenalizationFrameDetail[] }) {
+export function FrameGallery({
+  frames,
+  srcPrefix,
+}: {
+  frames: PenalizationFrameDetail[];
+  srcPrefix: string;
+}) {
   const modalRef = useRef<HTMLDialogElement>(null);
   const [selected, setSelected] = useState<number | null>(null);
 
@@ -81,6 +95,7 @@ export function FrameGallery({ frames }: { frames: PenalizationFrameDetail[] }) 
             className="group flex flex-col gap-2 overflow-hidden rounded-lg border border-base-300 bg-base-100 p-2 text-left transition-colors hover:border-primary"
             onClick={() => openFrame(index)}>
             <FrameImage
+              srcPrefix={srcPrefix}
               frame={item}
               className="aspect-video w-full rounded-md border border-base-300 object-cover transition-opacity group-hover:opacity-90"
             />
@@ -97,6 +112,7 @@ export function FrameGallery({ frames }: { frames: PenalizationFrameDetail[] }) 
           <div className="flex flex-col gap-3">
             <FrameImage
               key={frame.id}
+              srcPrefix={srcPrefix}
               frame={frame}
               className="max-h-[75vh] w-full rounded-md object-contain"
             />
