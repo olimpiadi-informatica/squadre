@@ -21,7 +21,7 @@ const typeLabel = {
   proctoring: "Proctoring",
   plagiarism: "Copiatura",
   ai: "Uso di strumenti AI",
-  other: "Violazione del codice d'onore",
+  other: "Codice d'onore",
 } as const;
 
 export default async function TeacherPenalizationPage({ params }: PageProps<"/teacher/p/[token]">) {

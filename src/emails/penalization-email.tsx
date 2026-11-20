@@ -27,7 +27,7 @@ const typeLabel: Record<PenalizationType, string> = {
   proctoring: "Proctoring",
   plagiarism: "Copiatura",
   ai: "Uso di strumenti AI",
-  other: "Violazione del codice d'onore",
+  other: "Codice d'onore",
 };
 
 export default function PenalizationEmail({
@@ -68,7 +68,7 @@ export default function PenalizationEmail({
           </table>
 
           <Text style={paragraph}>
-            È possibile accedere ai dettagli al seguente link:{" "}
+            È possibile accedere ai dettagli e alle procedure di ricorso al seguente link:{" "}
             <Link href={detailsUrl}>{detailsUrl}</Link>
           </Text>
 

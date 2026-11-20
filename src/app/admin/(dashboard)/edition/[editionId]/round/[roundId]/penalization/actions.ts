@@ -3,16 +3,14 @@
 import { revalidatePath } from "next/cache";
 
 import { verifyAdmin } from "~/lib/admin";
-import { sendInstitutePenalizationEmail, sendPenalizationAppealResultEmail } from "~/lib/email";
+import type { PenalizationLevel } from "~/lib/db/schema";
+import { sendPenalizationAppealResultEmail } from "~/lib/email";
 import {
-  PENALIZATION_APPEAL_RESULT_EMAIL_TEMPLATE_ID,
-  PENALIZATION_EMAIL_TEMPLATE_ID,
-  upsertEmailTemplateContent,
-} from "~/lib/email-template";
-import {
+  createProctoringPenalization,
   importRoundPlagiarismPenalization,
   importRoundProctoringPenalization,
   reviewPenalizationAppeal,
+  updatePenalizationDetails,
 } from "~/lib/penalization";
 import { getRoundAdmin } from "~/lib/round";
 import { refreshViews } from "~/lib/view";
@@ -61,42 +59,47 @@ export async function uploadRoundProctoringPenalization(
   revalidatePath("/", "layout");
 }
 
-export async function sendPenalizationEmail(
+export async function createRoundProctoringPenalization(
   editionId: string,
   roundSlug: string,
-  instituteId: string,
+  teamSlug: string,
+  values: { level: PenalizationLevel; appealAllowed: boolean; description: string },
 ) {
   await verifyAdmin();
 
   const round = await getRoundAdmin(editionId, roundSlug);
-  if (!round) throw new Error(`Round ${roundSlug} not found`);
+  if (!round) {
+    throw new Error("Round non trovato.");
+  }
 
-  await sendInstitutePenalizationEmail(round, instituteId);
+  await createProctoringPenalization(editionId, roundSlug, teamSlug, values);
   await refreshViews();
   revalidatePath("/", "layout");
 }
 
-export async function savePenalizationEmailTemplate(
+export async function updateRoundPenalization(
   editionId: string,
   roundSlug: string,
-  content: string,
+  penalizationId: number,
+  values: { level: PenalizationLevel; appealAllowed: boolean; description: string },
 ) {
   await verifyAdmin();
 
-  await upsertEmailTemplateContent(PENALIZATION_EMAIL_TEMPLATE_ID, content);
-  revalidatePath(`/admin/edition/${editionId}/round/${roundSlug}/penalization`);
+  const round = await getRoundAdmin(editionId, roundSlug);
+  if (!round) {
+    throw new Error("Round non trovato.");
+  }
+
+  await updatePenalizationDetails(round.id, penalizationId, values);
+  await refreshViews();
+  revalidatePath("/", "layout");
 }
 
-export async function savePenalizationAppealResultEmailTemplate(
-  editionId: string,
-  roundSlug: string,
-  content: string,
-) {
-  await verifyAdmin();
-
-  await upsertEmailTemplateContent(PENALIZATION_APPEAL_RESULT_EMAIL_TEMPLATE_ID, content);
-  revalidatePath(`/admin/edition/${editionId}/round/${roundSlug}/penalization`);
-}
+/**
+ * TODO: rimuovere per riattivare la revisione dei ricorsi.
+ * Stesso flag di `penalization-table.tsx`.
+ */
+const APPEAL_REVIEW_DISABLED = true;
 
 export async function reviewAppeal(
   editionId: string,
@@ -105,6 +108,9 @@ export async function reviewAppeal(
   approved: boolean,
 ) {
   await verifyAdmin();
+  if (APPEAL_REVIEW_DISABLED) {
+    throw new Error("Gestione ricorsi temporaneamente disabilitata.");
+  }
   const round = await getRoundAdmin(editionId, roundSlug);
   if (!round) throw new Error(`Round ${roundSlug} not found`);
 

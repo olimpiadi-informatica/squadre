@@ -16,13 +16,17 @@ import {
   type PenalizationLevel,
   type PenalizationType,
   penalization,
+  penalizationFrame,
+  penalizationLevelValues,
   round,
+  screenshot,
   submission,
   task,
   team,
   teamRound,
   teamRoundPenalization,
 } from "./db/schema";
+import { parseFrameTimestamp } from "./screenshot";
 
 const yellowAppealPolicy: Record<PenalizationType, boolean> = {
   // I controlli internet sono appellabili; le penalità manuali per le
@@ -142,6 +146,43 @@ export async function getRoundPenalization(
       penalization.allowAppealUntil,
     );
   return item;
+}
+
+export type PenalizationFrameDetail = {
+  id: number;
+  screenshotId: number;
+  pcHash: string;
+  /** Timestamp nell'ora del PC che ha registrato il frame. */
+  capturedAt: Date | null;
+  /** Ora di arrivo del frame al server di proctoring. */
+  recordedAt: Date;
+};
+
+export function getPenalizationFrames(penalizationId: number): Promise<PenalizationFrameDetail[]> {
+  return db
+    .select({
+      id: penalizationFrame.id,
+      screenshotId: penalizationFrame.screenshotId,
+      pcHash: screenshot.pcHash,
+      filename: screenshot.filename,
+      recordedAt: screenshot.ts,
+    })
+    .from(penalizationFrame)
+    .innerJoin(screenshot, eq(screenshot.id, penalizationFrame.screenshotId))
+    .where(eq(penalizationFrame.penalizationId, penalizationId))
+    .orderBy(screenshot.ts, penalizationFrame.id)
+    .then((rows) =>
+      rows.map((row) => {
+        const capturedMs = parseFrameTimestamp(row.filename);
+        return {
+          id: row.id,
+          screenshotId: row.screenshotId,
+          pcHash: row.pcHash,
+          recordedAt: row.recordedAt,
+          capturedAt: capturedMs === null ? null : new Date(capturedMs),
+        };
+      }),
+    );
 }
 
 export type InstitutePenalizationAccess = {
@@ -475,6 +516,113 @@ export async function importRoundProctoringPenalization(
       });
     }
   });
+}
+
+export type PenalizationValues = {
+  level: PenalizationLevel;
+  appealAllowed: boolean;
+  description: string;
+};
+
+function normalizePenalizationValues({ level, appealAllowed, description }: PenalizationValues) {
+  if (!penalizationLevelValues.includes(level)) {
+    throw new Error("Livello della penalizzazione non valido.");
+  }
+  const trimmedDescription = description.trim();
+  if (!trimmedDescription) {
+    throw new Error("La descrizione è obbligatoria.");
+  }
+  return {
+    level,
+    // Solo le penalizzazioni gialle possono essere appellabili.
+    appealAllowed: level === "yellow" && appealAllowed,
+    description: trimmedDescription,
+  };
+}
+
+/** Crea una penalizzazione di proctoring manuale per una singola squadra. */
+export async function createProctoringPenalization(
+  editionId: string,
+  roundSlug: string,
+  teamSlug: string,
+  values: PenalizationValues,
+) {
+  const normalized = normalizePenalizationValues(values);
+
+  await db.transaction(async (tx) => {
+    const [target] = await tx
+      .select({ teamRoundId: teamRound.id })
+      .from(teamRound)
+      .innerJoin(team, eq(team.id, teamRound.teamId))
+      .innerJoin(round, eq(round.id, teamRound.roundId))
+      .where(
+        and(eq(round.editionId, editionId), eq(round.slug, roundSlug), eq(team.slug, teamSlug)),
+      );
+    if (!target) {
+      throw new Error(`Squadra ${teamSlug} non trovata nel round.`);
+    }
+
+    const [existing] = await tx
+      .select({ id: penalization.id })
+      .from(penalization)
+      .innerJoin(teamRoundPenalization, eq(teamRoundPenalization.penalizationId, penalization.id))
+      .where(
+        and(
+          eq(teamRoundPenalization.teamRoundId, target.teamRoundId),
+          eq(penalization.type, "proctoring"),
+        ),
+      )
+      .limit(1);
+    if (existing) {
+      throw new Error("Esiste già una penalizzazione di proctoring per questa squadra.");
+    }
+
+    const [{ id }] = await tx
+      .insert(penalization)
+      .values({
+        ...normalized,
+        type: "proctoring",
+        createdAt: new Date(),
+      })
+      .returning({ id: penalization.id });
+
+    await tx.insert(teamRoundPenalization).values({
+      penalizationId: id,
+      teamRoundId: target.teamRoundId,
+    });
+  });
+}
+
+/** Aggiorna livello, appellabilità e descrizione di una penalizzazione del round. */
+export async function updatePenalizationDetails(
+  roundId: number,
+  penalizationId: number,
+  values: PenalizationValues,
+) {
+  const normalized = normalizePenalizationValues(values);
+
+  const [updated] = await db
+    .update(penalization)
+    .set(normalized)
+    .where(
+      and(
+        eq(penalization.id, penalizationId),
+        exists(
+          db
+            .select({ id: teamRoundPenalization.id })
+            .from(teamRoundPenalization)
+            .innerJoin(teamRound, eq(teamRound.id, teamRoundPenalization.teamRoundId))
+            .where(
+              and(
+                eq(teamRoundPenalization.penalizationId, penalization.id),
+                eq(teamRound.roundId, roundId),
+              ),
+            ),
+        ),
+      ),
+    )
+    .returning({ id: penalization.id });
+  if (!updated) throw new Error("Penalizzazione non trovata.");
 }
 
 type ProctoringCsvRow = {

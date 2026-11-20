@@ -51,7 +51,7 @@ export default async function AdminEmailPage({
           <li>
             <Link href={`/admin/edition/${editionId}/round/${roundId}`}>{round.title}</Link>
           </li>
-          <li>Email</li>
+          <li>Email credenziali</li>
         </ul>
       </div>
       <div className="grid gap-4 md:grid-cols-2">

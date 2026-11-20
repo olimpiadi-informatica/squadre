@@ -302,6 +302,7 @@ export const email = pgTable("email", {
   address: text().notNull(),
   status: text().notNull().$type<"sending" | "sent" | "sending-failed">(),
   html: text(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const credentialEmail = pgTable(
@@ -398,6 +399,55 @@ export const teamRoundPenalization = pgTable(
       table.teamRoundId,
       table.penalizationId,
       table.submissionId,
+    ),
+  ],
+);
+
+/**
+ * Frame delle registrazioni allegati a una penalizzazione come prova. Il frame
+ * è un record di `screenshot` (metadati importati dai log): così la pagina di
+ * dettaglio può mostrare l'immagine senza duplicare timestamp e percorso.
+ */
+export const penalizationFrame = pgTable(
+  "penalization_frame",
+  {
+    id: serial().primaryKey(),
+    penalizationId: integer("penalization_id")
+      .notNull()
+      .references(() => penalization.id, { onDelete: "cascade" }),
+    screenshotId: integer("screenshot_id")
+      .notNull()
+      .references(() => screenshot.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("penalization_frame_penalization_id_screenshot_id_unique").on(
+      table.penalizationId,
+      table.screenshotId,
+    ),
+    index("penalization_frame_penalization_id_idx").on(table.penalizationId),
+  ],
+);
+
+/**
+ * Penalizzazioni incluse in una specifica email: `penalization.sentAt` è
+ * globale, mentre l'invio è per istituto. Serve quindi tenere traccia di cosa
+ * è stato comunicato a ciascuna scuola.
+ */
+export const penalizationEmailItem = pgTable(
+  "penalization_email_item",
+  {
+    id: serial().primaryKey(),
+    penalizationEmailId: integer("penalization_email_id")
+      .notNull()
+      .references(() => penalizationEmail.id, { onDelete: "cascade" }),
+    penalizationId: integer("penalization_id")
+      .notNull()
+      .references(() => penalization.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("penalization_email_item_unique").on(
+      table.penalizationEmailId,
+      table.penalizationId,
     ),
   ],
 );

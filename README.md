@@ -59,9 +59,10 @@ registrazioni mancanti, con le due timeline affiancate. Entrambe le penalità
 vengono create in blocco con delle soglie (check internet falliti/mancanti e
 minuti di registrazione mancanti).
 
-Il visualizzatore frame-by-frame delle registrazioni è stato rimosso per ora;
-i metadati delle registrazioni restano importati insieme ai risultati, così il
-viewer potrà essere ripreso senza rifare il parsing.
+Il visualizzatore frame-by-frame completo non è disponibile. Nella pagina di
+dettaglio di una penalizzazione vengono però mostrati i frame allegati come
+prova (`penalization_frame`, importati dallo script `scripts/import-18`);
+i metadati delle registrazioni restano importati insieme ai risultati.
 
 ### Compile and Minify for Production
 

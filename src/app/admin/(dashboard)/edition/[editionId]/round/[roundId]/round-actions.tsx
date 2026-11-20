@@ -11,6 +11,7 @@ import {
   FileText,
   ListChecks,
   Mail,
+  MailWarning,
   MonitorPlay,
   ShieldAlert,
 } from "lucide-react";
@@ -85,13 +86,13 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
         {round.slug !== "final" && (
           <li className="step step-primary">
             <div className="flex flex-col items-start gap-2 my-4">
-              <div className="text-left text-xl font-semibold">Email</div>
+              <div className="text-left text-xl font-semibold">Email credenziali</div>
 
               <Link
                 href={`/admin/edition/${round.editionId}/round/${round.slug}/email`}
                 className="btn btn-primary">
                 <Mail className="size-5" />
-                Gestisci email password
+                Gestisci email credenziali
               </Link>
             </div>
           </li>
@@ -135,6 +136,18 @@ export function RoundActions({ round }: { round: RoundAdminItem }) {
               className="btn btn-primary">
               <ShieldAlert className="size-5" />
               Gestisci penalizzazioni
+            </Link>
+          </div>
+        </li>
+        <li className="step step-primary">
+          <div className="flex flex-col items-start gap-2 my-4">
+            <div className="text-left text-xl font-semibold">Email penalizzazioni</div>
+
+            <Link
+              href={`/admin/edition/${round.editionId}/round/${round.slug}/penalization-email`}
+              className="btn btn-primary">
+              <MailWarning className="size-5" />
+              Gestisci email penalizzazioni
             </Link>
           </div>
         </li>

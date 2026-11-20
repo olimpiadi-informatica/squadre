@@ -6,7 +6,10 @@ import { useCallback } from "react";
 import clsx from "clsx";
 
 import { Table } from "~/components/table";
+import { formatTableScore } from "~/lib/format";
 import type { ProctoringTeamRow } from "~/lib/proctoring";
+
+import { PenalizationModalButton } from "../penalization/penalization-modal-button";
 
 const MISSING_WARNING_MS = 30 * 60_000;
 
@@ -44,6 +47,7 @@ function ProctoringRow({
       <div className="text-wrap break-words">
         {item.instituteName}, {item.instituteCity}
       </div>
+      <div>{formatTableScore(item.score)}</div>
       <div className={clsx(item.numPc > 2 && "font-semibold text-error")}>{item.numPc}</div>
       <div>
         {item.penalization ? (
@@ -103,12 +107,21 @@ function ProctoringRow({
           </span>
         )}
       </div>
-      <div>
+      <div className="flex flex-wrap gap-1">
         <Link
           href={`/admin/edition/${editionId}/round/${roundId}/proctoring/${item.teamSlug}`}
           className="btn btn-primary btn-xs">
           Dettaglio
         </Link>
+        <PenalizationModalButton
+          editionId={editionId}
+          roundId={roundId}
+          teamSlug={item.teamSlug}
+          disabled={item.penalization !== null}
+          title={
+            item.penalization === null ? undefined : "Esiste già una penalizzazione di proctoring"
+          }
+        />
       </div>
     </>
   );
@@ -145,7 +158,7 @@ export function ProctoringTable({
       itemMatch={itemMatch}
       header={TableHeaders}
       row={Row}
-      className="grid-cols-[repeat(8,auto)]"
+      className="grid-cols-[repeat(9,auto)]"
     />
   );
 }
@@ -156,6 +169,7 @@ function TableHeaders() {
       <div className="min-w-20">Username</div>
       <div className="min-w-32">Nome</div>
       <div className="min-w-48">Istituto</div>
+      <div className="min-w-16">Punteggio</div>
       <div className="min-w-10">PC</div>
       <div className="min-w-24">Penalizzato</div>
       <div className="min-w-28">Internet</div>

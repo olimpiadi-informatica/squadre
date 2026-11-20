@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { cache } from "react";
@@ -313,14 +313,60 @@ function buildSession(
   };
 }
 
-function parseFrame(file: string): number | null {
-  const match = FRAME_FILE.exec(file);
+/**
+ * Timestamp scritto nel nome del frame. È l'orologio del PC della squadra (non
+ * l'ora di arrivo al server, che è `screenshot.ts`): serve per ritrovare il
+ * frame indicato nel verbale.
+ */
+export function parseFrameTimestamp(filename: string): number | null {
+  const match = FRAME_FILE.exec(filename);
   if (!match?.groups?.seconds) return null;
 
   const seconds = Number(match.groups.seconds);
   if (!Number.isFinite(seconds)) return null;
 
   return Math.round(seconds * 1000);
+}
+
+function parseFrame(file: string): number | null {
+  return parseFrameTimestamp(file);
+}
+
+export type ScreenshotFile = {
+  data: Buffer;
+  contentType: string;
+};
+
+/**
+ * Legge dal filesystem il frame indicato dai metadati. I segmenti di percorso
+ * vengono validati prima di toccare il disco: `pcHash` e `filename` arrivano
+ * dai log di proctoring e non sono fidati.
+ */
+export async function readScreenshotFile(screenshotId: number): Promise<ScreenshotFile | null> {
+  const [row] = await db
+    .select({
+      teamSlug: team.slug,
+      pcHash: screenshot.pcHash,
+      filename: screenshot.filename,
+    })
+    .from(screenshot)
+    .innerJoin(teamRound, eq(teamRound.id, screenshot.teamRoundId))
+    .innerJoin(team, eq(team.id, teamRound.teamId))
+    .where(eq(screenshot.id, screenshotId));
+
+  if (!row) return null;
+  if (!SAFE_SEGMENT.test(row.teamSlug) || !SESSION_ID.test(row.pcHash)) return null;
+  if (path.basename(row.filename) !== row.filename || !FRAME_FILE.test(row.filename)) return null;
+
+  const data = await readFile(
+    path.join(SCREENSHOTS_DIR, row.teamSlug, row.pcHash, row.filename),
+  ).catch(() => null);
+  if (!data) return null;
+
+  return {
+    data,
+    contentType: /\.png$/iu.test(row.filename) ? "image/png" : "image/jpeg",
+  };
 }
 
 function median(values: number[]) {

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Card, CardBody } from "@olinfo/react-components";
 
 import { PenalizationDetail } from "~/components/penalization";
+import { PenalizationFrames } from "~/components/penalization/frames";
 import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
 import { getRoundPenalization } from "~/lib/penalization";
@@ -50,6 +51,7 @@ export default async function AdminRoundPenalizationDetailPage({
       </div>
 
       <PenalizationDetail round={round} penalizationId={numericPenalizationId} />
+      <PenalizationFrames penalizationId={numericPenalizationId} />
       {penalization.appealApproved !== null && (
         <Card>
           <CardBody title="Ricorso">

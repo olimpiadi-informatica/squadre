@@ -10,10 +10,10 @@ import { Check, X } from "lucide-react";
 
 import { Modal } from "~/components/modal";
 import { Table } from "~/components/table";
-import type { RoundPenalizationEmail } from "~/lib/email";
 import type { RoundPenalization } from "~/lib/penalization";
 
-import { reviewAppeal, sendPenalizationEmail } from "./actions";
+import { reviewAppeal } from "./actions";
+import { PenalizationModalButton } from "./penalization-modal-button";
 
 const levelLabel = {
   yellow: "Giallo",
@@ -29,56 +29,14 @@ const typeLabel = {
   proctoring: "Proctoring",
   plagiarism: "Copiatura",
   ai: "Uso di strumenti AI",
-  other: "Violazione del codice d'onore",
+  other: "Codice d'onore",
 } as const;
 
-function EmailPreviewModal({ emailId }: { emailId: number | null }) {
-  const modalRef = useRef<HTMLDialogElement>(null);
-
-  const src = emailId ? `/admin/api/email/${emailId}` : null;
-
-  return (
-    <>
-      <Button
-        className="btn-xs btn-outline"
-        onClick={() => modalRef.current?.showModal()}
-        disabled={!src}>
-        Visualizza
-      </Button>
-      <Modal ref={modalRef} title="Anteprima email">
-        {src && <iframe src={src} className="w-full h-96 border rounded" title="Anteprima email" />}
-      </Modal>
-    </>
-  );
-}
-
-function SendEmailButton({
-  editionId,
-  roundId,
-  instituteId,
-  status,
-  sendingClosed,
-}: {
-  editionId: string;
-  roundId: string;
-  instituteId: string;
-  status: string;
-  sendingClosed?: boolean;
-}) {
-  const router = useRouter();
-  const disabled = sendingClosed || status === "sending";
-
-  async function handleSend() {
-    await sendPenalizationEmail(editionId, roundId, instituteId);
-    router.refresh();
-  }
-
-  return (
-    <Button className="btn-xs btn-primary" onClick={handleSend} disabled={disabled}>
-      {status === "sent" ? "Reinvia email" : "Invia email"}
-    </Button>
-  );
-}
+/**
+ * TODO: riattivare la revisione dei ricorsi.
+ * Disabilitata temporaneamente: i pulsanti restano visibili ma non cliccabili.
+ */
+const APPEAL_REVIEW_DISABLED = true;
 
 function AppealReviewButtons({
   editionId,
@@ -119,6 +77,10 @@ function AppealReviewButtons({
 
   const isApproved = item.appealApproved === true;
   const isRejected = item.appealApproved === false;
+  const blocked = APPEAL_REVIEW_DISABLED || !isEmailSent;
+  const blockedReason = APPEAL_REVIEW_DISABLED
+    ? "Gestione ricorsi temporaneamente disabilitata"
+    : "Email non inviata all'istituto";
 
   return (
     <>
@@ -126,46 +88,46 @@ function AppealReviewButtons({
         <button
           type="button"
           onClick={() => !isApproved && openConfirm(true)}
-          disabled={!isEmailSent || pending}
+          disabled={blocked || pending}
           className={clsx(
             "size-6 rounded flex items-center justify-center border transition-all",
-            isEmailSent
-              ? isApproved
+            blocked
+              ? "border-success/30 text-success/40 cursor-not-allowed opacity-40"
+              : isApproved
                 ? "bg-success border-success text-white cursor-default shadow-sm ring-2 ring-success/30"
-                : "border-success text-success hover:bg-success hover:text-white cursor-pointer"
-              : "border-success/30 text-success/40 cursor-not-allowed opacity-40",
+                : "border-success text-success hover:bg-success hover:text-white cursor-pointer",
           )}
           title={
-            isEmailSent
-              ? isApproved
+            blocked
+              ? blockedReason
+              : isApproved
                 ? "Ricorso approvato"
                 : isRejected
                   ? "Modifica esito: Approva ricorso"
                   : "Approva ricorso"
-              : "Email non inviata all'istituto"
           }>
           <Check className="size-4" strokeWidth={2.5} />
         </button>
         <button
           type="button"
           onClick={() => !isRejected && openConfirm(false)}
-          disabled={!isEmailSent || pending}
+          disabled={blocked || pending}
           className={clsx(
             "size-6 rounded flex items-center justify-center border transition-all",
-            isEmailSent
-              ? isRejected
+            blocked
+              ? "border-error/30 text-error/40 cursor-not-allowed opacity-40"
+              : isRejected
                 ? "bg-error border-error text-white cursor-default shadow-sm ring-2 ring-error/30"
-                : "border-error text-error hover:bg-error hover:text-white cursor-pointer"
-              : "border-error/30 text-error/40 cursor-not-allowed opacity-40",
+                : "border-error text-error hover:bg-error hover:text-white cursor-pointer",
           )}
           title={
-            isEmailSent
-              ? isRejected
+            blocked
+              ? blockedReason
+              : isRejected
                 ? "Ricorso rigettato"
                 : isApproved
                   ? "Modifica esito: Rigetta ricorso"
                   : "Rigetta ricorso"
-              : "Email non inviata all'istituto"
           }>
           <X className="size-4" strokeWidth={2.5} />
         </button>
@@ -198,19 +160,14 @@ function AppealReviewButtons({
 
 function PenalizationRow({
   item,
-  emailStatuses,
   editionId,
   roundId,
-  sendingClosed,
 }: {
   item: RoundPenalization;
-  emailStatuses: RoundPenalizationEmail[];
   editionId: string;
   roundId: string;
-  sendingClosed?: boolean;
 }) {
-  const emailStatus = emailStatuses.find((e) => e.instituteId === item.instituteId);
-  const isEmailSent = emailStatus?.status === "sent" || item.sentAt !== null;
+  const isEmailSent = item.sentAt !== null;
 
   return (
     <>
@@ -226,28 +183,22 @@ function PenalizationRow({
       </div>
       <div className="text-wrap break-words">{item.description}</div>
       <div className="flex flex-wrap gap-1 justify-center">
-        {emailStatus ? (
-          <>
-            <SendEmailButton
-              editionId={editionId}
-              roundId={roundId}
-              instituteId={emailStatus.instituteId}
-              status={emailStatus.status}
-              sendingClosed={sendingClosed}
-            />
-            <EmailPreviewModal emailId={emailStatus.emailId} />
-          </>
-        ) : (
-          <span className="italic opacity-50">-</span>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-1 justify-center">
         <Link
           href={`/admin/edition/${item.editionId}/round/${item.roundSlug}/penalization/${item.id}`}
           className="btn btn-primary btn-xs">
           Dettaglio
         </Link>
-        <Button className="btn-primary btn-xs">Modifica</Button>
+        <PenalizationModalButton
+          editionId={editionId}
+          roundId={roundId}
+          label="Modifica"
+          penalization={{
+            id: item.id,
+            level: item.level,
+            appealAllowed: item.appealAllowed,
+            description: item.description,
+          }}
+        />
       </div>
       <div>
         <AppealReviewButtons
@@ -263,16 +214,12 @@ function PenalizationRow({
 
 export function PenalizationTable({
   penalization,
-  emailStatuses,
   editionId,
   roundId,
-  sendingClosed,
 }: {
   penalization: RoundPenalization[];
-  emailStatuses: RoundPenalizationEmail[];
   editionId: string;
   roundId: string;
-  sendingClosed?: boolean;
 }) {
   const itemMatch = useCallback(
     (search: string, item: RoundPenalization) =>
@@ -285,15 +232,9 @@ export function PenalizationTable({
 
   const Row = useCallback(
     ({ item }: { item: RoundPenalization }) => (
-      <PenalizationRow
-        item={item}
-        emailStatuses={emailStatuses}
-        editionId={editionId}
-        roundId={roundId}
-        sendingClosed={sendingClosed}
-      />
+      <PenalizationRow item={item} editionId={editionId} roundId={roundId} />
     ),
-    [emailStatuses, editionId, roundId, sendingClosed],
+    [editionId, roundId],
   );
 
   return (
@@ -302,7 +243,7 @@ export function PenalizationTable({
       itemMatch={itemMatch}
       header={TableHeaders}
       row={Row}
-      className="grid-cols-[repeat(8,auto)]"
+      className="grid-cols-[repeat(7,auto)]"
     />
   );
 }
@@ -315,7 +256,6 @@ function TableHeaders() {
       <div>Livello</div>
       <div>Tipo</div>
       <div>Descrizione</div>
-      <div>Email</div>
       <div>Azioni</div>
       <div>Ricorso</div>
     </>

@@ -1,4 +1,8 @@
+import { and, eq, sql } from "drizzle-orm";
+
+import { db } from "./db";
 import type { PenalizationLevel } from "./db/schema";
+import { round, task, team, teamTaskScore } from "./db/schema";
 import { getTeamRoundInternetChecks } from "./internet-check";
 import { listRoundRecordings, type RecordingPenalization } from "./screenshot";
 
@@ -30,12 +34,37 @@ export type ProctoringTeamRow = {
   instituteName: string;
   instituteCity: string;
   numPc: number;
+  /** Punteggio totale della squadra nel round. */
+  score: number;
   internet: ProctoringInternetStats | null;
   recording: ProctoringRecordingStats | null;
   /** Livello della penalizzazione di proctoring più grave, se presente. */
   penalization: PenalizationLevel | null;
   hasIssues: boolean;
 };
+
+/**
+ * Punteggi totali delle squadre nel round, indipendenti dal campionato: il
+ * proctoring riguarda sia i regolari sia gli esordienti.
+ */
+async function getRoundTeamScores(
+  editionId: string,
+  roundSlug: string,
+): Promise<Map<string, number>> {
+  const rows = await db
+    .select({
+      teamSlug: team.slug,
+      score: sql<number>`COALESCE(SUM(${teamTaskScore.score}), 0)::float8`,
+    })
+    .from(teamTaskScore)
+    .innerJoin(task, eq(task.id, teamTaskScore.taskId))
+    .innerJoin(round, eq(round.id, task.roundId))
+    .innerJoin(team, eq(team.id, teamTaskScore.teamId))
+    .where(and(eq(round.editionId, editionId), eq(round.slug, roundSlug)))
+    .groupBy(team.slug);
+
+  return new Map(rows.map((row) => [row.teamSlug, row.score]));
+}
 
 /**
  * Solo le penalizzazioni di tipo proctoring riguardano questa pagina; le altre
@@ -55,9 +84,10 @@ export async function listRoundProctoring(
   editionId: string,
   roundSlug: string,
 ): Promise<ProctoringTeamRow[]> {
-  const [internetTeams, recordingTeams] = await Promise.all([
+  const [internetTeams, recordingTeams, scores] = await Promise.all([
     getTeamRoundInternetChecks(editionId, roundSlug),
     listRoundRecordings(editionId, roundSlug),
+    getRoundTeamScores(editionId, roundSlug),
   ]);
 
   const rows = new Map<string, ProctoringTeamRow>();
@@ -69,6 +99,7 @@ export async function listRoundProctoring(
       instituteName: team.instituteName,
       instituteCity: team.instituteCity,
       numPc: team.numSessions,
+      score: scores.get(team.teamSlug) ?? 0,
       internet: null,
       recording: {
         numSessions: team.numSessions,
@@ -106,6 +137,7 @@ export async function listRoundProctoring(
         instituteName: team.instituteName,
         instituteCity: team.instituteCity,
         numPc: team.numPc,
+        score: scores.get(team.teamSlug) ?? 0,
         internet,
         recording: null,
         penalization: null,
@@ -116,6 +148,7 @@ export async function listRoundProctoring(
 
   return [...rows.values()].sort(
     (a, b) =>
+      b.score - a.score ||
       a.instituteName.localeCompare(b.instituteName) ||
       a.instituteCity.localeCompare(b.instituteCity) ||
       a.teamName.localeCompare(b.teamName),

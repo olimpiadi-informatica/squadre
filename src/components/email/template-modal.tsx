@@ -10,9 +10,11 @@ type Props = {
   label: string;
   content: string;
   onSave: (content: string) => Promise<void>;
+  /** Testo del pulsante; di default "Modifica template". */
+  buttonLabel?: string;
 };
 
-export function TemplateModal({ label, content, onSave }: Props) {
+export function TemplateModal({ label, content, onSave, buttonLabel }: Props) {
   const modalRef = useRef<HTMLDialogElement>(null);
 
   async function handleSubmit({ content }: { content: string }) {
@@ -23,7 +25,7 @@ export function TemplateModal({ label, content, onSave }: Props) {
   return (
     <>
       <Button className="btn-primary" onClick={() => modalRef.current?.showModal()}>
-        Modifica template
+        {buttonLabel ?? "Modifica template"}
       </Button>
       <Modal ref={modalRef} title={label}>
         <Form defaultValue={{ content }} onSubmit={handleSubmit} className="!max-w-none">

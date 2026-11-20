@@ -3,24 +3,11 @@ import { notFound } from "next/navigation";
 
 import { Card, CardActions, CardBody } from "@olinfo/react-components";
 
-import { EmailCard } from "~/components/email/email-card";
-import { TemplateModal } from "~/components/email/template-modal";
 import { verifyAdmin } from "~/lib/admin";
 import { getEditionAdmin } from "~/lib/edition";
-import { listRoundPenalizationEmailStatuses } from "~/lib/email";
-import {
-  getEmailTemplateContent,
-  PENALIZATION_APPEAL_RESULT_EMAIL_TEMPLATE_ID,
-  PENALIZATION_EMAIL_TEMPLATE_ID,
-} from "~/lib/email-template";
 import { listRoundPenalization } from "~/lib/penalization";
 import { getRoundAdmin } from "~/lib/round";
 
-import {
-  savePenalizationAppealResultEmailTemplate,
-  savePenalizationEmailTemplate,
-  sendPenalizationEmail,
-} from "./actions";
 import { PenalizationTable } from "./penalization-table";
 import { UploadPlagiarismButton } from "./upload-plagiarism-button";
 import { UploadProctoringButton } from "./upload-proctoring-button";
@@ -31,18 +18,12 @@ export default async function AdminRoundPenalizationPage({
   await verifyAdmin();
 
   const { editionId, roundId } = await params;
-  const [edition, round, penalization, emailStatuses, penalizationTemplate, appealResultTemplate] =
-    await Promise.all([
-      getEditionAdmin(editionId),
-      getRoundAdmin(editionId, roundId),
-      listRoundPenalization(editionId, roundId),
-      listRoundPenalizationEmailStatuses(editionId, roundId),
-      getEmailTemplateContent(PENALIZATION_EMAIL_TEMPLATE_ID),
-      getEmailTemplateContent(PENALIZATION_APPEAL_RESULT_EMAIL_TEMPLATE_ID),
-    ]);
+  const [edition, round, penalization] = await Promise.all([
+    getEditionAdmin(editionId),
+    getRoundAdmin(editionId, roundId),
+    listRoundPenalization(editionId, roundId),
+  ]);
   if (!edition || !round) notFound();
-  // Invio delle email di penalizzazione temporaneamente disabilitato.
-  const sendingClosed = true;
 
   const stats = {
     total: penalization.length,
@@ -51,21 +32,6 @@ export default async function AdminRoundPenalizationPage({
     red: penalization.filter((penalization) => penalization.level === "red").length,
     yellow: penalization.filter((penalization) => penalization.level === "yellow").length,
   };
-
-  async function onSendAll(instituteId: string) {
-    "use server";
-    await sendPenalizationEmail(editionId, roundId, instituteId);
-  }
-
-  async function onSaveTemplate(content: string) {
-    "use server";
-    await savePenalizationEmailTemplate(editionId, roundId, content);
-  }
-
-  async function onSaveAppealResultTemplate(content: string) {
-    "use server";
-    await savePenalizationAppealResultEmailTemplate(editionId, roundId, content);
-  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -98,22 +64,9 @@ export default async function AdminRoundPenalizationPage({
             <CardActions>
               <UploadPlagiarismButton editionId={editionId} roundId={roundId} />
               <UploadProctoringButton editionId={editionId} roundId={roundId} />
-              <TemplateModal
-                label="Template email esito ricorso"
-                content={appealResultTemplate ?? ""}
-                onSave={onSaveAppealResultTemplate}
-              />
             </CardActions>
           </CardBody>
         </Card>
-        <EmailCard
-          statuses={emailStatuses}
-          onSendAll={onSendAll}
-          templateLabel="Template email penalizzazioni"
-          templateContent={penalizationTemplate ?? ""}
-          onSaveTemplate={onSaveTemplate}
-          sendingClosed={sendingClosed}
-        />
       </div>
 
       {penalization.length === 0 ? (
@@ -123,13 +76,7 @@ export default async function AdminRoundPenalizationPage({
           </CardBody>
         </Card>
       ) : (
-        <PenalizationTable
-          penalization={penalization}
-          emailStatuses={emailStatuses}
-          editionId={editionId}
-          roundId={roundId}
-          sendingClosed={sendingClosed}
-        />
+        <PenalizationTable penalization={penalization} editionId={editionId} roundId={roundId} />
       )}
     </div>
   );
