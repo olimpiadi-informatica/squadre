@@ -175,8 +175,13 @@ function PenalizationRow({
       <div className="text-wrap break-words">
         {item.instituteName}, {item.instituteCity}
       </div>
-      <div>
+      <div className="flex flex-col items-start gap-1">
         <span className={`badge badge-sm ${levelBadge[item.level]}`}>{levelLabel[item.level]}</span>
+        {item.appealAllowed ? (
+          <span className="badge badge-sm badge-info">Appellabile</span>
+        ) : (
+          <span className="badge badge-sm badge-error">Non appellabile</span>
+        )}
       </div>
       <div>
         <span className="badge badge-sm badge-outline">{typeLabel[item.type]}</span>

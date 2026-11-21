@@ -116,7 +116,7 @@ export function PenalizationModalButton({
                   Le penalizzazioni di livello rosso non sono appellabili.
                 </p>
               ) : (
-                <CheckboxField field="appealAllowed" label="Appellabile" />
+                <CheckboxField field="appealAllowed" label="Appellabile" optional />
               )}
               <TextAreaField
                 field="description"
